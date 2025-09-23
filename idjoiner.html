@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SKU ↔ Identification Joiner (XLSX)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 10px; }
+    label { display:block; margin-top:15px; }
+    button { margin-top:20px; padding:8px 12px; border:0; border-radius:4px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .hint { font-size:.9em; color:#9aa0a6; }
+    #report { margin-top:15px; font-size:.9em; color:#a9aa9f; white-space:pre; }
+  </style>
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>SKU ↔ Identification Joiner (XLSX)</h1>
+  <p class="hint">
+    Upload:<br>
+    1. Identification–Handle file (<em>either</em> 2-column Identification|Handle <em>or</em> 3-row Shopify format).<br>
+    2. SKU–Handle file (cols: SKU, Handle).<br>
+    Output: XLSX with columns: SKU | Identification.
+  </p>
+
+  <label>Identification–Handle file:</label>
+  <input id="fileA" type="file" accept=".xlsx"><br>
+
+  <label>SKU–Handle file:</label>
+  <input id="fileB" type="file" accept=".xlsx"><br>
+
+  <button id="process" disabled>Generate Join XLSX</button>
+
+  <pre id="report"></pre>
+
+<script>
+async function readWorkbook(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header:1 });
+      resolve(rows);
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// Normalise Identification–Handle file, whether 2-col or 3-row format
+function extractIdentificationHandle(rows) {
+  const header = (rows[0] || []).map(x => String(x).toLowerCase());
+  const out = new Map();
+
+  if (header.includes("field")) {
+    // Looks like Shopify import-style
+    for (let i=1; i<rows.length; i++){
+      const row = rows[i];
+      if (!row || row.length < 7) continue;
+      const type = String(row[0]||"").trim().toUpperCase();
+      const ident = String(row[1]||"").trim();
+      const field = String(row[2]||"").trim().toLowerCase();
+      const handleVal = String(row[6]||"").trim(); // Default content col
+      if (type==="PRODUCT" && ident && field==="handle" && handleVal){
+        out.set(handleVal, ident);
+      }
+    }
+  } else {
+    // Assume simple Identification | Handle sheet
+    for (let i=1; i<rows.length; i++){
+      const row = rows[i];
+      if (!row || row.length < 2) continue;
+      const ident = String(row[0]||"").trim();
+      const handle = String(row[1]||"").trim();
+      if (ident && handle) out.set(handle, ident);
+    }
+  }
+  return out;
+}
+
+let fileA=null, fileB=null;
+document.getElementById('fileA').addEventListener('change', e => { fileA = e.target.files[0]; checkReady(); });
+document.getElementById('fileB').addEventListener('change', e => { fileB = e.target.files[0]; checkReady(); });
+
+function checkReady(){ document.getElementById('process').disabled = !(fileA && fileB); }
+
+document.getElementById('process').addEventListener('click', async () => {
+  const rowsA = await readWorkbook(fileA);
+  const rowsB = await readWorkbook(fileB);
+
+  const handleToIdent = extractIdentificationHandle(rowsA);
+
+  const out = [["SKU","Identification"]];
+  const seen = new Set();
+  let matched=0, skipped=0;
+
+  for (let i=1; i<rowsB.length; i++){
+    const row = rowsB[i];
+    if (!row || row.length < 2) continue;
+    const sku = String(row[0]||"").trim();
+    const handle = String(row[1]||"").trim();
+    if (!sku || !handle) continue;
+
+    const ident = handleToIdent.get(handle);
+    if (!ident) { skipped++; continue; }
+
+    const key = sku+"|"+ident;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    out.push([sku, ident]);
+    matched++;
+  }
+
+  // Create workbook
+  const ws = XLSX.utils.aoa_to_sheet(out);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "SKU-Identification");
+  XLSX.writeFile(wb, "sku_identification_map.xlsx");
+
+  document.getElementById('report').textContent =
+    `Products matched: ${matched}\n`+
+    `Skipped (no Identification found): ${skipped}\n`+
+    `Total output rows: ${out.length-1}`;
+});
+</script>
+</body>
+</html>
