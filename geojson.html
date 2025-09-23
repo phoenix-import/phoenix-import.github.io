@@ -419,15 +419,14 @@
             zoom: 2
         });
         
-        // Initialize drawing controls
+        // Initialize drawing controls with custom styles
         draw = new MapboxDraw({
             displayControlsDefault: false,
             controls: {
                 polygon: true,
                 trash: true
-            }
-        });
-        map.addControl(draw);
+            },
+            
         
         // Listen to draw events
         map.on('draw.create', updateStats);
