@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shopify export parser & prepper</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 10px; }
+    textarea { width:100%; min-height:200px; background:#1a1c22; color:#e6e6e6; border:1px solid #333; padding:10px; }
+    button { margin-top:10px; padding:8px 12px; border:0; border-radius:4px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .hint { font-size:.9em; color:#9aa0a6; }
+  </style>
+  <!-- SheetJS library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Identification → Shopify Schema (XLSX)</h1>
+  <p class="hint">
+    Upload a CSV with headers <code>Type,Identification,Field,Locale,Market,Status,Default content,Translated content</code>.<br>
+    This tool deduplicates by Identification, creates 3 rows (title, body_html, handle),<br>
+    and places the detected handle into <code>Default content</code>.
+  </p>
+
+  <input id="file" type="file" accept=".csv,text/csv"><br><br>
+  <button id="process" disabled>Generate XLSX</button>
+
+<script>
+// Simple CSV field splitter that respects quotes
+function splitCsvLine(line) {
+  const regex = /("([^"]*)"|[^,]*)(,|$)/g;
+  const result = [];
+  let match;
+  while ((match = regex.exec(line)) !== null) {
+    let value = match[2] !== undefined ? match[2] : match[1];
+    result.push(value.trim());
+    if (match[3] === '') break;
+  }
+  return result;
+}
+
+let parsedRows = [];
+
+document.getElementById('file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  parsedRows = [];
+
+  for (let i=1; i<lines.length; i++){ // skip header
+    const row = lines[i].trim();
+    if (!row) continue;
+    const parts = splitCsvLine(row);
+    if (parts.length < 2) continue;
+    if (parts[0].trim().toUpperCase() !== 'PRODUCT') continue;
+
+    parsedRows.push({
+      type: parts[0].trim(),
+      identification: (parts[1] || '').trim(),
+      field: (parts[2] || '').trim(),
+      locale: (parts[3] || '').trim(),
+      market: (parts[4] || '').trim(),
+      status: (parts[5] || '').trim(),
+      defaultContent: (parts[6] || '').trim(),
+      translatedContent: (parts[7] || '').trim()
+    });
+  }
+
+  if (parsedRows.length === 0) {
+    alert("No valid PRODUCT rows found.");
+    document.getElementById('process').disabled = true;
+  } else {
+    document.getElementById('process').disabled = false;
+  }
+});
+
+document.getElementById('process').addEventListener('click', () => {
+  // Deduplicate by Identification
+  const productMap = new Map();
+
+  for (const row of parsedRows) {
+    if (!row.identification) continue;
+    if (!productMap.has(row.identification)) {
+      productMap.set(row.identification, { handle: null });
+    }
+    if (row.field.toLowerCase() === 'handle' && row.defaultContent) {
+      productMap.get(row.identification).handle = row.defaultContent;
+    }
+  }
+
+  // Prepare output rows
+  const out = [];
+  // Header row
+  out.push([
+    "Type","Identification","Field","Locale","Market","Status","Default content","Translated content"
+  ]);
+
+  for (const [ident, data] of productMap.entries()) {
+    // title row
+    out.push(["PRODUCT", ident, "title", "", "", "", "", ""]);
+    // body_html row
+    out.push(["PRODUCT", ident, "body_html", "", "", "", "", ""]);
+    // handle row, with handle in Default content
+    out.push(["PRODUCT", ident, "handle", "", "", "", data.handle || "", ""]);
+  }
+
+  // Create workbook and sheet
+  const ws = XLSX.utils.aoa_to_sheet(out);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Shopify Import");
+
+  // Download XLSX
+  XLSX.writeFile(wb, "shopify_import.xlsx");
+});
+</script>
+</body>
+</html>
