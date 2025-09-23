@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Shopify Import Filler (scan by cell keys)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 8px; }
+    label { display:block; margin-top:12px; }
+    input[type="file"], input[type="text"] { width:100%; max-width:640px; }
+    button { margin-top:16px; padding:10px 14px; border:0; border-radius:8px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    pre { background:#171a21; border:1px solid #2a2f3a; border-radius:8px; padding:12px; white-space:pre-wrap; margin-top:14px; color:#cfd2d6; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Shopify Import Filler</h1>
+  <p>
+    Inputs:<br>
+    A) Shopify skeleton (3-row format)<br>
+    B) SKU → Handle map (.xlsx)<br>
+    C) PLGGR export (SKU=A, Title=AE, Description=AG)<br>
+    Output: skeleton filled in column H, locale set.
+  </p>
+
+  <label>A) Shopify skeleton (.xlsx)</label>
+  <input id="skeleton" type="file" accept=".xlsx">
+
+  <label>B) SKU → Handle map (.xlsx)</label>
+  <input id="skuHandle" type="file" accept=".xlsx">
+
+  <label>C) PLGGR export (.xlsx)</label>
+  <input id="plggr" type="file" accept=".xlsx">
+
+  <label>Locale code</label>
+  <input id="locale" type="text" value="de">
+
+  <button id="process" disabled>Generate Filled XLSX</button>
+  <pre id="report"></pre>
+
+<script>
+const $ = id => document.getElementById(id);
+let fSkeleton=null, fSkuHandle=null, fPlggr=null;
+
+['skeleton','skuHandle','plggr'].forEach(id=>{
+  $(id).addEventListener('change', e=>{
+    if (id==='skeleton')  fSkeleton  = e.target.files[0];
+    if (id==='skuHandle') fSkuHandle = e.target.files[0];
+    if (id==='plggr')     fPlggr     = e.target.files[0];
+    $('process').disabled = !(fSkeleton && fSkuHandle && fPlggr);
+  });
+});
+
+function readWorkbook(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      try {
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        resolve(wb);
+      }catch(err){reject(err);}
+    };
+    r.onerror=reject;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+$('process').addEventListener('click', async ()=>{
+  const report=[];
+  const [wbSkel, wbSku, wbPlg] = await Promise.all([
+    readWorkbook(fSkeleton),
+    readWorkbook(fSkuHandle),
+    readWorkbook(fPlggr)
+  ]);
+
+  const wsSkel=wbSkel.Sheets[wbSkel.SheetNames[0]];
+  const wsSku=wbSku.Sheets[wbSku.SheetNames[0]];
+  const wsPlg=wbPlg.Sheets[wbPlg.SheetNames[0]];
+  const locale=$('locale').value.trim();
+
+  // Skeleton to AOA
+  const skelAOA=XLSX.utils.sheet_to_json(wsSkel,{header:1,raw:false,defval:""});
+  const TYPE=0, IDENT=1, FIELD=2, LOCALE=3, DEFAULT_C=6, TRANSLATED=7;
+
+  // ident -> handle from skeleton
+  const identToHandle=new Map();
+  for(let i=1;i<skelAOA.length;i++){
+    const row=skelAOA[i]; if(!row) continue;
+    if(String(row[TYPE]).toUpperCase()==='PRODUCT' && String(row[FIELD]).toLowerCase()==='handle'){
+      identToHandle.set(String(row[IDENT]).trim(), String(row[DEFAULT_C]).trim());
+    }
+  }
+
+  // handle -> sku
+  const skuAOA=XLSX.utils.sheet_to_json(wsSku,{header:1,raw:false,defval:""});
+  const handleToSku=new Map();
+  for(let i=1;i<skuAOA.length;i++){
+    const r=skuAOA[i]; if(!r) continue;
+    const sku=String(r[0]||'').trim(), handle=String(r[1]||'').trim();
+    if(sku && handle) handleToSku.set(handle, sku);
+  }
+
+  // --- NEW: scan PLGGR by keys ---
+  const allCells=Object.keys(wsPlg).filter(a=>!a.startsWith('!'));
+  let maxRow=0;
+  for(const addr of allCells){
+    const m=addr.match(/^[A-Z]+(\d+)$/);
+    if(m){ maxRow=Math.max(maxRow, parseInt(m[1],10)); }
+  }
+
+  const skuToContent=new Map();
+  let rowsWithData=0;
+  for(let R=2;R<=maxRow;R++){
+    const addrSKU = "A"+R;
+    const addrTitle = "AE"+R;
+    const addrBody = "AG"+R;
+    const sku=(wsPlg[addrSKU]?String(wsPlg[addrSKU].v).trim():"");
+    if(!sku) continue;
+    const title=(wsPlg[addrTitle]?String(wsPlg[addrTitle].v).trim():"");
+    const body=(wsPlg[addrBody]?String(wsPlg[addrBody].v).trim():"");
+    if(!skuToContent.has(sku)) skuToContent.set(sku,{title:"",body:""});
+    const o=skuToContent.get(sku);
+    if(title) o.title=title;
+    if(body)  o.body=body;
+    rowsWithData++;
+  }
+
+  // Fill skeleton
+  const out=skelAOA.map(r=>r?r.slice():r);
+  let filledTitle=0, filledBody=0;
+  for(let i=1;i<out.length;i++){
+    const row=out[i]; if(!row) continue;
+    if(String(row[TYPE]).toUpperCase()!=='PRODUCT') continue;
+    const ident=String(row[IDENT]||'').trim();
+    const field=String(row[FIELD]||'').trim().toLowerCase();
+    if(locale) row[LOCALE]=locale;
+    if(field!=='title' && field!=='body_html') continue;
+    const handle=identToHandle.get(ident);
+    if(!handle) continue;
+    const sku=handleToSku.get(handle);
+    if(!sku) continue;
+    const content=skuToContent.get(sku);
+    if(!content) continue;
+    if(field==='title' && content.title){ row[TRANSLATED]=content.title; filledTitle++; }
+    if(field==='body_html' && content.body){ row[TRANSLATED]=content.body; filledBody++; }
+  }
+
+  const wsOut=XLSX.utils.aoa_to_sheet(out);
+  const wbOut=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbOut, wsOut, "Shopify Import");
+  XLSX.writeFile(wbOut, `shopify_import_filled_${locale||'xx'}.xlsx`);
+
+  $('report').textContent=
+    `Skeleton rows: ${skelAOA.length}\n`+
+    `PLGGR max row detected: ${maxRow}\n`+
+    `PLGGR rows with SKU data: ${rowsWithData}\n`+
+    `Titles filled: ${filledTitle}\n`+
+    `Descriptions filled: ${filledBody}`;
+});
+</script>
+</body>
+</html>
