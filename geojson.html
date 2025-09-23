@@ -283,20 +283,20 @@
 <body>
     <div class="container">
         <h1>EUDR GeoJSON Converter</h1>
-        <p class="subtitle">Convert supplier geodata to EUDR-compliant GeoJSON format</p>
+        <p class="subtitle">Make plot location files for EU deforestation rules</p>
         
         <div class="input-modes">
-            <button class="mode-btn active" data-mode="wgs84">WGS84 Entry</button>
-            <button class="mode-btn" data-mode="utm">UTM Entry</button>
-            <button class="mode-btn" data-mode="map">Map Selection</button>
+            <button class="mode-btn active" data-mode="wgs84">GPS Coordinates</button>
+            <button class="mode-btn" data-mode="utm">UTM Grid</button>
+            <button class="mode-btn" data-mode="map">Draw on Map</button>
         </div>
         
         <div class="main-content">
             <div class="input-panel">
                 <!-- WGS84 Entry Mode -->
                 <div class="input-mode active" id="wgs84-mode">
-                    <h3>WGS84 Coordinate Entry</h3>
-                    <p>Enter decimal degree coordinates [longitude, latitude]</p>
+                    <h3>Add Coordinates (Decimal)</h3>
+                    <p>Enter GPS coordinates as decimal numbers</p>
                     
                     <table class="coord-grid">
                         <thead>
@@ -318,14 +318,14 @@
                     </table>
                     
                     <button class="btn" onclick="addWGS84Row()">Add Point</button>
-                    <button class="btn" onclick="closeRing('wgs84')">Close Ring</button>
-                    <button class="btn success" onclick="processWGS84()">Preview on Map</button>
+                    <button class="btn" onclick="closeRing('wgs84')">Close Shape</button>
+                    <button class="btn success" onclick="processWGS84()">Add to Map</button>
                 </div>
                 
                 <!-- UTM Entry Mode -->
                 <div class="input-mode" id="utm-mode">
-                    <h3>UTM Coordinate Entry</h3>
-                    <p>Enter UTM coordinates. They will be converted to WGS84 (EPSG:4326)</p>
+                    <h3>Add UTM Coordinates</h3>
+                    <p>Enter UTM grid coordinates (will convert to GPS)</p>
                     
                     <div class="form-group">
                         <label>UTM Zone (1-60)</label>
@@ -360,56 +360,55 @@
                     </table>
                     
                     <button class="btn" onclick="addUTMRow()">Add Point</button>
-                    <button class="btn" onclick="closeRing('utm')">Close Ring</button>
-                    <button class="btn success" onclick="processUTM()">Convert & Preview</button>
+                    <button class="btn" onclick="closeRing('utm')">Close Shape</button>
+                    <button class="btn success" onclick="processUTM()">Convert & Add to Map</button>
                 </div>
                 
                 <!-- Map Selection Mode -->
                 <div class="input-mode" id="map-mode">
-                    <h3>Map Selection</h3>
+                    <h3>Draw on Map</h3>
                     <div class="map-instructions">
-                        <strong>Drawing instructions:</strong>
+                        <strong>How to draw:</strong>
                         <ul>
-                            <li>Click the polygon tool (□) on the map</li>
-                            <li>Click to place vertices on the map</li>
-                            <li>Click the first point again to close the polygon</li>
-                            <li>Click on existing polygons to edit them</li>
-                            <li>Use the trash icon to delete selected polygons</li>
+                            <li>Click the polygon button (□) on the map</li>
+                            <li>Click on the map to add corners</li>
+                            <li>Click the first point again to finish</li>
+                            <li>Click a shape to change it</li>
+                            <li>Use trash icon to delete shapes</li>
                         </ul>
                     </div>
                     
-                    <button class="btn danger" onclick="clearAllPolygons()">Clear All Polygons</button>
-                    <button class="btn" onclick="simplifyPolygons()">Simplify Polygons</button>
-                    <button class="btn success" onclick="captureFromMap()">Capture Current Polygons</button>
+                    <button class="btn danger" onclick="clearAllPolygons()">Clear All</button>
+                    <button class="btn" onclick="simplifyPolygons()" title="Reduces extra points to stay under limits">Reduce Points</button>
+                    <button class="btn success" onclick="captureFromMap()">Save These Shapes</button>
                 </div>
                 
-                <!-- Metadata Section (shown for all modes) -->
+                <!-- Optional Data Section (shown for all modes) -->
                 <div class="metadata-section">
-                    <h3>Optional Supplier Metadata</h3>
-                    <p class="metadata-note">Used by the EU IS to group producers; entirely optional but recommended.</p>
+                    <h3>Optional Data</h3>
+                    <p class="metadata-note">This helps group your plots in the EU system.</p>
                     
                     <div class="form-group">
-                        <label>Producer Name</label>
-                        <input type="text" id="producer-name" placeholder="e.g., Forest Products Ltd">
+                        <label>Company Name</label>
+                        <input type="text" id="producer-name" placeholder="Your company name">
                     </div>
                     
                     <div class="form-group">
-                        <label>Producer Country (ISO-2)</label>
-                        <input type="text" id="producer-country" placeholder="e.g., BR" maxlength="2" style="text-transform: uppercase;">
+                        <label>Country Code</label>
+                        <input type="text" id="producer-country" placeholder="2 letters (like BR or ID)" maxlength="2" style="text-transform: uppercase;">
                     </div>
                     
                     <div class="form-group">
-                        <label>Production Place</label>
-                        <input type="text" id="production-place" placeholder="e.g., Amazon Region">
+                        <label>Location Name</label>
+                        <input type="text" id="production-place" placeholder="Region or area name">
                     </div>
                 </div>
                 
-                <!-- Validation and Export -->
+                <!-- Export Section -->
                 <div class="validation-result" id="validation-result"></div>
                 
                 <div style="margin-top: 20px;">
-                    <button class="btn" onclick="validateGeoJSON()">Validate</button>
-                    <button class="btn success" onclick="exportGeoJSON()" id="export-btn" disabled>Export GeoJSON</button>
+                    <button class="btn success" onclick="exportGeoJSON()" id="export-btn">Download GeoJSON File</button>
                 </div>
             </div>
             
@@ -417,20 +416,16 @@
                 <div id="map"></div>
                 <div class="stats-panel">
                     <div class="stat-row">
-                        <span class="stat-label">Features:</span> 
+                        <span class="stat-label">Shapes:</span> 
                         <span class="stat-value" id="feature-count">0</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">Vertices:</span> 
+                        <span class="stat-label">Points:</span> 
                         <span class="stat-value" id="vertex-count">0</span>
                     </div>
                     <div class="stat-row">
                         <span class="stat-label">Total Area:</span> 
                         <span class="stat-value" id="total-area">0 ha</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">File Size:</span> 
-                        <span class="stat-value" id="file-size">0 KB</span>
                     </div>
                 </div>
             </div>
@@ -444,7 +439,6 @@
         let drawControl;
         let currentMode = 'wgs84';
         let currentFeatures = [];
-        let isValid = false;
         
         // Initialize Leaflet map
         function initMap() {
@@ -567,7 +561,7 @@
             if (hasError) return;
             
             if (coords.length < 3) {
-                showValidation('Need at least 3 points to create a polygon', 'error');
+                showValidation('Need at least 3 points to make a shape', 'error');
                 return;
             }
             
@@ -578,7 +572,7 @@
             }
             
             displayPolygon(coords);
-            showValidation('Polygon added to map', 'success');
+            showValidation('Shape added to map', 'success');
         }
         
         // UTM Functions
@@ -600,7 +594,7 @@
             const hemisphere = document.getElementById('utm-hemisphere').value;
             
             if (!zone || zone < 1 || zone > 60) {
-                showValidation('UTM zone must be between 1 and 60', 'error');
+                showValidation('Zone must be a number from 1 to 60', 'error');
                 return;
             }
             
@@ -620,7 +614,7 @@
             });
             
             if (coords.length < 3) {
-                showValidation('Need at least 3 points to create a polygon', 'error');
+                showValidation('Need at least 3 points to make a shape', 'error');
                 return;
             }
             
@@ -631,7 +625,7 @@
             }
             
             displayPolygon(coords);
-            showValidation('UTM coordinates converted and polygon added to map', 'success');
+            showValidation('UTM converted and shape added to map', 'success');
         }
         
         // Common Functions
@@ -650,7 +644,7 @@
                 const tbody = document.getElementById('utm-coords');
                 const rows = tbody.querySelectorAll('tr');
                 if (rows.length < 3) {
-                    showValidation('Need at least 3 points before closing ring', 'error');
+                    showValidation('Add at least 3 points first', 'error');
                     return;
                 }
                 
@@ -667,7 +661,7 @@
                 const tbody = document.getElementById('wgs84-coords');
                 const rows = tbody.querySelectorAll('tr');
                 if (rows.length < 3) {
-                    showValidation('Need at least 3 points before closing ring', 'error');
+                    showValidation('Add at least 3 points first', 'error');
                     return;
                 }
                 
@@ -705,7 +699,7 @@
         function clearAllPolygons() {
             drawnItems.clearLayers();
             updateStats();
-            showValidation('All polygons cleared', 'warning');
+            showValidation('All shapes removed', 'warning');
         }
         
         function simplifyPolygons() {
@@ -741,16 +735,16 @@
             });
             
             updateStats();
-            showValidation('Polygons simplified', 'success');
+            showValidation('Extra points removed. Shape kept the same.', 'success');
         }
         
         function captureFromMap() {
             updateStats();
             if (currentFeatures.length === 0) {
-                showValidation('No polygons drawn on map', 'error');
+                showValidation('No shapes on map yet', 'error');
                 return;
             }
-            showValidation(`Captured ${currentFeatures.length} polygon(s) from map`, 'success');
+            showValidation(`${currentFeatures.length} shape(s) saved from map`, 'success');
         }
         
         function updateStats() {
@@ -791,93 +785,7 @@
             document.getElementById('vertex-count').textContent = totalVertices;
             document.getElementById('total-area').textContent = totalArea.toFixed(2) + ' ha';
             
-            // Estimate file size
-            const featureCollection = {
-                type: "FeatureCollection",
-                features: features
-            };
-            
-            const jsonStr = JSON.stringify(featureCollection);
-            const bytes = new TextEncoder().encode(jsonStr).length;
-            const kb = bytes / 1024;
-            const mb = kb / 1024;
-            
-            let sizeText = kb < 1000 ? kb.toFixed(2) + ' KB' : mb.toFixed(2) + ' MB';
-            
-            if (mb > 10) {
-                document.getElementById('file-size').innerHTML = `<span class="error">${sizeText}</span>`;
-            } else if (mb > 5) {
-                document.getElementById('file-size').innerHTML = `<span class="warning">${sizeText}</span>`;
-            } else {
-                document.getElementById('file-size').textContent = sizeText;
-            }
-            
             currentFeatures = features;
-        }
-        
-        function validateGeoJSON() {
-            if (currentFeatures.length === 0) {
-                showValidation('No features to validate. Draw polygons on the map or enter coordinates.', 'error');
-                return;
-            }
-            
-            let errors = [];
-            
-            currentFeatures.forEach((feature, index) => {
-                // Check vertices count
-                const vertices = feature.geometry.coordinates[0].length;
-                if (vertices > 1000) {
-                    errors.push(`Feature ${index + 1}: Too many vertices (${vertices}/1000 max)`);
-                }
-                if (vertices < 4) {
-                    errors.push(`Feature ${index + 1}: Too few vertices (minimum 4)`);
-                }
-                
-                // Check if closed
-                const first = feature.geometry.coordinates[0][0];
-                const last = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length - 1];
-                if (first[0] !== last[0] || first[1] !== last[1]) {
-                    errors.push(`Feature ${index + 1}: Ring is not closed`);
-                }
-                
-                // Check for self-intersection
-                try {
-                    const kinks = turf.kinks(feature);
-                    if (kinks.features.length > 0) {
-                        errors.push(`Feature ${index + 1}: Contains self-intersections`);
-                    }
-                } catch (e) {
-                    // Skip kinks check if it fails
-                }
-                
-                // Check area
-                const area = turf.area(feature) / 10000; // hectares
-                if (area === 0) {
-                    errors.push(`Feature ${index + 1}: Zero area`);
-                }
-            });
-            
-            // Check total features count
-            if (currentFeatures.length > 200) {
-                errors.push(`Too many features (${currentFeatures.length}/200 max)`);
-            }
-            
-            // Check file size
-            const jsonStr = JSON.stringify({ type: "FeatureCollection", features: currentFeatures });
-            const mb = new TextEncoder().encode(jsonStr).length / (1024 * 1024);
-            if (mb > 10) {
-                errors.push(`File size exceeds 10MB limit (${mb.toFixed(2)}MB)`);
-            }
-            
-            if (errors.length === 0) {
-                showValidation('Validation successful! Ready to export.', 'success');
-                isValid = true;
-                document.getElementById('export-btn').disabled = false;
-            } else {
-                showValidation('Validation errors:\n' + errors.join('\n'), 'error');
-                isValid = false;
-                document.getElementById('export-btn').disabled = true;
-            }
         }
         
         function showValidation(message, type) {
@@ -895,9 +803,57 @@
         }
         
         function exportGeoJSON() {
-            if (!isValid) {
-                validateGeoJSON();
-                if (!isValid) return;
+            if (currentFeatures.length === 0) {
+                showValidation('No shapes to export. Please draw on the map or add coordinates first.', 'error');
+                return;
+            }
+            
+            // Run validation
+            let errors = [];
+            
+            currentFeatures.forEach((feature, index) => {
+                const vertices = feature.geometry.coordinates[0].length;
+                if (vertices > 1000) {
+                    errors.push(`Shape ${index + 1}: Too many points (${vertices}). Use "Reduce Points" button.`);
+                }
+                if (vertices < 4) {
+                    errors.push(`Shape ${index + 1}: Not enough points`);
+                }
+                
+                const first = feature.geometry.coordinates[0][0];
+                const last = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length - 1];
+                if (first[0] !== last[0] || first[1] !== last[1]) {
+                    errors.push(`Shape ${index + 1}: Not closed properly`);
+                }
+                
+                try {
+                    const kinks = turf.kinks(feature);
+                    if (kinks.features.length > 0) {
+                        errors.push(`Shape ${index + 1}: Lines cross each other`);
+                    }
+                } catch (e) {
+                    // Skip check if it fails
+                }
+                
+                const area = turf.area(feature) / 10000;
+                if (area === 0) {
+                    errors.push(`Shape ${index + 1}: No area`);
+                }
+            });
+            
+            if (currentFeatures.length > 200) {
+                errors.push(`Too many shapes (${currentFeatures.length}). Maximum is 200.`);
+            }
+            
+            const jsonStr = JSON.stringify({ type: "FeatureCollection", features: currentFeatures });
+            const mb = new TextEncoder().encode(jsonStr).length / (1024 * 1024);
+            if (mb > 10) {
+                errors.push(`File too large. Use "Reduce Points" or remove some shapes.`);
+            }
+            
+            if (errors.length > 0) {
+                showValidation('Cannot export. Problems found:\n' + errors.join('\n'), 'error');
+                return;
             }
             
             // Add metadata if provided
@@ -906,17 +862,15 @@
             const productionPlace = document.getElementById('production-place').value;
             
             const features = currentFeatures.map(feature => {
-                const newFeature = JSON.parse(JSON.stringify(feature)); // Deep clone
+                const newFeature = JSON.parse(JSON.stringify(feature));
                 
                 if (producerName) newFeature.properties.ProducerName = producerName;
                 if (producerCountry) newFeature.properties.ProducerCountry = producerCountry.toUpperCase();
                 if (productionPlace) newFeature.properties.ProductionPlace = productionPlace;
                 
-                // Calculate and add area
-                const area = turf.area(feature) / 10000; // hectares
+                const area = turf.area(feature) / 10000;
                 newFeature.properties.Area = Math.round(area * 100) / 100;
                 
-                // Round coordinates to 6 decimal places
                 newFeature.geometry.coordinates[0] = newFeature.geometry.coordinates[0].map(coord => [
                     Math.round(coord[0] * 1000000) / 1000000,
                     Math.round(coord[1] * 1000000) / 1000000
@@ -936,7 +890,6 @@
                 }
             };
             
-            // Create download
             const dataStr = JSON.stringify(featureCollection, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
             
@@ -947,7 +900,7 @@
             linkElement.setAttribute('download', exportName);
             linkElement.click();
             
-            showValidation('GeoJSON exported successfully!', 'success');
+            showValidation('File downloaded successfully!', 'success');
         }
     </script>
 </body>
