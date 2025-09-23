@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dump → CSV</title>
+<style>
+ body {font-family: system-ui, sans-serif; margin: 2rem; max-width: 40rem;}
+ input[type=file] {margin: 1rem 0;}
+ #log {color: crimson;}
+</style>
+</head>
+<body>
+
+<h1>JSON dump → CSV converter</h1>
+
+<input type="file" id="file" accept=".txt,.json">
+<button id="go">Convert</button>
+<p id="log"></p>
+
+<script>
+const log = msg => document.getElementById('log').textContent = msg;
+
+document.getElementById('go').onclick = async () => {
+  const fileInput = document.getElementById('file');
+  if (!fileInput.files.length) { log('Choose a file first.'); return; }
+
+  try {
+    const raw = await fileInput.files[0].text();
+    const records = JSON.parse(raw);   // assuming the dump is a JSON array
+
+    // Build semicolon-delimited CSV
+    const rows = [['prod_code','unit_code','qty']];
+    records.forEach(r => rows.push([
+      r.productId  ?? '',          // → prod_code
+      r.unitCode   ?? '',          // → unit_code
+      r.quantity   ?? ''           // → qty
+    ]));
+
+    const csv = rows.map(a => a.join(';')).join('\r\n');
+    const blob = new Blob([csv], {type: 'text/csv'});
+
+    // Trigger download—helpful filename: first cartId + yyyyMMdd
+    const cartId = records[0]?.shoppingCartId || 'order';
+    const today  = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const link   = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: `${cartId}_${today}.csv`
+    });
+    link.click();
+    URL.revokeObjectURL(link.href);
+    log('Conversion done. Enjoy.');
+  } catch (e) {
+    console.error(e);
+    log('Could not parse the file—are you sure it is valid JSON?');
+  }
+};
+</script>
+
+</body>
+</html>
