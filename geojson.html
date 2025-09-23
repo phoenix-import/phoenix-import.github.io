@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EUDR GeoJSON Converter</title>
     
-    <!-- MapLibre GL JS -->
-    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- MapLibre GL Draw -->
-    <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.0/mapbox-gl-draw.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.0/mapbox-gl-draw.js"></script>
+    <!-- Leaflet Draw -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     
     <!-- Proj4js for UTM conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.min.js"></script>
     
     <!-- Turf.js for geometry operations -->
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -80,10 +81,11 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 500px;
         }
         
         .map-container {
-            flex: 1;
+            flex: 1.5;
             background: white;
             border-radius: 8px;
             overflow: hidden;
@@ -118,6 +120,7 @@
         
         .coord-grid th {
             background: #f8f8f8;
+            font-weight: 500;
         }
         
         .coord-grid input {
@@ -137,6 +140,7 @@
             font-size: 14px;
             color: #666;
             margin-bottom: 10px;
+            font-style: italic;
         }
         
         .form-group {
@@ -165,6 +169,7 @@
             cursor: pointer;
             margin-right: 10px;
             margin-top: 10px;
+            font-size: 14px;
         }
         
         .btn:hover {
@@ -187,11 +192,18 @@
             background: #229954;
         }
         
+        .btn.small {
+            padding: 4px 8px;
+            margin: 0;
+            font-size: 12px;
+        }
+        
         .validation-result {
             margin-top: 20px;
             padding: 15px;
             border-radius: 4px;
             display: none;
+            white-space: pre-line;
         }
         
         .validation-result.error {
@@ -206,6 +218,12 @@
             color: #060;
         }
         
+        .validation-result.warning {
+            background: #fef8e7;
+            border: 1px solid #fdeaa8;
+            color: #856404;
+        }
+        
         .stats-panel {
             position: absolute;
             top: 10px;
@@ -214,17 +232,23 @@
             padding: 15px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            z-index: 1;
+            z-index: 1000;
             min-width: 200px;
         }
         
         .stat-row {
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-size: 14px;
         }
         
         .stat-label {
             font-weight: 500;
+            display: inline-block;
+            min-width: 100px;
+        }
+        
+        .stat-value {
+            color: #2c3e50;
         }
         
         .warning {
@@ -236,6 +260,24 @@
             color: #e74c3c;
             font-weight: bold;
         }
+        
+        .map-instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .map-instructions ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        .leaflet-draw-toolbar {
+            margin-top: 10px !important;
+        }
     </style>
 </head>
 <body>
@@ -244,15 +286,44 @@
         <p class="subtitle">Convert supplier geodata to EUDR-compliant GeoJSON format</p>
         
         <div class="input-modes">
-            <button class="mode-btn active" data-mode="utm">UTM Entry</button>
-            <button class="mode-btn" data-mode="wgs84">WGS84 Entry</button>
+            <button class="mode-btn active" data-mode="wgs84">WGS84 Entry</button>
+            <button class="mode-btn" data-mode="utm">UTM Entry</button>
             <button class="mode-btn" data-mode="map">Map Selection</button>
         </div>
         
         <div class="main-content">
             <div class="input-panel">
+                <!-- WGS84 Entry Mode -->
+                <div class="input-mode active" id="wgs84-mode">
+                    <h3>WGS84 Coordinate Entry</h3>
+                    <p>Enter decimal degree coordinates [longitude, latitude]</p>
+                    
+                    <table class="coord-grid">
+                        <thead>
+                            <tr>
+                                <th>Point</th>
+                                <th>Longitude</th>
+                                <th>Latitude</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="wgs84-coords">
+                            <tr>
+                                <td>1</td>
+                                <td><input type="number" class="wgs84-lon" step="0.000001" min="-180" max="180"></td>
+                                <td><input type="number" class="wgs84-lat" step="0.000001" min="-90" max="90"></td>
+                                <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <button class="btn" onclick="addWGS84Row()">Add Point</button>
+                    <button class="btn" onclick="closeRing('wgs84')">Close Ring</button>
+                    <button class="btn success" onclick="processWGS84()">Preview on Map</button>
+                </div>
+                
                 <!-- UTM Entry Mode -->
-                <div class="input-mode active" id="utm-mode">
+                <div class="input-mode" id="utm-mode">
                     <h3>UTM Coordinate Entry</h3>
                     <p>Enter UTM coordinates. They will be converted to WGS84 (EPSG:4326)</p>
                     
@@ -272,7 +343,7 @@
                     <table class="coord-grid">
                         <thead>
                             <tr>
-                                <th>Point #</th>
+                                <th>Point</th>
                                 <th>Easting (m)</th>
                                 <th>Northing (m)</th>
                                 <th></th>
@@ -283,7 +354,7 @@
                                 <td>1</td>
                                 <td><input type="number" class="utm-easting" step="0.01"></td>
                                 <td><input type="number" class="utm-northing" step="0.01"></td>
-                                <td><button class="btn danger" onclick="removeRow(this)">×</button></td>
+                                <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -293,49 +364,23 @@
                     <button class="btn success" onclick="processUTM()">Convert & Preview</button>
                 </div>
                 
-                <!-- WGS84 Entry Mode -->
-                <div class="input-mode" id="wgs84-mode">
-                    <h3>WGS84 Coordinate Entry</h3>
-                    <p>Enter decimal degree coordinates [longitude, latitude]</p>
-                    
-                    <table class="coord-grid">
-                        <thead>
-                            <tr>
-                                <th>Point #</th>
-                                <th>Longitude</th>
-                                <th>Latitude</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="wgs84-coords">
-                            <tr>
-                                <td>1</td>
-                                <td><input type="number" class="wgs84-lon" step="0.000001" min="-180" max="180"></td>
-                                <td><input type="number" class="wgs84-lat" step="0.000001" min="-90" max="90"></td>
-                                <td><button class="btn danger" onclick="removeRow(this)">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    
-                    <button class="btn" onclick="addWGS84Row()">Add Point</button>
-                    <button class="btn" onclick="closeRing('wgs84')">Close Ring</button>
-                    <button class="btn success" onclick="processWGS84()">Preview on Map</button>
-                </div>
-                
                 <!-- Map Selection Mode -->
                 <div class="input-mode" id="map-mode">
                     <h3>Map Selection</h3>
-                    <p>Draw polygons directly on the map</p>
-                    
-                    <div style="margin-bottom: 15px;">
-                        Use the polygon tool in the top-left corner of the map to draw
-                        Click to add vertices
-                        Double-click to finish polygon
-                        Click on a polygon to edit vertices
+                    <div class="map-instructions">
+                        <strong>Drawing instructions:</strong>
+                        <ul>
+                            <li>Click the polygon tool (□) on the map</li>
+                            <li>Click to place vertices on the map</li>
+                            <li>Click the first point again to close the polygon</li>
+                            <li>Click on existing polygons to edit them</li>
+                            <li>Use the trash icon to delete selected polygons</li>
+                        </ul>
                     </div>
                     
-                    <button class="btn danger" onclick="clearDrawings()">Clear All</button>
-                    <button class="btn" onclick="simplifyDrawings()">Simplify Polygons</button>
+                    <button class="btn danger" onclick="clearAllPolygons()">Clear All Polygons</button>
+                    <button class="btn" onclick="simplifyPolygons()">Simplify Polygons</button>
+                    <button class="btn success" onclick="captureFromMap()">Capture Current Polygons</button>
                 </div>
                 
                 <!-- Metadata Section (shown for all modes) -->
@@ -372,16 +417,20 @@
                 <div id="map"></div>
                 <div class="stats-panel">
                     <div class="stat-row">
-                        <span class="stat-label">Features:</span> <span id="feature-count">0</span>
+                        <span class="stat-label">Features:</span> 
+                        <span class="stat-value" id="feature-count">0</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">Total Vertices:</span> <span id="vertex-count">0</span>
+                        <span class="stat-label">Vertices:</span> 
+                        <span class="stat-value" id="vertex-count">0</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">Total Area:</span> <span id="total-area">0 ha</span>
+                        <span class="stat-label">Total Area:</span> 
+                        <span class="stat-value" id="total-area">0 ha</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">File Size (est):</span> <span id="file-size">0 KB</span>
+                        <span class="stat-label">File Size:</span> 
+                        <span class="stat-value" id="file-size">0 KB</span>
                     </div>
                 </div>
             </div>
@@ -389,49 +438,74 @@
     </div>
     
     <script>
-        // Initialize map
+        // Global variables
         let map;
-        let draw;
-        let currentMode = 'utm';
+        let drawnItems;
+        let drawControl;
+        let currentMode = 'wgs84';
         let currentFeatures = [];
         let isValid = false;
         
-        // Initialize MapLibre GL map
-        map = new maplibregl.Map({
-            container: 'map',
-            style: {
-                version: 8,
-                sources: {
-                    osm: {
-                        type: 'raster',
-                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                        tileSize: 256,
-                        attribution: '© OpenStreetMap contributors'
-                    }
-                },
-                layers: [{
-                    id: 'osm',
-                    type: 'raster',
-                    source: 'osm'
-                }]
-            },
-            center: [0, 0],
-            zoom: 2
-        });
-        
-        // Initialize drawing controls with custom styles
-        draw = new MapboxDraw({
-            displayControlsDefault: false,
-            controls: {
-                polygon: true,
-                trash: true
-            },
+        // Initialize Leaflet map
+        function initMap() {
+            map = L.map('map').setView([0, 0], 2);
             
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Initialize the FeatureGroup to store editable layers
+            drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+            
+            // Initialize the draw control
+            drawControl = new L.Control.Draw({
+                position: 'topleft',
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        showArea: true,
+                        shapeOptions: {
+                            color: '#2c3e50',
+                            fillColor: '#3498db',
+                            fillOpacity: 0.3,
+                            weight: 2
+                        }
+                    },
+                    polyline: false,
+                    circle: false,
+                    circlemarker: false,
+                    rectangle: false,
+                    marker: false
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    edit: true,
+                    remove: true
+                }
+            });
+            
+            // Event handlers for drawing
+            map.on(L.Draw.Event.CREATED, function(e) {
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+                updateStats();
+            });
+            
+            map.on(L.Draw.Event.EDITED, function(e) {
+                updateStats();
+            });
+            
+            map.on(L.Draw.Event.DELETED, function(e) {
+                updateStats();
+            });
+        }
         
-        // Listen to draw events
-        map.on('draw.create', updateStats);
-        map.on('draw.delete', updateStats);
-        map.on('draw.update', updateStats);
+        // Initialize the map on page load
+        window.onload = function() {
+            initMap();
+        };
         
         // Mode switching
         document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -445,15 +519,67 @@
                 
                 // Show/hide draw controls based on mode
                 if (currentMode === 'map') {
-                    document.querySelector('.mapboxgl-ctrl-group').style.display = 'block';
+                    map.addControl(drawControl);
                 } else {
-                    document.querySelector('.mapboxgl-ctrl-group').style.display = 'none';
+                    map.removeControl(drawControl);
                 }
             });
         });
         
-        // Hide draw controls initially
-        document.querySelector('.mapboxgl-ctrl-group').style.display = 'none';
+        // WGS84 Functions
+        function addWGS84Row() {
+            const tbody = document.getElementById('wgs84-coords');
+            const rowCount = tbody.children.length + 1;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${rowCount}</td>
+                <td><input type="number" class="wgs84-lon" step="0.000001" min="-180" max="180"></td>
+                <td><input type="number" class="wgs84-lat" step="0.000001" min="-90" max="90"></td>
+                <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+        
+        function processWGS84() {
+            const coords = [];
+            const rows = document.querySelectorAll('#wgs84-coords tr');
+            
+            let hasError = false;
+            rows.forEach(row => {
+                const lon = parseFloat(row.querySelector('.wgs84-lon').value);
+                const lat = parseFloat(row.querySelector('.wgs84-lat').value);
+                
+                if (!isNaN(lon) && !isNaN(lat)) {
+                    if (lat < -90 || lat > 90) {
+                        showValidation('Latitude must be between -90 and 90', 'error');
+                        hasError = true;
+                        return;
+                    }
+                    if (lon < -180 || lon > 180) {
+                        showValidation('Longitude must be between -180 and 180', 'error');
+                        hasError = true;
+                        return;
+                    }
+                    coords.push([lat, lon]); // Leaflet uses [lat, lon]
+                }
+            });
+            
+            if (hasError) return;
+            
+            if (coords.length < 3) {
+                showValidation('Need at least 3 points to create a polygon', 'error');
+                return;
+            }
+            
+            // Ensure ring is closed
+            if (coords[0][0] !== coords[coords.length - 1][0] || 
+                coords[0][1] !== coords[coords.length - 1][1]) {
+                coords.push([...coords[0]]);
+            }
+            
+            displayPolygon(coords);
+            showValidation('Polygon added to map', 'success');
+        }
         
         // UTM Functions
         function addUTMRow() {
@@ -464,7 +590,7 @@
                 <td>${rowCount}</td>
                 <td><input type="number" class="utm-easting" step="0.01"></td>
                 <td><input type="number" class="utm-northing" step="0.01"></td>
-                <td><button class="btn danger" onclick="removeRow(this)">×</button></td>
+                <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
             `;
             tbody.appendChild(row);
         }
@@ -489,7 +615,7 @@
                     // Define UTM projection
                     const projString = `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +datum=WGS84`;
                     const wgs84 = proj4(projString, 'WGS84', [easting, northing]);
-                    coords.push(roundCoordinate(wgs84));
+                    coords.push([wgs84[1], wgs84[0]]); // Leaflet uses [lat, lon]
                 }
             });
             
@@ -504,56 +630,8 @@
                 coords.push([...coords[0]]);
             }
             
-            displayPolygon([coords]);
-        }
-        
-        // WGS84 Functions
-        function addWGS84Row() {
-            const tbody = document.getElementById('wgs84-coords');
-            const rowCount = tbody.children.length + 1;
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${rowCount}</td>
-                <td><input type="number" class="wgs84-lon" step="0.000001" min="-180" max="180"></td>
-                <td><input type="number" class="wgs84-lat" step="0.000001" min="-90" max="90"></td>
-                <td><button class="btn danger" onclick="removeRow(this)">×</button></td>
-            `;
-            tbody.appendChild(row);
-        }
-        
-        function processWGS84() {
-            const coords = [];
-            const rows = document.querySelectorAll('#wgs84-coords tr');
-            
-            rows.forEach(row => {
-                const lon = parseFloat(row.querySelector('.wgs84-lon').value);
-                const lat = parseFloat(row.querySelector('.wgs84-lat').value);
-                
-                if (!isNaN(lon) && !isNaN(lat)) {
-                    if (lat < -90 || lat > 90) {
-                        showValidation('Latitude must be between -90 and 90', 'error');
-                        return;
-                    }
-                    if (lon < -180 || lon > 180) {
-                        showValidation('Longitude must be between -180 and 180', 'error');
-                        return;
-                    }
-                    coords.push(roundCoordinate([lon, lat]));
-                }
-            });
-            
-            if (coords.length < 3) {
-                showValidation('Need at least 3 points to create a polygon', 'error');
-                return;
-            }
-            
-            // Ensure ring is closed
-            if (coords[0][0] !== coords[coords.length - 1][0] || 
-                coords[0][1] !== coords[coords.length - 1][1]) {
-                coords.push([...coords[0]]);
-            }
-            
-            displayPolygon([coords]);
+            displayPolygon(coords);
+            showValidation('UTM coordinates converted and polygon added to map', 'success');
         }
         
         // Common Functions
@@ -568,10 +646,8 @@
         }
         
         function closeRing(mode) {
-            let tbody, eastingClass, northingClass, lonClass, latClass;
-            
             if (mode === 'utm') {
-                tbody = document.getElementById('utm-coords');
+                const tbody = document.getElementById('utm-coords');
                 const rows = tbody.querySelectorAll('tr');
                 if (rows.length < 3) {
                     showValidation('Need at least 3 points before closing ring', 'error');
@@ -588,7 +664,7 @@
                     lastRow.querySelector('.utm-northing').value = firstNorthing;
                 }
             } else if (mode === 'wgs84') {
-                tbody = document.getElementById('wgs84-coords');
+                const tbody = document.getElementById('wgs84-coords');
                 const rows = tbody.querySelectorAll('tr');
                 if (rows.length < 3) {
                     showValidation('Need at least 3 points before closing ring', 'error');
@@ -607,78 +683,121 @@
             }
         }
         
-        function roundCoordinate(coord) {
-            return [
-                Math.round(coord[0] * 1000000) / 1000000,
-                Math.round(coord[1] * 1000000) / 1000000
-            ];
-        }
-        
         function displayPolygon(coordinates) {
-            // Clear existing features
-            draw.deleteAll();
+            // Create and add polygon to map
+            const polygon = L.polygon(coordinates, {
+                color: '#2c3e50',
+                fillColor: '#3498db',
+                fillOpacity: 0.3,
+                weight: 2
+            });
             
-            // Create polygon feature
-            const polygon = turf.polygon(coordinates);
-            
-            // Add to map
-            draw.add(polygon);
+            drawnItems.addLayer(polygon);
             
             // Fit map to bounds
-            const bbox = turf.bbox(polygon);
-            map.fitBounds(bbox, { padding: 50 });
+            const bounds = polygon.getBounds();
+            map.fitBounds(bounds, { padding: [50, 50] });
             
             updateStats();
         }
         
-        function clearDrawings() {
-            draw.deleteAll();
+        // Map mode functions
+        function clearAllPolygons() {
+            drawnItems.clearLayers();
             updateStats();
+            showValidation('All polygons cleared', 'warning');
         }
         
-        function simplifyDrawings() {
-            const features = draw.getAll();
-            if (features.features.length === 0) {
-                showValidation('No polygons to simplify', 'error');
-                return;
-            }
-            
-            draw.deleteAll();
-            
-            features.features.forEach(feature => {
-                if (feature.geometry.type === 'Polygon') {
-                    // Simplify using Turf
-                    const simplified = turf.simplify(feature, {
+        function simplifyPolygons() {
+            const layers = [];
+            drawnItems.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    const coords = latlngs.map(ll => [ll.lng, ll.lat]);
+                    
+                    // Create GeoJSON and simplify
+                    const polygon = turf.polygon([coords]);
+                    const simplified = turf.simplify(polygon, {
                         tolerance: 0.00001,
                         highQuality: true
                     });
-                    draw.add(simplified);
+                    
+                    // Convert back to Leaflet format
+                    const simplifiedCoords = simplified.geometry.coordinates[0].map(c => [c[1], c[0]]);
+                    layers.push(simplifiedCoords);
                 }
+            });
+            
+            // Clear and redraw
+            drawnItems.clearLayers();
+            layers.forEach(coords => {
+                const polygon = L.polygon(coords, {
+                    color: '#2c3e50',
+                    fillColor: '#3498db',
+                    fillOpacity: 0.3,
+                    weight: 2
+                });
+                drawnItems.addLayer(polygon);
             });
             
             updateStats();
             showValidation('Polygons simplified', 'success');
         }
         
+        function captureFromMap() {
+            updateStats();
+            if (currentFeatures.length === 0) {
+                showValidation('No polygons drawn on map', 'error');
+                return;
+            }
+            showValidation(`Captured ${currentFeatures.length} polygon(s) from map`, 'success');
+        }
+        
         function updateStats() {
-            const features = draw.getAll();
+            const features = [];
             let totalVertices = 0;
             let totalArea = 0;
             
-            features.features.forEach(feature => {
-                if (feature.geometry.type === 'Polygon') {
-                    totalVertices += feature.geometry.coordinates[0].length;
+            drawnItems.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs()[0];
+                    const coords = latlngs.map(ll => [ll.lng, ll.lat]);
+                    
+                    // Ensure closed ring
+                    if (coords[0][0] !== coords[coords.length - 1][0] || 
+                        coords[0][1] !== coords[coords.length - 1][1]) {
+                        coords.push([...coords[0]]);
+                    }
+                    
+                    const feature = {
+                        type: "Feature",
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [coords]
+                        },
+                        properties: {}
+                    };
+                    
+                    features.push(feature);
+                    totalVertices += coords.length;
+                    
+                    // Calculate area
                     const area = turf.area(feature);
                     totalArea += area / 10000; // Convert to hectares
                 }
             });
             
-            document.getElementById('feature-count').textContent = features.features.length;
+            document.getElementById('feature-count').textContent = features.length;
             document.getElementById('vertex-count').textContent = totalVertices;
             document.getElementById('total-area').textContent = totalArea.toFixed(2) + ' ha';
             
             // Estimate file size
-            const jsonStr = JSON.stringify(features);
+            const featureCollection = {
+                type: "FeatureCollection",
+                features: features
+            };
+            
+            const jsonStr = JSON.stringify(featureCollection);
             const bytes = new TextEncoder().encode(jsonStr).length;
             const kb = bytes / 1024;
             const mb = kb / 1024;
@@ -686,64 +805,65 @@
             let sizeText = kb < 1000 ? kb.toFixed(2) + ' KB' : mb.toFixed(2) + ' MB';
             
             if (mb > 10) {
-                sizeText = `<span class="error">${sizeText} (exceeds 10MB limit)</span>`;
+                document.getElementById('file-size').innerHTML = `<span class="error">${sizeText}</span>`;
             } else if (mb > 5) {
-                sizeText = `<span class="warning">${sizeText} (approaching limit)</span>`;
+                document.getElementById('file-size').innerHTML = `<span class="warning">${sizeText}</span>`;
+            } else {
+                document.getElementById('file-size').textContent = sizeText;
             }
             
-            document.getElementById('file-size').innerHTML = sizeText;
-            
-            currentFeatures = features.features;
+            currentFeatures = features;
         }
         
         function validateGeoJSON() {
-            const features = draw.getAll();
-            
-            if (features.features.length === 0) {
-                showValidation('No features to validate', 'error');
+            if (currentFeatures.length === 0) {
+                showValidation('No features to validate. Draw polygons on the map or enter coordinates.', 'error');
                 return;
             }
             
             let errors = [];
             
-            features.features.forEach((feature, index) => {
-                // Check if polygon
-                if (feature.geometry.type !== 'Polygon' && feature.geometry.type !== 'MultiPolygon') {
-                    errors.push(`Feature ${index + 1}: Must be Polygon or MultiPolygon`);
+            currentFeatures.forEach((feature, index) => {
+                // Check vertices count
+                const vertices = feature.geometry.coordinates[0].length;
+                if (vertices > 1000) {
+                    errors.push(`Feature ${index + 1}: Too many vertices (${vertices}/1000 max)`);
+                }
+                if (vertices < 4) {
+                    errors.push(`Feature ${index + 1}: Too few vertices (minimum 4)`);
                 }
                 
-                // Check vertices count
-                if (feature.geometry.type === 'Polygon') {
-                    const vertices = feature.geometry.coordinates[0].length;
-                    if (vertices > 1000) {
-                        errors.push(`Feature ${index + 1}: Too many vertices (${vertices}/1000 max)`);
-                    }
-                    if (vertices < 4) {
-                        errors.push(`Feature ${index + 1}: Too few vertices (minimum 4)`);
-                    }
-                    
-                    // Check if closed
-                    const first = feature.geometry.coordinates[0][0];
-                    const last = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length - 1];
-                    if (first[0] !== last[0] || first[1] !== last[1]) {
-                        errors.push(`Feature ${index + 1}: Ring is not closed`);
-                    }
-                    
-                    // Check for self-intersection
+                // Check if closed
+                const first = feature.geometry.coordinates[0][0];
+                const last = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length - 1];
+                if (first[0] !== last[0] || first[1] !== last[1]) {
+                    errors.push(`Feature ${index + 1}: Ring is not closed`);
+                }
+                
+                // Check for self-intersection
+                try {
                     const kinks = turf.kinks(feature);
                     if (kinks.features.length > 0) {
                         errors.push(`Feature ${index + 1}: Contains self-intersections`);
                     }
+                } catch (e) {
+                    // Skip kinks check if it fails
+                }
+                
+                // Check area
+                const area = turf.area(feature) / 10000; // hectares
+                if (area === 0) {
+                    errors.push(`Feature ${index + 1}: Zero area`);
                 }
             });
             
             // Check total features count
-            if (features.features.length > 200) {
-                errors.push(`Too many features (${features.features.length}/200 max)`);
+            if (currentFeatures.length > 200) {
+                errors.push(`Too many features (${currentFeatures.length}/200 max)`);
             }
             
             // Check file size
-            const jsonStr = JSON.stringify(features);
+            const jsonStr = JSON.stringify({ type: "FeatureCollection", features: currentFeatures });
             const mb = new TextEncoder().encode(jsonStr).length / (1024 * 1024);
             if (mb > 10) {
                 errors.push(`File size exceeds 10MB limit (${mb.toFixed(2)}MB)`);
@@ -754,7 +874,7 @@
                 isValid = true;
                 document.getElementById('export-btn').disabled = false;
             } else {
-                showValidation(errors.join('\n'), 'error');
+                showValidation('Validation errors:\n' + errors.join('\n'), 'error');
                 isValid = false;
                 document.getElementById('export-btn').disabled = true;
             }
@@ -765,6 +885,13 @@
             result.textContent = message;
             result.className = 'validation-result ' + type;
             result.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    result.style.display = 'none';
+                }, 5000);
+            }
         }
         
         function exportGeoJSON() {
@@ -773,44 +900,44 @@
                 if (!isValid) return;
             }
             
-            const features = draw.getAll();
-            
             // Add metadata if provided
             const producerName = document.getElementById('producer-name').value;
             const producerCountry = document.getElementById('producer-country').value;
             const productionPlace = document.getElementById('production-place').value;
             
-            features.features.forEach(feature => {
-                feature.properties = feature.properties || {};
+            const features = currentFeatures.map(feature => {
+                const newFeature = JSON.parse(JSON.stringify(feature)); // Deep clone
                 
-                if (producerName) feature.properties.ProducerName = producerName;
-                if (producerCountry) feature.properties.ProducerCountry = producerCountry.toUpperCase();
-                if (productionPlace) feature.properties.ProductionPlace = productionPlace;
+                if (producerName) newFeature.properties.ProducerName = producerName;
+                if (producerCountry) newFeature.properties.ProducerCountry = producerCountry.toUpperCase();
+                if (productionPlace) newFeature.properties.ProductionPlace = productionPlace;
                 
-                // Calculate area for each feature
+                // Calculate and add area
                 const area = turf.area(feature) / 10000; // hectares
-                feature.properties.Area = Math.round(area * 100) / 100;
+                newFeature.properties.Area = Math.round(area * 100) / 100;
+                
+                // Round coordinates to 6 decimal places
+                newFeature.geometry.coordinates[0] = newFeature.geometry.coordinates[0].map(coord => [
+                    Math.round(coord[0] * 1000000) / 1000000,
+                    Math.round(coord[1] * 1000000) / 1000000
+                ]);
+                
+                return newFeature;
             });
             
-            // Round all coordinates to 6 decimal places
-            features.features.forEach(feature => {
-                if (feature.geometry.type === 'Polygon') {
-                    feature.geometry.coordinates[0] = feature.geometry.coordinates[0].map(coord => 
-                        roundCoordinate(coord)
-                    );
-                }
-            });
-            
-            // Add CRS explicitly
-            features.crs = {
-                type: "name",
-                properties: {
-                    name: "urn:ogc:def:crs:OGC:1.3:CRS84"
+            const featureCollection = {
+                type: "FeatureCollection",
+                features: features,
+                crs: {
+                    type: "name",
+                    properties: {
+                        name: "urn:ogc:def:crs:OGC:1.3:CRS84"
+                    }
                 }
             };
             
             // Create download
-            const dataStr = JSON.stringify(features, null, 2);
+            const dataStr = JSON.stringify(featureCollection, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
             
             const exportName = 'eudr_geojson_' + new Date().toISOString().slice(0, 10) + '.geojson';
