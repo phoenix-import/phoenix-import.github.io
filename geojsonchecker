@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EUDR GeoJSON Helper — v3e</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #0d1117; color: #e6edf3; font: 14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial; }
+    :root{
+      --bg:#0d1117; --panel:#11161d; --panel2:#0f141a; --ink:#e6edf3; --muted:#8b96a3;
+      --stroke:#232a34; --accent:#2f81f7; --bad:#f85149; --good:#2ea043; --radius:8px;
+    }
+    h1 { font-size: 18px; margin: 0 0 10px 0; }
+    .wrap { height: 100vh; display: grid; grid-template-columns: 420px 1fr; gap: 12px; padding: 12px; }
+    .left { background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .scroll { overflow: auto; }
+    .right { display: grid; grid-template-rows: auto 1fr auto; gap: 8px; min-width: 0; }
+    #map { height: 100%; border: 1px solid var(--stroke); }
+    fieldset { border: 1px solid var(--stroke); border-radius: var(--radius); margin: 0 0 10px 0; padding: 10px; background: var(--panel2); }
+    legend { padding: 0 6px; color: var(--muted); }
+    label { display: block; margin: 6px 0 4px 0; white-space: nowrap; }
+    input, select, textarea, button {
+      width: 100%; background: #0b0f14; border: 1px solid var(--stroke); color: var(--ink);
+      padding: 7px 8px; border-radius: 6px; font: inherit;
+    }
+    input.invalid { border-color: var(--bad) !important; box-shadow: 0 0 0 2px rgba(248,81,73,0.2); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .hint { margin-top: 4px; font-size: 12px; color: var(--muted); }
+    .danger { color: var(--bad); }
+    .success { color: var(--good); }
+    .toolbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .features { background: var(--panel2); border: 1px dashed var(--stroke); border-radius: var(--radius); padding: 8px; height: 100%; overflow: auto; }
+    .feature { border: 1px solid var(--stroke); border-radius: 6px; padding: 10px; margin-bottom: 8px; background: #0e141b; }
+    .feature h4 { margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #c7d0db; }
+    .field { margin-bottom: 8px; }
+    .field input { width: 100%; }
+    .small { font-size: 12px; color: #a8b3bf; }
+    .btn { cursor: pointer; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.ghost { background: transparent; }
+    .btn.warn { background: transparent; border-color: var(--bad); color: var(--bad); }
+    .header-row { display: grid; grid-template-columns: 1fr 320px 200px; gap: 8px; align-items: end; }
+    .footer { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+    .leaflet-fade-anim .leaflet-tile { will-change: opacity, transform; }
+    .leaflet-pane { background: #0d1117; }
+    /* Mode tabs */
+    .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+    .tab { padding: 8px; border: 1px solid var(--stroke); border-radius: 6px; background: #0b0f14; color: var(--ink); cursor: pointer; text-align: center; }
+    .tab.active { background: var(--accent); border-color: var(--accent); }
+    .mode-pane { display: none; }
+    .mode-pane.active { display: block; }
+    /* Stats panel on map */
+    .stats { position:absolute; right:10px; top:10px; background:#11161d; border:1px solid var(--stroke); border-radius:6px; padding:10px 12px; color:#c7d0db; font-size:12px; z-index:1000; min-width:200px;}
+    .stats div { display:flex; justify-content:space-between; margin:3px 0;}
+    /* Simple coordinate tables */
+    table.coord { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .coord th, .coord td { border: 1px solid var(--stroke); padding: 6px; font-size: 13px; }
+    .coord th { background:#0f141a; color:#c7d0db; text-align:left; }
+    .coord input { width: 100%; }
+    .cell-actions { text-align: center; }
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--stroke);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      background: #0b0f14;
+      cursor: pointer;
+    }
+    .dropzone.dragover { background: #0f141a; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="left">
+    <div class="scroll">
+      <h1>EUDR GeoJSON Helper <span class="small">— v3e</span></h1>
+      <p class="small">Make EUDR-ready GeoJSON polygons from GPS, UTM, or by drawing on the map.</p>
+
+      <div class="modes">
+        <button class="tab active" data-mode="wgs84">GPS Coordinates</button>
+        <button class="tab" data-mode="utm">UTM Grid</button>
+        <button class="tab" data-mode="map">Draw on Map</button>
+      </div>
+
+      <div id="wgsPane" class="mode-pane active">
+        <fieldset>
+          <legend>GPS (decimal degrees)</legend>
+          <p class="small">Enter longitude and latitude. Decimal commas are fine.</p>
+          <table class="coord" id="tblWgs">
+            <thead><tr><th>#</th><th>Longitude</th><th>Latitude</th><th class="cell-actions">Remove</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="row" style="margin-top:8px">
+            <button id="btnWgsAddRow" class="btn ghost">Add point</button>
+            <button id="btnWgsClose" class="btn ghost">Close shape</button>
+          </div>
+          <button id="btnAddWgs" class="btn primary" style="margin-top:8px">Add to map</button>
+        </fieldset>
+      </div>
+
+      <div id="utmPane" class="mode-pane">
+        <fieldset>
+          <legend>UTM grid (metres)</legend>
+          <div class="row">
+            <div>
+              <label>Zone (1–60)</label>
+              <input id="utmZone" type="number" min="1" max="60" value="43"/>
+            </div>
+            <div>
+              <label>Hemisphere</label>
+              <select id="utmHem"><option value="N">Northern</option><option value="S">Southern</option></select>
+            </div>
+          </div>
+          <p class="small">Enter Easting and Northing. Decimal commas are fine.</p>
+          <table class="coord" id="tblUtm">
+            <thead><tr><th>#</th><th>Easting (m)</th><th>Northing (m)</th><th class="cell-actions">Remove</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="row" style="margin-top:8px">
+            <button id="btnUtmAddRow" class="btn ghost">Add point</button>
+            <button id="btnUtmClose" class="btn ghost">Close shape</button>
+          </div>
+          <button id="btnAddUtm" class="btn primary" style="margin-top:8px">Convert & add to map</button>
+        </fieldset>
+      </div>
+
+      <div id="mapPane" class="mode-pane">
+        <fieldset>
+          <legend>Map tools</legend>
+          <div class="hint">Use the polygon button on the map (top-left). Click to add corners; click the first point to finish.</div>
+          <div class="toolbar" style="margin-top:8px">
+            <button id="btnClear" class="btn ghost">Clear all</button>
+            <button id="btnSimplify" class="btn ghost">Reduce points (2 m)</button>
+            <button id="btnImport" class="btn ghost">Import GeoJSON</button>
+            <button id="btnExport" class="btn primary">Validate & download</button>
+            <input id="fileImport" type="file" accept=".json,.geojson" style="display:none"/>
+          </div>
+          <div id="status" class="hint" style="margin-top:6px"></div>
+        </fieldset>
+      </div>
+
+      <fieldset style="flex:1; display:flex; flex-direction:column; min-height:200px;">
+        <legend>Polygons</legend>
+        <div id="featureList" class="features"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Quick check: upload & overlay</legend>
+        <div id="dropzone" class="dropzone">
+          Drop .geojson or .json here, or click to choose
+          <input id="quickFile" type="file" accept=".json,.geojson" style="display:none">
+        </div>
+        <p class="small">We’ll load polygons onto the map so you can eyeball what suppliers sent.</p>
+      </fieldset>
+
+      <p class="small">Limits: ≤1,000 points per polygon; ≤200 polygons per file. Rings close automatically; self-intersections are rejected.</p>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="header-row">
+      <div><label class="small">Map</label></div>
+      <div>
+        <label class="small">Simplify tolerance (metres)</label>
+        <input id="tol" type="number" min="0" step="1" value="2">
+      </div>
+      <div>
+        <label class="small">Precision (decimal places)</label>
+        <input id="prec" type="number" min="0" max="10" value="6">
+      </div>
+    </div>
+
+    <div style="position:relative">
+      <div id="map"></div>
+      <div class="stats" id="statsBox">
+        <div><span>Polygons</span><span id="stFeatures">0</span></div>
+        <div><span>Points</span><span id="stVerts">0</span></div>
+        <div><span>Total area</span><span id="stArea">0 ha</span></div>
+        <div><span>Est. size</span><span id="stSize">0 KB</span></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="small">Add points → send to map → edit metadata → validate & download.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.10.0/dist/proj4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+
+<script>
+// --- map init with stable tiles ---
+const map = L.map('map', { preferCanvas: true, fadeAnimation: false }).setView([20, 0], 2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap &copy; CARTO',
+  crossOrigin: true, updateWhenIdle: true, updateInterval: 50, keepBuffer: 6, reuseTiles: true
+}).addTo(map);
+
+const drawn = new L.FeatureGroup().addTo(map);
+let drawControl;
+
+function invalidateMap() { setTimeout(()=>map.invalidateSize(), 0); }
+window.addEventListener('load', invalidateMap);
+window.addEventListener('resize', invalidateMap);
+if ('ResizeObserver' in window) new ResizeObserver(invalidateMap).observe(document.querySelector('.right'));
+
+// --- feature store with stable IDs and layer mapping ---
+let features = []; // array of GeoJSON Feature<Polygon>
+const fidToLayer = new Map();
+const layerToFid = new Map();
+function newFid(){ return 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function layerFromFeature(f){
+  const latlngs = f.geometry.coordinates[0].map(([lon,lat])=>[lat,lon]);
+  return L.polygon(latlngs, { color:'#2f81f7', weight:2 });
+}
+function addFeature(f){
+  if (!f.properties) f.properties = {};
+  if (!f.properties.__id) f.properties.__id = newFid();
+  features.push(f);
+  const layer = layerFromFeature(f);
+  drawn.addLayer(layer);
+  fidToLayer.set(f.properties.__id, layer);
+  layerToFid.set(layer._leaflet_id, f.properties.__id);
+}
+function removeFeatureById(fid){
+  const idx = features.findIndex(x=>x.properties?.__id===fid);
+  if (idx>=0) features.splice(idx,1);
+  const layer = fidToLayer.get(fid);
+  if (layer) { drawn.removeLayer(layer); layerToFid.delete(layer._leaflet_id); }
+  fidToLayer.delete(fid);
+}
+function rebuildAllLayers(){
+  drawn.clearLayers(); fidToLayer.clear(); layerToFid.clear();
+  features.forEach(f=>{
+    const layer = layerFromFeature(f);
+    drawn.addLayer(layer);
+    fidToLayer.set(f.properties.__id, layer);
+    layerToFid.set(layer._leaflet_id, f.properties.__id);
+  });
+}
+function syncFeatureGeometryFromLayer(layer){
+  const fid = layerToFid.get(layer._leaflet_id);
+  if (!fid) return;
+  const f = features.find(x=>x.properties.__id===fid);
+  if (!f) return;
+  const latlngs = layer.getLatLngs()[0];
+  const coords = latlngs.map(ll=>[ll.lng, ll.lat]);
+  f.geometry.coordinates[0] = closeRing(coords);
+}
+
+// --- tabs ---
+const tabs = document.querySelectorAll('.tab');
+tabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    tabs.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const mode = btn.getAttribute('data-mode');
+    document.querySelectorAll('.mode-pane').forEach(p=>p.classList.remove('active'));
+    if (mode==='wgs84') document.getElementById('wgsPane').classList.add('active');
+    if (mode==='utm') document.getElementById('utmPane').classList.add('active');
+    if (mode==='map') document.getElementById('mapPane').classList.add('active');
+    if (mode==='map') {
+      if (drawControl) map.removeControl(drawControl);
+      drawControl = new L.Control.Draw({
+        position: 'topleft',
+        edit: { featureGroup: drawn, poly: { allowIntersection: false } },
+        draw: { polygon: { allowIntersection: false, showArea: true },
+                polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false }
+      });
+      map.addControl(drawControl);
+    } else {
+      if (drawControl) { map.removeControl(drawControl); drawControl=null; }
+    }
+    invalidateMap();
+  });
+});
+
+// --- helpers ---
+function parseNumEU(value) {
+  if (value === null || value === undefined) return NaN;
+  const s = String(value).trim().replace(/\s+/g, '');
+  if (s === '') return NaN;
+  if (s.includes('.') && s.includes(',')) {
+    return parseFloat(s.replace(/,/g,''));
+  }
+  if (s.includes(',') && !s.includes('.')) {
+    return parseFloat(s.replace(',', '.'));
+  }
+  return parseFloat(s);
+}
+function closeRing(coords) {
+  const a = coords[0], b = coords[coords.length-1];
+  if (!a || !b) return coords;
+  if (a[0]!==b[0] || a[1]!==b[1]) coords.push([...a]);
+  return coords;
+}
+function roundCoords(coords, dp) {
+  const f = Math.pow(10, dp);
+  return coords.map(([x,y])=>[Math.round(x*f)/f, Math.round(y*f)/f]);
+}
+function setStatus(msg, ok=false){ const el=document.getElementById('status'); if (!el) return; el.textContent = msg; el.className = ok ? 'hint success' : 'hint danger'; }
+function ok(msg){ setStatus(msg, true); }
+
+// --- WGS84 table logic ---
+function addWgsRow(lon='', lat='') {
+  const tbody = document.querySelector('#tblWgs tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td></td>
+    <td><input type="text" class="wgs-lon" value="${lon}"/></td>
+    <td><input type="text" class="wgs-lat" value="${lat}"/></td>
+    <td class="cell-actions"><button class="btn warn btn-del">×</button></td>`;
+  tbody.appendChild(tr);
+  renumberRows('#tblWgs');
+}
+function renumberRows(tableId){
+  const rows = document.querySelectorAll(`${tableId} tbody tr`);
+  rows.forEach((row,i)=>{ row.children[0].textContent = i+1; });
+}
+document.getElementById('btnWgsAddRow').addEventListener('click', ()=> addWgsRow());
+document.getElementById('tblWgs').addEventListener('click', (e)=>{
+  if (e.target.classList.contains('btn-del')) {
+    e.target.closest('tr').remove(); renumberRows('#tblWgs');
+  }
+});
+document.getElementById('btnWgsClose').addEventListener('click', ()=>{
+  const rows = document.querySelectorAll('#tblWgs tbody tr');
+  if (rows.length<3) return;
+  const firstLon = rows[0].querySelector('.wgs-lon').value;
+  const firstLat = rows[0].querySelector('.wgs-lat').value;
+  addWgsRow(firstLon, firstLat);
+});
+function collectWgsCoords(){
+  const rows = document.querySelectorAll('#tblWgs tbody tr');
+  const coords = [];
+  let hasErr = false;
+  rows.forEach(row=>{
+    const lonEl = row.querySelector('.wgs-lon');
+    const latEl = row.querySelector('.wgs-lat');
+    lonEl.classList.remove('invalid'); latEl.classList.remove('invalid');
+    const lon = parseNumEU(lonEl.value);
+    const lat = parseNumEU(latEl.value);
+    if (!isFinite(lon) || !isFinite(lat)) { lonEl.classList.add('invalid'); latEl.classList.add('invalid'); hasErr = true; return; }
+    if (lon<-180 || lon>180) { lonEl.classList.add('invalid'); hasErr = true; }
+    if (lat<-90 || lat>90) { latEl.classList.add('invalid'); hasErr = true; }
+    coords.push([lon, lat]); // store as [lon,lat]
+  });
+  if (hasErr) throw new Error('Please fix the highlighted GPS cells.');
+  if (coords.length<3) throw new Error('Need at least 3 points.');
+  return coords;
+}
+document.getElementById('btnAddWgs').addEventListener('click', ()=>{
+  try{
+    const coords = collectWgsCoords();
+    addPolygonFromLonLat(coords);
+    ok('Added GPS polygon to map.');
+  }catch(err){ setStatus(err.message); }
+});
+
+// --- UTM table logic ---
+function addUtmRow(e='', n='') {
+  const tbody = document.querySelector('#tblUtm tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td></td>
+    <td><input type="text" class="utm-e" value="${e}"/></td>
+    <td><input type="text" class="utm-n" value="${n}"/></td>
+    <td class="cell-actions"><button class="btn warn btn-del">×</button></td>`;
+  tbody.appendChild(tr);
+  renumberRows('#tblUtm');
+}
+document.getElementById('btnUtmAddRow').addEventListener('click', ()=> addUtmRow());
+document.getElementById('tblUtm').addEventListener('click', (e)=>{
+  if (e.target.classList.contains('btn-del')) {
+    e.target.closest('tr').remove(); renumberRows('#tblUtm');
+  }
+});
+document.getElementById('btnUtmClose').addEventListener('click', ()=>{
+  const rows = document.querySelectorAll('#tblUtm tbody tr');
+  if (rows.length<3) return;
+  const firstE = rows[0].querySelector('.utm-e').value;
+  const firstN = rows[0].querySelector('.utm-n').value;
+  addUtmRow(firstE, firstN);
+});
+function collectUtmCoords(){
+  const zone = Number(document.getElementById('utmZone').value);
+  const hem = document.getElementById('utmHem').value;
+  if (!(zone>=1 && zone<=60)) throw new Error('UTM zone must be 1–60.');
+  const south = (hem==='S' || hem==='Southern');
+  const utmProj = `+proj=utm +zone=${zone} ${south?'+south':''} +datum=WGS84 +units=m +no_defs`;
+  const rows = document.querySelectorAll('#tblUtm tbody tr');
+  const out = [];
+  let hasErr=false;
+  rows.forEach(row=>{
+    const eEl = row.querySelector('.utm-e'); const nEl = row.querySelector('.utm-n');
+    eEl.classList.remove('invalid'); nEl.classList.remove('invalid');
+    const E = parseNumEU(eEl.value); const N = parseNumEU(nEl.value);
+    if (!isFinite(E) || !isFinite(N)) { eEl.classList.add('invalid'); nEl.classList.add('invalid'); hasErr=true; return; }
+    if (E<100000 || E>900000) { eEl.classList.add('invalid'); hasErr=true; }
+    if (N<0 || N>10000000) { nEl.classList.add('invalid'); hasErr=true; }
+    const ll = proj4(utmProj, 'WGS84', [E, N]);
+    out.push([ll[0], ll[1]]); // [lon,lat]
+  });
+  if (hasErr) throw new Error('Please fix the highlighted UTM cells.');
+  if (out.length<3) throw new Error('Need at least 3 points.');
+  return out;
+}
+document.getElementById('btnAddUtm').addEventListener('click', ()=>{
+  try{
+    const coords = collectUtmCoords();
+    addPolygonFromLonLat(coords);
+    ok('Converted UTM and added polygon to map.');
+  }catch(err){ setStatus(err.message); }
+});
+
+// --- polygon add & list ---
+function addPolygonFromLonLat(coords){
+  closeRing(coords);
+  const poly = turf.polygon([coords]);
+  const k = turf.kinks(poly);
+  if (k && k.features && k.features.length) throw new Error('Polygon self-intersects. Fix points.');
+  if (coords.length > 1000) throw new Error('Polygon has more than 1,000 points. Reduce points.');
+  const dp = Number(document.getElementById('prec').value) || 6;
+  const rounded = roundCoords(coords, dp);
+  const f = turf.polygon([rounded], { __id: newFid() });
+  addFeature(f);
+  refreshFeatureList();
+  updateStats();
+}
+function featureEditorHTML(f, idx) {
+  const pn = f.properties?.ProducerName || '';
+  const pc = f.properties?.ProducerCountry || '';
+  const pp = f.properties?.ProductionPlace || '';
+  return `
+    <h4>Polygon ${idx+1}</h4>
+    <div class="field">
+      <label>Producer Name</label>
+      <input value="${pn}" placeholder="Company or site" data-k="ProducerName" data-id="${f.properties.__id}"/>
+    </div>
+    <div class="field">
+      <label>Producer Country (ISO-2)</label>
+      <input value="${pc}" placeholder="IN" maxlength="2" data-k="ProducerCountry" data-id="${f.properties.__id}"/>
+    </div>
+    <div class="field">
+      <label>Production Place</label>
+      <input value="${pp}" placeholder="Estate / block" data-k="ProductionPlace" data-id="${f.properties.__id}"/>
+    </div>
+    <div class="row">
+      <button class="btn warn" data-del="${f.properties.__id}">Delete</button>
+      <button class="btn ghost" data-zoom="${f.properties.__id}">Zoom</button>
+    </div>
+  `;
+}
+function refreshFeatureList() {
+  const list = document.getElementById('featureList'); list.innerHTML = '';
+  features.forEach((f, idx)=>{
+    const div = document.createElement('div'); div.className = 'feature';
+    div.innerHTML = featureEditorHTML(f, idx);
+    list.appendChild(div);
+  });
+}
+document.getElementById('featureList').addEventListener('click', (e)=>{
+  const del = e.target.getAttribute('data-del');
+  const zoom = e.target.getAttribute('data-zoom');
+  if (del) { removeFeatureById(del); refreshFeatureList(); updateStats(); }
+  if (zoom) {
+    const layer = fidToLayer.get(zoom);
+    if (layer) map.fitBounds(layer.getBounds(), { maxZoom: 16 });
+  }
+});
+document.getElementById('featureList').addEventListener('input', (e)=>{
+  const k = e.target.getAttribute('data-k');
+  const id = e.target.getAttribute('data-id');
+  if (k && id) {
+    const v = e.target.value.trim();
+    const f = features.find(x=>x.properties.__id===id);
+    if (!f.properties) f.properties = { __id: id };
+    f.properties[k] = (k==='ProducerCountry') ? v.toUpperCase() : v;
+  }
+});
+
+// --- simplify/import/export/validate ---
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  features = []; rebuildAllLayers(); refreshFeatureList(); ok('Cleared.'); updateStats();
+});
+document.getElementById('btnSimplify').addEventListener('click', ()=>{
+  try{
+    const metres = Number(document.getElementById('tol').value)||2;
+    const deg = metres / 111320;
+    features = features.map(f=>{
+      const simp = turf.simplify(f, { tolerance: deg, highQuality:false });
+      const dp = Number(document.getElementById('prec').value) || 6;
+      simp.geometry.coordinates[0] = roundCoords(simp.geometry.coordinates[0], dp);
+      simp.properties.__id = f.properties.__id; // keep id
+      return simp;
+    });
+    rebuildAllLayers(); refreshFeatureList(); ok('Reduced points.'); updateStats();
+  }catch(err){ setStatus('Reduce failed: '+err.message); }
+});
+document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', handleFileInput);
+
+// Quick check dropzone
+const dz = document.getElementById('dropzone');
+const quickFile = document.getElementById('quickFile');
+dz.addEventListener('click', ()=> quickFile.click());
+dz.addEventListener('dragover', (e)=>{ e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', ()=> dz.classList.remove('dragover'));
+dz.addEventListener('drop', (e)=>{
+  e.preventDefault(); dz.classList.remove('dragover');
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) readAndImport(file);
+});
+quickFile.addEventListener('change', handleFileInput);
+
+function handleFileInput(e){
+  const file = e.target.files[0]; if (!file) return;
+  readAndImport(file);
+}
+function readAndImport(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const gj = JSON.parse(reader.result);
+      importGeoJSON(gj);
+    }catch(err){ setStatus('Import failed: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function ringNeedsFlip(ring){
+  // Heuristic: if >80% of first coords look like latitude (|x|<=90) and >80% of second coords look like longitude (|y|<=180 && |y|>90 often), assume [lat,lon] and flip.
+  let firstAsLat=0, secondAsLon=0;
+  ring.forEach(([x,y])=>{
+    if (Math.abs(x)<=90) firstAsLat++;
+    if (Math.abs(y)<=180) secondAsLon++;
+  });
+  const n = ring.length || 1;
+  return (firstAsLat/n > 0.8) && (secondAsLon/n > 0.8) && ring.some(([x,y])=>Math.abs(y)>90);
+}
+
+function importGeoJSON(gj){
+  if (gj.type!=='FeatureCollection' || !Array.isArray(gj.features)) throw new Error('Not a GeoJSON FeatureCollection');
+  let imported = 0, flipped = 0;
+  features = []; // replace
+  gj.features.forEach(ft=>{
+    if (!ft.geometry) return;
+    const props = Object.assign({}, ft.properties || {});
+    const addPoly = (coords)=>{
+      // coords: [ [ [lon,lat], ... ] ]
+      let ring = coords[0];
+      if (!Array.isArray(ring) || ring.length<4) return;
+      if (ringNeedsFlip(ring)) { ring = ring.map(([a,b])=>[b,a]); flipped++; }
+      const poly = turf.polygon([ring], Object.assign(props, { __id: newFid() }));
+      features.push(poly); imported++;
+    };
+    if (ft.geometry.type==='Polygon') addPoly(ft.geometry.coordinates);
+    else if (ft.geometry.type==='MultiPolygon') ft.geometry.coordinates.forEach(addPoly);
+  });
+  rebuildAllLayers(); refreshFeatureList(); updateStats();
+  if (imported>0) {
+    // zoom to features
+    const bounds = L.featureGroup([...fidToLayer.values()]).getBounds();
+    if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
+    ok(`Imported ${imported} polygon(s).${flipped? ' (Detected and fixed lat/lon order in '+flipped+')' : ''}`);
+  } else {
+    setStatus('No polygons found in file.');
+  }
+}
+
+function validateGeoJSON(fc) {
+  if (!fc || fc.type!=='FeatureCollection' || !Array.isArray(fc.features) || fc.features.length===0) {
+    return 'FeatureCollection with at least one feature required.';
+  }
+  for (let i=0;i<fc.features.length;i++){
+    const f = fc.features[i];
+    if (!f || f.type!=='Feature') return `Feature ${i+1}: type must be "Feature".`;
+    if (!f.geometry || f.geometry.type!=='Polygon') return `Feature ${i+1}: geometry must be Polygon.`;
+    const rings = f.geometry.coordinates;
+    if (!Array.isArray(rings) || rings.length<1) return `Feature ${i+1}: coordinates must contain one ring.`;
+    const ring = rings[0];
+    if (!Array.isArray(ring) || ring.length<4) return `Feature ${i+1}: ring must have at least 4 coordinate pairs.`;
+    for (let j=0;j<ring.length;j++){
+      const c = ring[j];
+      if (!Array.isArray(c) || c.length<2 || !isFinite(c[0]) || !isFinite(c[1])) return `Feature ${i+1}: invalid coordinate at index ${j}.`;
+      if (c[0]<-180 || c[0]>180 || c[1]<-90 || c[1]>90) return `Feature ${i+1}: coordinate out of bounds at index ${j}.`;
+    }
+  }
+  return null;
+}
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  try{
+    if (!features.length) throw new Error('No polygons to export.');
+    const out = { type:'FeatureCollection', features: [] };
+    const dp = Number(document.getElementById('prec').value) || 6;
+    features.forEach((f,i)=>{
+      const ring = f.geometry.coordinates[0].map(([lon,lat])=>[
+        Math.round(lon*Math.pow(10,dp))/Math.pow(10,dp),
+        Math.round(lat*Math.pow(10,dp))/Math.pow(10,dp)
+      ]);
+      closeRing(ring);
+      const poly = turf.polygon([ring], Object.assign({}, f.properties));
+      if (poly.properties) delete poly.properties.__id;
+      const k = turf.kinks(poly);
+      if (k && k.features && k.features.length) throw new Error(`Polygon ${i+1} self-intersects.`);
+      out.features.push(poly);
+    });
+    const err = validateGeoJSON(out);
+    if (err) throw new Error('Schema check failed: '+err);
+    const blob = new Blob([JSON.stringify(out,null,2)], {type:'application/geo+json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'eudr-geo.geojson'; a.click();
+    URL.revokeObjectURL(url);
+    ok('Exported GeoJSON (.geojson).');
+  }catch(err){ setStatus('Export failed: '+err.message); }
+});
+
+// Leaflet.draw events
+map.on(L.Draw.Event.CREATED, (e)=>{
+  const tempLayer = e.layer;
+  const latlngs = tempLayer.getLatLngs()[0];
+  if (!latlngs || latlngs.length<3) { setStatus('Draw at least 3 points.'); return; }
+  const coords = latlngs.map(ll=>[ll.lng, ll.lat]);
+  try{
+    closeRing(coords);
+    const dp = Number(document.getElementById('prec').value) || 6;
+    const rounded = roundCoords(coords, dp);
+    const f = turf.polygon([rounded], { __id: newFid() });
+    addFeature(f);
+    refreshFeatureList(); ok('Polygon added.'); updateStats();
+  }catch(err){ setStatus(err.message); }
+});
+
+map.on(L.Draw.Event.EDITED, (e)=>{
+  const layers = e.layers;
+  layers.eachLayer(layer=>{
+    syncFeatureGeometryFromLayer(layer);
+  });
+  updateStats();
+});
+
+map.on(L.Draw.Event.DELETED, (e)=>{
+  const layers = e.layers;
+  layers.eachLayer(layer=>{
+    const fid = layerToFid.get(layer._leaflet_id);
+    if (fid) removeFeatureById(fid);
+  });
+  refreshFeatureList(); updateStats();
+});
+
+// Stats
+function updateStats(){
+  let featCount = features.length;
+  let vertexCount = 0;
+  let totalAreaHa = 0;
+  const out = { type:'FeatureCollection', features: [] };
+  features.forEach(f=>{
+    vertexCount += f.geometry.coordinates[0].length;
+    const areaM2 = turf.area(f);
+    totalAreaHa += (areaM2/10000);
+    const g = JSON.parse(JSON.stringify(f));
+    if (g.properties) delete g.properties.__id;
+    out.features.push(g);
+  });
+  const jsonStr = JSON.stringify(out);
+  const bytes = new TextEncoder().encode(jsonStr).length;
+  const kb = bytes/1024; const mb = kb/1024;
+  document.getElementById('stFeatures').textContent = featCount;
+  document.getElementById('stVerts').textContent = vertexCount;
+  document.getElementById('stArea').textContent = totalAreaHa.toFixed(2)+' ha';
+  document.getElementById('stSize').textContent = (kb<1024? kb.toFixed(1)+' KB' : mb.toFixed(2)+' MB');
+}
+
+// Seed one empty row for each table
+function seedTables(){ addWgsRow(); addUtmRow(); }
+seedTables();
+updateStats();
+</script>
+</body>
+</html>
