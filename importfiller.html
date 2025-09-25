@@ -150,7 +150,11 @@ $('process').addEventListener('click', async ()=>{
   const wsOut=XLSX.utils.aoa_to_sheet(out);
   const wbOut=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wbOut, wsOut, "Shopify Import");
-  XLSX.writeFile(wbOut, `shopify_import_filled_${locale||'xx'}.xlsx`);
+XLSX.writeFile(
+  wbOut,
+  `shopify_import_filled_${locale||'xx'}.xlsx`,
+  { bookSST: false }
+);
 
   $('report').textContent=
     `Skeleton rows: ${skelAOA.length}\n`+
