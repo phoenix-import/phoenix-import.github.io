@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Shopify Import Filler (scan by cell keys)</title>
+  <title>Shopify Import Filler (filtered)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
@@ -22,7 +22,9 @@
     A) Shopify skeleton (3-row format)<br>
     B) SKU → Handle map (.xlsx)<br>
     C) PLGGR export (SKU=A, Title=AE, Description=AG)<br>
-    Output: skeleton filled in column H, locale set.
+    Output: skeleton filled in column H, locale set. <br>
+    • Titles chopped at "--"<br>
+    • Products with no translation omitted
   </p>
 
   <label>A) Shopify skeleton (.xlsx)</label>
@@ -102,7 +104,7 @@ $('process').addEventListener('click', async ()=>{
     if(sku && handle) handleToSku.set(handle, sku);
   }
 
-  // --- NEW: scan PLGGR by keys ---
+  // --- scan PLGGR by keys ---
   const allCells=Object.keys(wsPlg).filter(a=>!a.startsWith('!'));
   let maxRow=0;
   for(const addr of allCells){
@@ -118,8 +120,9 @@ $('process').addEventListener('click', async ()=>{
     const addrBody = "AG"+R;
     const sku=(wsPlg[addrSKU]?String(wsPlg[addrSKU].v).trim():"");
     if(!sku) continue;
-    const title=(wsPlg[addrTitle]?String(wsPlg[addrTitle].v).trim():"");
-    const body=(wsPlg[addrBody]?String(wsPlg[addrBody].v).trim():"");
+    let title=(wsPlg[addrTitle]?String(wsPlg[addrTitle].v).trim():"");
+    if(title.includes("--")) title = title.split("--")[0].trim();
+    let body=(wsPlg[addrBody]?String(wsPlg[addrBody].v).trim():"");
     if(!skuToContent.has(sku)) skuToContent.set(sku,{title:"",body:""});
     const o=skuToContent.get(sku);
     if(title) o.title=title;
@@ -127,41 +130,62 @@ $('process').addEventListener('click', async ()=>{
     rowsWithData++;
   }
 
-  // Fill skeleton
-  const out=skelAOA.map(r=>r?r.slice():r);
+  // Fill skeleton, dropping untranslated products
+  const out=[];
+  out.push(skelAOA[0]); // header
+
   let filledTitle=0, filledBody=0;
-  for(let i=1;i<out.length;i++){
-    const row=out[i]; if(!row) continue;
+  let currentBlock=[], hasTranslation=false;
+
+  for(let i=1;i<skelAOA.length;i++){
+    const row=skelAOA[i]; if(!row) continue;
     if(String(row[TYPE]).toUpperCase()!=='PRODUCT') continue;
+
+    const newRow=row.slice();
     const ident=String(row[IDENT]||'').trim();
     const field=String(row[FIELD]||'').trim().toLowerCase();
-    if(locale) row[LOCALE]=locale;
-    if(field!=='title' && field!=='body_html') continue;
-    const handle=identToHandle.get(ident);
-    if(!handle) continue;
-    const sku=handleToSku.get(handle);
-    if(!sku) continue;
-    const content=skuToContent.get(sku);
-    if(!content) continue;
-    if(field==='title' && content.title){ row[TRANSLATED]=content.title; filledTitle++; }
-    if(field==='body_html' && content.body){ row[TRANSLATED]=content.body; filledBody++; }
+    if(locale) newRow[LOCALE]=locale;
+
+    let added=false;
+    if(field==='title' || field==='body_html'){
+      const handle=identToHandle.get(ident);
+      const sku=handle ? handleToSku.get(handle) : null;
+      const content=sku ? skuToContent.get(sku) : null;
+      if(content){
+        if(field==='title' && content.title){
+          newRow[TRANSLATED]=content.title; filledTitle++; added=true;
+        }
+        if(field==='body_html' && content.body){
+          newRow[TRANSLATED]=content.body; filledBody++; added=true;
+        }
+      }
+    }
+
+    currentBlock.push(newRow);
+    if(added) hasTranslation=true;
+
+    if(currentBlock.length===3){
+      if(hasTranslation) out.push(...currentBlock);
+      currentBlock=[]; hasTranslation=false;
+    }
   }
 
   const wsOut=XLSX.utils.aoa_to_sheet(out);
   const wbOut=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wbOut, wsOut, "Shopify Import");
-XLSX.writeFile(
-  wbOut,
-  `shopify_import_filled_${locale||'xx'}.xlsx`,
-  { bookSST: false }
-);
+  XLSX.writeFile(
+    wbOut,
+    `shopify_import_filled_${locale||'xx'}.xlsx`,
+    { bookSST: false }
+  );
 
   $('report').textContent=
     `Skeleton rows: ${skelAOA.length}\n`+
     `PLGGR max row detected: ${maxRow}\n`+
     `PLGGR rows with SKU data: ${rowsWithData}\n`+
     `Titles filled: ${filledTitle}\n`+
-    `Descriptions filled: ${filledBody}`;
+    `Descriptions filled: ${filledBody}\n`+
+    `Output rows: ${out.length}`;
 });
 </script>
 </body>
