@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fumbled order fixer 2025 XL edition → CSV</title>
+<style>
+ body {font-family: system-ui, sans-serif; margin: 2rem; max-width: 40rem;}
+ input[type=file] {margin: 1rem 0;}
+ #log {color: crimson; white-space: pre-wrap;}
+</style>
+</head>
+<body>
+
+<h1>Fumbled order fixer 2025 XL edition</h1>
+
+<input type="file" id="file" accept=".txt">
+<button id="go">Convert</button>
+<p id="log"></p>
+
+<script>
+const log = msg => document.getElementById('log').textContent = msg;
+
+// helper: normalise European decimals
+function parseEuro(str) {
+  if (!str) return NaN;
+  return parseFloat(str.replace(/[€ \s]/g,'').replace(',','.'));
+}
+
+document.getElementById('go').onclick = async () => {
+  const fileInput = document.getElementById('file');
+  if (!fileInput.files.length) { log('Choose a file first.'); return; }
+
+  const text = await fileInput.files[0].text();
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  const rows = [['prod_code','unit_code','qty']];
+  let code=null, unit=null, total=null;
+
+  for (let i=0;i<lines.length;i++) {
+    const line = lines[i];
+
+    // detect code (letters/numbers with optional slash)
+    if (/^[A-Z0-9/]+$/.test(line)) {
+      code = line;
+      unit = null; total = null;
+      continue;
+    }
+
+    // detect euro values
+    if (line.startsWith('€')) {
+      const val = parseEuro(line);
+      if (isNaN(unit)) unit = null;
+      if (!unit) { unit = val; } 
+      else if (!total) { total = val; }
+
+      // if both prices collected, we can write the row
+      if (code && unit && total) {
+        const qty = Math.round(total / unit);
+        rows.push([code, '', qty]);
+        code = unit = total = null;
+      }
+    }
+  }
+
+  const csv = rows.map(r => r.join(';')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const link = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `weirdorder_${today}.csv`
+  });
+  link.click();
+  URL.revokeObjectURL(link.href);
+  log(`Done. ${rows.length-1} records written.`);
+};
+</script>
+
+</body>
+</html>
