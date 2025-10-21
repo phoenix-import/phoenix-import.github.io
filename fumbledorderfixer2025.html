@@ -2,28 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Weird order → CSV</title>
+<title>Fumbled order fixer 2025 XL edition</title>
 <style>
- body {font-family: system-ui, sans-serif; margin:2rem; max-width:42rem;}
+ body{font-family:system-ui,sans-serif;margin:2rem;max-width:42rem;}
  input[type=file]{margin:1rem 0;}
  #log{color:crimson;white-space:pre-wrap;}
 </style>
 </head>
 <body>
 
-<h1>Weird order → CSV converter</h1>
+<h1>Fumbled order fixer 2025 XL edition</h1>
 
 <input type="file" id="file" accept=".txt">
 <button id="go">Convert</button>
 <p id="log"></p>
 
 <script>
-const log = msg => document.getElementById('log').textContent = msg;
+const log = m => document.getElementById('log').textContent = m;
 
-// normalise decimal formats
 function parseEuro(str){
-  if(!str) return NaN;
-  return parseFloat(str.replace(/[€ \s]/g,'').replace(',','.'));
+  return parseFloat(str.replace(/[€ \s]/g,'').replace(',','.')) || 0;
 }
 
 document.getElementById('go').onclick = async ()=>{
@@ -31,39 +29,18 @@ document.getElementById('go').onclick = async ()=>{
   if(!f){log('Choose a file first.');return;}
   const raw = await f.text();
 
-  // normalise weird Unicode spaces and linebreaks
-  const text = raw.replace(/\u202f/g,' ').replace(/\r/g,'');
-  const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length);
-
-  const euroRe = /^€\s*([\d.,]+)/;
-  const codeRe = /^[A-Za-z0-9/]+$/;
+  // Normalise: remove exotic spaces, collapse multiple blank lines
+  const lines = raw.replace(/\u202f/g,' ').split(/\r?\n/).map(l=>l.trim());
+  const clean = lines.filter(l=>l.length>0);   // drop empties
 
   const rows = [['prod_code','unit_code','qty']];
-  let code=null, unit=null, total=null;
-
-  for(const line of lines){
-    // code line
-    if(codeRe.test(line)){
-      code = line;
-      unit = total = null;
-      continue;
-    }
-
-    const m = line.match(euroRe);
-    if(m){
-      const val = parseEuro(m[0]);
-      if(!unit) unit = val;
-      else if(!total){
-        total = val;
-        if(code && unit && total){
-          const qty = Math.round(total/unit);
-          if(qty>0){
-            rows.push([code,'',qty]);
-          }
-          code = unit = total = null;
-        }
-      }
-    }
+  // Each block: [title, code, unit, stock, total]
+  for(let i=0;i<clean.length;i+=5){
+    const code  = clean[i+1] || '';
+    const unit  = parseEuro(clean[i+2]);
+    const total = parseEuro(clean[i+4]);
+    const qty   = unit>0 && total>0 ? Math.round(total/unit) : '';
+    if(code && qty) rows.push([code,'',qty]);
   }
 
   const csv = rows.map(r=>r.join(';')).join('\r\n');
