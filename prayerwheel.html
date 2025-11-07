@@ -175,54 +175,101 @@
 
     <script>
         // Use CountAPI for simple persistent counter
-        const COUNTER_KEY = 'phoenix-linear-prayer-wheel'; // Unique key for your project
+        const COUNTER_KEY = 'phoenix-linear-prayer-wheel';
         const API_BASE = 'https://api.countapi.xyz';
+        const counterElement = document.getElementById('globalCount');
+        
+        // Local fallback counter if API fails
+        let localCount = 0;
+        let useLocalCounter = false;
 
-        // Load current count
-        fetch(`${API_BASE}/get/phoenix-import/${COUNTER_KEY}`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('globalCount').textContent = (data.value || 0).toLocaleString();
-                document.querySelector('.counter').classList.remove('loading');
-            })
-            .catch(() => {
-                // If counter doesn't exist, create it
-                fetch(`${API_BASE}/create?namespace=phoenix-import&key=${COUNTER_KEY}&value=0`)
-                    .then(response => response.json())
-                    .then(() => {
-                        document.getElementById('globalCount').textContent = '0';
-                        document.querySelector('.counter').classList.remove('loading');
-                    });
-            });
-
-        // Count each complete scroll as one mantra recitation
-        function incrementCounter() {
-            fetch(`${API_BASE}/hit/phoenix-import/${COUNTER_KEY}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.value) {
-                        document.getElementById('globalCount').textContent = data.value.toLocaleString();
-                    }
-                })
-                .catch(error => {
-                    console.log('Counter update failed:', error);
-                });
+        // Show status
+        function updateCounterDisplay(count, isLocal = false) {
+            counterElement.textContent = count.toLocaleString() + (isLocal ? ' (local)' : '');
+            document.querySelector('.counter').classList.remove('loading');
         }
 
-        // Track each animation cycle (complete scroll across screen)
+        // Load current count with better error handling
+        async function initializeCounter() {
+            try {
+                console.log('Trying to load counter from CountAPI...');
+                const response = await fetch(`${API_BASE}/get/phoenix-import/${COUNTER_KEY}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('CountAPI response:', data);
+                
+                if (data.value !== undefined) {
+                    updateCounterDisplay(data.value);
+                    return;
+                }
+                
+                // Counter doesn't exist, create it
+                console.log('Creating new counter...');
+                const createResponse = await fetch(`${API_BASE}/create?namespace=phoenix-import&key=${COUNTER_KEY}&value=0`);
+                const createData = await createResponse.json();
+                console.log('Create response:', createData);
+                
+                updateCounterDisplay(0);
+                
+            } catch (error) {
+                console.log('CountAPI failed, using local counter:', error);
+                useLocalCounter = true;
+                updateCounterDisplay(localCount, true);
+            }
+        }
+
+        // Increment counter
+        async function incrementCounter() {
+            if (useLocalCounter) {
+                localCount++;
+                updateCounterDisplay(localCount, true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/hit/phoenix-import/${COUNTER_KEY}`);
+                const data = await response.json();
+                
+                if (data.value) {
+                    updateCounterDisplay(data.value);
+                }
+            } catch (error) {
+                console.log('Counter increment failed, switching to local:', error);
+                useLocalCounter = true;
+                localCount++;
+                updateCounterDisplay(localCount, true);
+            }
+        }
+
+        // Sync with server (only if using API)
+        async function syncCounter() {
+            if (useLocalCounter) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/get/phoenix-import/${COUNTER_KEY}`);
+                const data = await response.json();
+                
+                if (data.value) {
+                    updateCounterDisplay(data.value);
+                }
+            } catch (error) {
+                console.log('Counter sync failed:', error);
+            }
+        }
+
+        // Initialize
+        initializeCounter();
+
+        // Track each animation cycle
         const mantraStream = document.getElementById('mantraStream');
         mantraStream.addEventListener('animationiteration', incrementCounter);
 
-        // Sync with other visitors every 30 seconds
-        setInterval(() => {
-            fetch(`${API_BASE}/get/phoenix-import/${COUNTER_KEY}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.value) {
-                        document.getElementById('globalCount').textContent = data.value.toLocaleString();
-                    }
-                });
-        }, 30000);
+        // Sync every 30 seconds
+        setInterval(syncCounter, 30000);
     </script>
 </body>
 </html>
