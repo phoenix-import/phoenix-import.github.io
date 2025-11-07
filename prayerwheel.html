@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Prayer Scroll - ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tibetan:wght@400;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c1810, #8b4513, #daa520);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Noto Sans Tibetan', Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .prayer-scroll-container {
+            width: 100vw;
+            height: 150px;
+            position: relative;
+            background: linear-gradient(90deg, 
+                rgba(139, 69, 19, 0.8) 0%, 
+                rgba(218, 165, 32, 0.9) 20%, 
+                rgba(255, 215, 0, 1) 50%, 
+                rgba(218, 165, 32, 0.9) 80%, 
+                rgba(139, 69, 19, 0.8) 100%
+            );
+            border-top: 4px solid #8b4513;
+            border-bottom: 4px solid #8b4513;
+            box-shadow: 
+                0 10px 20px rgba(0, 0, 0, 0.5),
+                inset 0 5px 15px rgba(255, 215, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .mantra-stream {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            animation: scroll-horizontal 20s linear infinite;
+            font-size: 42px;
+            font-weight: 700;
+            color: #8b0000;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            width: max-content;
+        }
+
+        @keyframes scroll-horizontal {
+            0% { 
+                transform: translateY(-50%) translateX(100vw); 
+            }
+            100% { 
+                transform: translateY(-50%) translateX(-100%); 
+            }
+        }
+
+        .decorative-border {
+            position: absolute;
+            width: 100%;
+            height: 8px;
+            background: repeating-linear-gradient(
+                90deg,
+                #ffd700 0px,
+                #ffd700 20px,
+                #8b4513 20px,
+                #8b4513 40px
+            );
+        }
+
+        .decorative-border.top {
+            top: 0;
+        }
+
+        .decorative-border.bottom {
+            bottom: 0;
+        }
+
+        .counter {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(139, 69, 19, 0.9);
+            color: #ffd700;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            z-index: 10;
+        }
+
+        .global-counter {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        .blessing-text {
+            margin-top: 40px;
+            color: #ffd700;
+            text-align: center;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .lotus-symbol {
+            position: fixed;
+            left: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 80px;
+            color: #ff69b4;
+            text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.6);
+            opacity: 0.7;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 0.7; 
+                transform: translateY(-50%) scale(1);
+            }
+            50% { 
+                opacity: 1; 
+                transform: translateY(-50%) scale(1.1);
+            }
+        }
+
+        .loading {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="lotus-symbol">🪷</div>
+    
+    <div class="counter">
+        <div class="global-counter" id="globalCount">Loading...</div>
+        <div>Total mantras by all visitors</div>
+    </div>
+    
+    <div class="prayer-scroll-container">
+        <div class="decorative-border top"></div>
+        
+        <div class="mantra-stream" id="mantraStream">
+            ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ
+        </div>
+        
+        <div class="mantra-stream" style="animation-delay: -7s;">
+            ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ
+        </div>
+        
+        <div class="mantra-stream" style="animation-delay: -14s;">
+            ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ
+        </div>
+        
+        <div class="decorative-border bottom"></div>
+    </div>
+
+    <div class="blessing-text">
+        May the continuous flow of sacred syllables<br>
+        bring peace and compassion to all beings<br>
+        ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ
+    </div>
+
+    <script>
+        // Use CountAPI for simple persistent counter
+        const COUNTER_KEY = 'phoenix-linear-prayer-wheel'; // Unique key for your project
+        const API_BASE = 'https://api.countapi.xyz';
+
+        // Load current count
+        fetch(`${API_BASE}/get/phoenix-import/${COUNTER_KEY}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('globalCount').textContent = (data.value || 0).toLocaleString();
+                document.querySelector('.counter').classList.remove('loading');
+            })
+            .catch(() => {
+                // If counter doesn't exist, create it
+                fetch(`${API_BASE}/create?namespace=phoenix-import&key=${COUNTER_KEY}&value=0`)
+                    .then(response => response.json())
+                    .then(() => {
+                        document.getElementById('globalCount').textContent = '0';
+                        document.querySelector('.counter').classList.remove('loading');
+                    });
+            });
+
+        // Count each complete scroll as one mantra recitation
+        function incrementCounter() {
+            fetch(`${API_BASE}/hit/phoenix-import/${COUNTER_KEY}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.value) {
+                        document.getElementById('globalCount').textContent = data.value.toLocaleString();
+                    }
+                })
+                .catch(error => {
+                    console.log('Counter update failed:', error);
+                });
+        }
+
+        // Track each animation cycle (complete scroll across screen)
+        const mantraStream = document.getElementById('mantraStream');
+        mantraStream.addEventListener('animationiteration', incrementCounter);
+
+        // Sync with other visitors every 30 seconds
+        setInterval(() => {
+            fetch(`${API_BASE}/get/phoenix-import/${COUNTER_KEY}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.value) {
+                        document.getElementById('globalCount').textContent = data.value.toLocaleString();
+                    }
+                });
+        }, 30000);
+    </script>
+</body>
+</html>
