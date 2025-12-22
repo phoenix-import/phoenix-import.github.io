@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Localized URL Handle Generator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 8px; }
+    label { display:block; margin-top:12px; }
+    input[type="file"] { width:100%; max-width:640px; }
+    button { margin-top:16px; padding:10px 14px; border:0; border-radius:8px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    pre { background:#171a21; border:1px solid #2a2f3a; border-radius:8px; padding:12px; white-space:pre-wrap; margin-top:14px; color:#cfd2d6; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Localized URL Handle Generator</h1>
+  <p>
+    Inputs:<br>
+    A) Shopify skeleton (.xlsx) - for product identification<br>
+    B) SKU → Handle map (.xlsx) - navigation file<br>
+    C) SKU + Translated Titles (.xlsx) - Column A=SKU, Column B=Title<br>
+    D) Output template (.csv) - CSV with 'Type,Identification,Field,Locale,Market,Status,Default content,Translated content'<br>
+    <br>
+    Output: File D with localized URL handles filled in "Translated content" column.<br>
+    • Handles normalized (accents removed, spaces→dashes)<br>
+    • Specs removed unless needed for uniqueness<br>
+    • Duplicates resolved with minimal spec info
+  </p>
+
+  <label>A) Shopify skeleton (.xlsx)</label>
+  <input id="skeleton" type="file" accept=".xlsx">
+
+  <label>B) SKU → Handle map (.xlsx)</label>
+  <input id="skuHandle" type="file" accept=".xlsx">
+
+  <label>C) SKU + Translated Titles (.xlsx)</label>
+  <input id="titles" type="file" accept=".xlsx">
+
+  <label>D) Output template (.csv)</label>
+  <input id="template" type="file" accept=".csv">
+
+  <button id="process" disabled>Generate Filled CSV</button>
+  <pre id="report"></pre>
+
+<script>
+const $ = id => document.getElementById(id);
+let fSkeleton=null, fSkuHandle=null, fTitles=null, fTemplate=null;
+
+['skeleton','skuHandle','titles','template'].forEach(id=>{
+  $(id).addEventListener('change', e=>{
+    if (id==='skeleton')  fSkeleton  = e.target.files[0];
+    if (id==='skuHandle') fSkuHandle = e.target.files[0];
+    if (id==='titles')    fTitles    = e.target.files[0];
+    if (id==='template')  fTemplate  = e.target.files[0];
+    $('process').disabled = !(fSkeleton && fSkuHandle && fTitles && fTemplate);
+  });
+});
+
+function readWorkbook(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      try {
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        resolve(wb);
+      }catch(err){reject(err);}
+    };
+    r.onerror=reject;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function readCSV(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=e=>resolve(e.target.result);
+    r.onerror=reject;
+    r.readAsText(file);
+  });
+}
+
+// Normalize accents and special chars for URL-safe handles
+function normalizeText(text){
+  const accentMap = {
+    'á':'a','à':'a','ä':'a','â':'a','å':'a','ã':'a','ą':'a','ā':'a',
+    'é':'e','è':'e','ë':'e','ê':'e','ę':'e','ē':'e','ė':'e',
+    'í':'i','ì':'i','ï':'i','î':'i','į':'i','ī':'i',
+    'ó':'o','ò':'o','ö':'o','ô':'o','õ':'o','ø':'o','ō':'o',
+    'ú':'u','ù':'u','ü':'u','û':'u','ū':'u','ų':'u',
+    'ý':'y','ÿ':'y',
+    'ñ':'n','ń':'n',
+    'ç':'c','ć':'c','č':'c',
+    'ş':'s','š':'s','ś':'s',
+    'ž':'z','ź':'z','ż':'z',
+    'ł':'l',
+    'Á':'a','À':'a','Ä':'a','Â':'a','Å':'a','Ã':'a','Ą':'a','Ā':'a',
+    'É':'e','È':'e','Ë':'e','Ê':'e','Ę':'e','Ē':'e','Ė':'e',
+    'Í':'i','Ì':'i','Ï':'i','Î':'i','Į':'i','Ī':'i',
+    'Ó':'o','Ò':'o','Ö':'o','Ô':'o','Õ':'o','Ø':'o','Ō':'o',
+    'Ú':'u','Ù':'u','Ü':'u','Û':'u','Ū':'u','Ų':'u',
+    'Ý':'y','Ÿ':'y',
+    'Ñ':'n','Ń':'n',
+    'Ç':'c','Ć':'c','Č':'c',
+    'Ş':'s','Š':'s','Ś':'s',
+    'Ž':'z','Ź':'z','Ż':'z',
+    'Ł':'l'
+  };
+
+  let result = text.toLowerCase();
+  for(const [accented, plain] of Object.entries(accentMap)){
+    result = result.replace(new RegExp(accented, 'g'), plain);
+  }
+  return result;
+}
+
+// Convert title to URL handle (no spec)
+function titleToHandle(title){
+  let handle = normalizeText(title);
+  // Remove everything except letters, numbers, spaces, dashes
+  handle = handle.replace(/[^a-z0-9\s-]/g, '');
+  // Replace multiple spaces/dashes with single dash
+  handle = handle.replace(/[\s-]+/g, '-');
+  // Remove leading/trailing dashes
+  handle = handle.replace(/^-+|-+$/g, '');
+  return handle;
+}
+
+// Extract and normalize spec part (numbers, cm, g, gr only)
+function normalizeSpec(specText){
+  if(!specText) return '';
+  let spec = normalizeText(specText);
+  // Keep only numbers, cm, g, gr, spaces
+  spec = spec.replace(/[^0-9cmg\s]/g, '');
+  // Normalize spacing
+  spec = spec.replace(/\s+/g, ' ').trim();
+  // Convert to dash-separated
+  spec = spec.replace(/\s/g, '-');
+  return spec;
+}
+
+// Simple CSV parser that respects quotes
+function parseCSVLine(line){
+  const regex = /("([^"]*)"|[^,]*)(,|$)/g;
+  const result = [];
+  let match;
+  while ((match = regex.exec(line)) !== null) {
+    let value = match[2] !== undefined ? match[2] : match[1];
+    result.push(value);
+    if (match[3] === '') break;
+  }
+  return result;
+}
+
+$('process').addEventListener('click', async ()=>{
+  try {
+    const [wbSkel, wbSku, wbTitles, csvTemplate] = await Promise.all([
+      readWorkbook(fSkeleton),
+      readWorkbook(fSkuHandle),
+      readWorkbook(fTitles),
+      readCSV(fTemplate)
+    ]);
+
+    const wsSkel = wbSkel.Sheets[wbSkel.SheetNames[0]];
+    const wsSku = wbSku.Sheets[wbSku.SheetNames[0]];
+    const wsTitles = wbTitles.Sheets[wbTitles.SheetNames[0]];
+
+    const skelAOA = XLSX.utils.sheet_to_json(wsSkel,{header:1,raw:false,defval:""});
+    const TYPE=0, IDENT=1, FIELD=2, DEFAULT_C=6, TRANSLATED=7;
+
+    // Build ident -> handle from skeleton
+    const identToHandle = new Map();
+    for(let i=1; i<skelAOA.length; i++){
+      const row = skelAOA[i]; if(!row) continue;
+      if(String(row[TYPE]).toUpperCase()==='PRODUCT' && String(row[FIELD]).toLowerCase()==='handle'){
+        identToHandle.set(String(row[IDENT]).trim(), String(row[DEFAULT_C]).trim());
+      }
+    }
+
+    // Build handle -> sku from SKU map
+    const skuAOA = XLSX.utils.sheet_to_json(wsSku,{header:1,raw:false,defval:""});
+    const handleToSku = new Map();
+    for(let i=1; i<skuAOA.length; i++){
+      const r = skuAOA[i]; if(!r) continue;
+      const sku = String(r[0]||'').trim();
+      const handle = String(r[1]||'').trim();
+      if(sku && handle) handleToSku.set(handle, sku);
+    }
+
+    // Build sku -> title from file C
+    const titlesAOA = XLSX.utils.sheet_to_json(wsTitles,{header:1,raw:false,defval:""});
+    const skuToTitle = new Map();
+    for(let i=1; i<titlesAOA.length; i++){
+      const r = titlesAOA[i]; if(!r) continue;
+      const sku = String(r[0]||'').trim();
+      const title = String(r[1]||'').trim();
+      if(sku && title) skuToTitle.set(sku, title);
+    }
+
+    // Generate handles from titles
+    const skuToHandleData = new Map();
+    const handleCounts = new Map(); // Track duplicates
+
+    for(const [sku, fullTitle] of skuToTitle.entries()){
+      let baseTitle = fullTitle;
+      let spec = '';
+
+      // Split on "--" if present
+      if(fullTitle.includes('--')){
+        const parts = fullTitle.split('--');
+        baseTitle = parts[0].trim();
+        spec = parts.slice(1).join('--').trim();
+      }
+
+      const baseHandle = titleToHandle(baseTitle);
+
+      skuToHandleData.set(sku, {
+        fullTitle,
+        baseTitle,
+        spec,
+        baseHandle,
+        finalHandle: baseHandle // Will be updated if duplicate
+      });
+
+      // Count occurrences
+      handleCounts.set(baseHandle, (handleCounts.get(baseHandle) || 0) + 1);
+    }
+
+    // Resolve duplicates by adding spec
+    for(const [sku, data] of skuToHandleData.entries()){
+      if(handleCounts.get(data.baseHandle) > 1 && data.spec){
+        const normalizedSpec = normalizeSpec(data.spec);
+        if(normalizedSpec){
+          data.finalHandle = data.baseHandle + '-' + normalizedSpec;
+        }
+      }
+    }
+
+    // Parse CSV template
+    const csvLines = csvTemplate.replace(/\r\n/g, '\n').split('\n');
+    const outputLines = [];
+
+    let handlesGenerated = 0;
+    let handlesFilled = 0;
+
+    for(let i=0; i<csvLines.length; i++){
+      const line = csvLines[i].trim();
+      if(!line) {
+        outputLines.push('');
+        continue;
+      }
+
+      const parts = parseCSVLine(line);
+
+      // Header row - pass through
+      if(i === 0){
+        outputLines.push(line);
+        continue;
+      }
+
+      // Data rows - check if we need to fill handle
+      // CSV format: Type,Identification,Field,Locale,Market,Status,Default content,Translated content
+      const type = (parts[0] || '').trim();
+      const ident = (parts[1] || '').trim();
+      const field = (parts[2] || '').trim().toLowerCase();
+
+      if(type.toUpperCase() === 'PRODUCT' && field === 'handle'){
+        // Look up the handle via ident -> NL handle -> SKU -> generated handle
+        const nlHandle = identToHandle.get(ident);
+        const sku = nlHandle ? handleToSku.get(nlHandle) : null;
+        const handleData = sku ? skuToHandleData.get(sku) : null;
+
+        if(handleData){
+          // Fill in the translated content (last column)
+          while(parts.length < 7) parts.push(''); // Ensure we have all columns
+          parts[7] = handleData.finalHandle;
+          handlesFilled++;
+        }
+      }
+
+      // Reconstruct CSV line with proper quoting
+      const escapedParts = parts.map(p => {
+        const s = String(p);
+        if(s.includes(',') || s.includes('"') || s.includes('\n')){
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      });
+      outputLines.push(escapedParts.join(','));
+    }
+
+    // Download the filled CSV
+    const csvContent = outputLines.join('\n');
+    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'localized_handles_filled.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+
+    $('report').textContent =
+      `Skeleton products: ${identToHandle.size}\n`+
+      `SKU mappings: ${handleToSku.size}\n`+
+      `Titles from file C: ${skuToTitle.size}\n`+
+      `Handles generated: ${skuToHandleData.size}\n`+
+      `Handles filled in template: ${handlesFilled}\n`+
+      `Duplicates resolved: ${Array.from(handleCounts.values()).filter(c=>c>1).length}\n`+
+      `Output lines: ${outputLines.length}`;
+
+  } catch(err) {
+    $('report').textContent = 'Error: ' + err.message + '\n\n' + err.stack;
+  }
+});
+</script>
+</body>
+</html>
