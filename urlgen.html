@@ -189,13 +189,20 @@ $('process').addEventListener('click', async ()=>{
       if(sku && handle) handleToSku.set(handle, sku);
     }
 
-    // Build sku -> title from file C
-    const titlesAOA = XLSX.utils.sheet_to_json(wsTitles,{header:1,raw:false,defval:""});
+    // Build sku -> title from file C (scan cells to handle sparse data)
+    const allCells = Object.keys(wsTitles).filter(a=>!a.startsWith('!'));
+    let maxRow = 0;
+    for(const addr of allCells){
+      const m = addr.match(/^[A-Z]+(\d+)$/);
+      if(m){ maxRow = Math.max(maxRow, parseInt(m[1],10)); }
+    }
+
     const skuToTitle = new Map();
-    for(let i=1; i<titlesAOA.length; i++){
-      const r = titlesAOA[i]; if(!r) continue;
-      const sku = String(r[0]||'').trim();
-      const title = String(r[1]||'').trim();
+    for(let R=2; R<=maxRow; R++){
+      const addrSKU = "A"+R;
+      const addrTitle = "B"+R;
+      const sku = (wsTitles[addrSKU] ? String(wsTitles[addrSKU].v).trim() : "");
+      const title = (wsTitles[addrTitle] ? String(wsTitles[addrTitle].v).trim() : "");
       if(sku && title) skuToTitle.set(sku, title);
     }
 
@@ -304,6 +311,7 @@ $('process').addEventListener('click', async ()=>{
     $('report').textContent =
       `Skeleton products: ${identToHandle.size}\n`+
       `SKU mappings: ${handleToSku.size}\n`+
+      `File C max row detected: ${maxRow}\n`+
       `Titles from file C: ${skuToTitle.size}\n`+
       `Handles generated: ${skuToHandleData.size}\n`+
       `Handles filled in template: ${handlesFilled}\n`+
