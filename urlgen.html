@@ -42,6 +42,9 @@
   <label>D) Output template (.csv)</label>
   <input id="template" type="file" accept=".csv">
 
+  <label>Output filename</label>
+  <input id="filename" type="text" value="localized_handles_filled.csv">
+
   <button id="process" disabled>Generate Filled CSV</button>
   <pre id="report"></pre>
 
@@ -128,16 +131,18 @@ function titleToHandle(title){
   return handle;
 }
 
-// Extract and normalize spec part (numbers, cm, g, gr only)
+// Extract and normalize spec part (numbers, cm, g, gr, and dashes)
 function normalizeSpec(specText){
   if(!specText) return '';
   let spec = normalizeText(specText);
-  // Keep only numbers, cm, g, gr, spaces
-  spec = spec.replace(/[^0-9cmg\s]/g, '');
-  // Normalize spacing
-  spec = spec.replace(/\s+/g, ' ').trim();
-  // Convert to dash-separated
-  spec = spec.replace(/\s/g, '-');
+  // Keep only numbers, cm, g, gr, spaces, and dashes
+  spec = spec.replace(/[^0-9cmg\s-]/g, '');
+  // Normalize spacing (replace spaces with dashes)
+  spec = spec.replace(/\s+/g, '-').trim();
+  // Clean up multiple consecutive dashes
+  spec = spec.replace(/-+/g, '-');
+  // Remove leading/trailing dashes
+  spec = spec.replace(/^-+|-+$/g, '');
   return spec;
 }
 
@@ -304,7 +309,8 @@ $('process').addEventListener('click', async ()=>{
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'localized_handles_filled.csv';
+    const filename = $('filename').value.trim() || 'localized_handles_filled.csv';
+    link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
 
