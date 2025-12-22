@@ -17,7 +17,7 @@
 <body>
   <h1>SKU ↔ Handle Mapper (XLSX)</h1>
   <p class="hint">
-    Upload a Shopify export with headers <code>Handle,Title,Published,Variant SKU,Status</code>.<br>
+    Upload a Shopify export with headers <code>Handle,Title,Variant SKU,Status</code>.<br>
     Output will be an Excel file with:<br>
     Column A = SKU numbers, Column B = Handles.
   </p>
@@ -53,11 +53,11 @@ document.getElementById('file').addEventListener('change', async e => {
     const row = lines[i].trim();
     if (!row) continue;
     const parts = splitCsvLine(row);
-    if (parts.length < 5) continue;
+    if (parts.length < 4) continue;
 
     const handle = (parts[0] || '').trim();
-    const sku = (parts[3] || '').trim();
-    const status = (parts[4] || '').trim().toLowerCase();
+    const sku = (parts[2] || '').trim();
+    const status = (parts[3] || '').trim().toLowerCase();
 
     // Skip if SKU or handle missing, or row is clearly junk
     if (!handle || !sku) continue;
