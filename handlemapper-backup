@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SKU ↔ Handle Mapper (XLSX)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 10px; }
+    button { margin-top:10px; padding:8px 12px; border:0; border-radius:4px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .hint { font-size:.9em; color:#9aa0a6; }
+  </style>
+  <!-- SheetJS library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>SKU ↔ Handle Mapper (XLSX)</h1>
+  <p class="hint">
+    Upload a Shopify export with headers <code>Handle,Title,Published,Variant SKU,Status</code>.<br>
+    Output will be an Excel file with:<br>
+    Column A = SKU numbers, Column B = Handles.
+  </p>
+
+  <input id="file" type="file" accept=".csv,text/csv"><br><br>
+  <button id="process" disabled>Generate XLSX</button>
+
+<script>
+// Simple CSV splitter that respects quotes
+function splitCsvLine(line) {
+  const regex = /("([^"]*)"|[^,]*)(,|$)/g;
+  const result = [];
+  let match;
+  while ((match = regex.exec(line)) !== null) {
+    let value = match[2] !== undefined ? match[2] : match[1];
+    result.push(value.trim());
+    if (match[3] === '') break;
+  }
+  return result;
+}
+
+let parsedRows = [];
+
+document.getElementById('file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  parsedRows = [];
+
+  for (let i=1; i<lines.length; i++){ // skip header
+    const row = lines[i].trim();
+    if (!row) continue;
+    const parts = splitCsvLine(row);
+    if (parts.length < 5) continue;
+
+    const handle = (parts[0] || '').trim();
+    const sku = (parts[3] || '').trim();
+    const status = (parts[4] || '').trim().toLowerCase();
+
+    // Skip if SKU or handle missing, or row is clearly junk
+    if (!handle || !sku) continue;
+    if (sku.toLowerCase().startsWith("'")) continue; // skip those weird 02575 rows
+
+    parsedRows.push([sku, handle]);
+  }
+
+  if (parsedRows.length === 0) {
+    alert("No valid rows found.");
+    document.getElementById('process').disabled = true;
+  } else {
+    document.getElementById('process').disabled = false;
+  }
+});
+
+document.getElementById('process').addEventListener('click', () => {
+  const out = [];
+  out.push(["SKU","Handle"]); // header
+
+  for (const row of parsedRows) {
+    out.push(row);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(out);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "SKU-Handle");
+
+  XLSX.writeFile(wb, "sku_handle_map.xlsx");
+});
+</script>
+</body>
+</html>
