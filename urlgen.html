@@ -138,8 +138,8 @@ function normalizeSpec(specText){
   // Replace special symbols with text equivalents
   spec = spec.replace(/±/g, 'pm');  // plus-minus becomes "pm"
   spec = spec.replace(/\+/g, 'plus'); // plus becomes "plus"
-  // Remove dots and commas entirely (10.5 becomes 105)
-  spec = spec.replace(/[.,]/g, '');
+  // Replace dots and commas with 'p' (10.5 becomes 10p5, 10,5 becomes 10p5)
+  spec = spec.replace(/[.,]/g, 'p');
   // Keep only alphanumeric (a-z, 0-9) and spaces/dashes
   spec = spec.replace(/[^a-z0-9\s-]/g, '');
   // Replace spaces with dashes
