@@ -131,14 +131,14 @@ function titleToHandle(title){
   return handle;
 }
 
-// Extract and normalize spec part (numbers, cm, g, gr, dashes, +, x)
+// Extract and normalize spec part (numbers, cm, g, gr, dashes, +, x, ±)
 function normalizeSpec(specText){
   if(!specText) return '';
   let spec = normalizeText(specText);
   // Replace dots and commas with middle dot (·) before processing
   spec = spec.replace(/[.,]/g, '·');
-  // Keep only numbers, cm, g, gr, spaces, dashes, middle dots, +, and x
-  spec = spec.replace(/[^0-9cmg\s-·+x]/g, '');
+  // Keep only numbers, cm, g, gr, spaces, dashes, middle dots, +, x, and ±
+  spec = spec.replace(/[^0-9cmg\s-·+x±]/g, '');
   // Normalize spacing (replace spaces with dashes)
   spec = spec.replace(/\s+/g, '-').trim();
   // Clean up multiple consecutive dashes
