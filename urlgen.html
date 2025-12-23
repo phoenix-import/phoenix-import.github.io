@@ -305,8 +305,8 @@ $('process').addEventListener('click', async ()=>{
       outputLines.push(escapedParts.join(','));
     }
 
-    // Download the filled CSV
-    const csvContent = outputLines.join('\n');
+    // Download the filled CSV with UTF-8 BOM to prevent encoding issues
+    const csvContent = '\uFEFF' + outputLines.join('\n');
     const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
