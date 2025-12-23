@@ -135,8 +135,10 @@ function titleToHandle(title){
 function normalizeSpec(specText){
   if(!specText) return '';
   let spec = normalizeText(specText);
-  // Keep only numbers, cm, g, gr, spaces, and dashes
-  spec = spec.replace(/[^0-9cmg\s-]/g, '');
+  // Replace dots and commas with middle dot (·) before processing
+  spec = spec.replace(/[.,]/g, '·');
+  // Keep only numbers, cm, g, gr, spaces, dashes, and middle dots
+  spec = spec.replace(/[^0-9cmg\s-·]/g, '');
   // Normalize spacing (replace spaces with dashes)
   spec = spec.replace(/\s+/g, '-').trim();
   // Clean up multiple consecutive dashes
