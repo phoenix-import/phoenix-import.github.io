@@ -135,10 +135,8 @@ function titleToHandle(title){
 function normalizeSpec(specText){
   if(!specText) return '';
   let spec = normalizeText(specText);
-  // Replace dots and commas with middle dot (·) before processing
-  spec = spec.replace(/[.,]/g, '·');
-  // Keep only numbers, cm, g, gr, spaces, dashes, and middle dots
-  spec = spec.replace(/[^0-9cmg\s-·]/g, '');
+  // Keep only numbers, cm, g, gr, spaces, and dashes
+  spec = spec.replace(/[^0-9cmg\s-]/g, '');
   // Normalize spacing (replace spaces with dashes)
   spec = spec.replace(/\s+/g, '-').trim();
   // Clean up multiple consecutive dashes
@@ -305,8 +303,8 @@ $('process').addEventListener('click', async ()=>{
       outputLines.push(escapedParts.join(','));
     }
 
-    // Download the filled CSV with UTF-8 BOM to prevent encoding issues
-    const csvContent = '\uFEFF' + outputLines.join('\n');
+    // Download the filled CSV
+    const csvContent = outputLines.join('\n');
     const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
