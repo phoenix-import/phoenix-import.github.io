@@ -18,7 +18,7 @@
 <h1>SKU ↔ Handle Mapper (XLSX)</h1>
 
 <p class="hint">
-  Works with full Shopify product exports.<br>
+  Upload a Shopify product export (joined is fine).<br>
   Output: Column A = SKU, Column B = Handle.
 </p>
 
@@ -26,61 +26,45 @@
 <button id="process" disabled>Generate XLSX</button>
 
 <script>
-function splitCsvLine(line) {
-  const regex = /("([^"]*)"|[^,]*)(,|$)/g;
-  const result = [];
-  let match;
-  while ((match = regex.exec(line)) !== null) {
-    let value = match[2] !== undefined ? match[2] : match[1];
-    result.push((value || '').trim());
-    if (match[3] === '') break;
-  }
-  return result;
-}
-
-let parsedRows = [];
+let rowMap = {};
 
 document.getElementById('file').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const text = await file.text();
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
-  parsedRows = [];
+  rowMap = {};
 
-  const headers = splitCsvLine(lines[0]).map(h => h.toLowerCase());
+  const data = new Uint8Array(await file.arrayBuffer());
+  const workbook = XLSX.read(data, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-  const handleIndex = headers.indexOf('handle');
-  const skuIndex = headers.indexOf('variant sku');
-  const statusIndex = headers.findIndex(h => h === 'status');
+  for (const row of rows) {
+    const sku =
+      (row["Variant SKU"] ||
+       row["SKU"] ||
+       row["Artikelnummer"] ||
+       "").toString().trim();
 
-  if (handleIndex === -1 || skuIndex === -1) {
-    alert("Required columns not found (Handle / Variant SKU).");
-    return;
-  }
+    const handle = (row["Handle"] || "").toString().trim();
+    const status = (row["Status"] || "").toString().toLowerCase();
 
-  for (let i = 1; i < lines.length; i++) {
-    const row = lines[i].trim();
-    if (!row) continue;
-
-    const parts = splitCsvLine(row);
-
-    const handle = (parts[handleIndex] || '').trim();
-    const sku = (parts[skuIndex] || '').trim();
-    const status = statusIndex !== -1 ? (parts[statusIndex] || '').toLowerCase() : '';
-
-    if (!handle || !sku) continue;
+    if (!sku || !handle) continue;
     if (sku.startsWith("'")) continue;
-    if (status && status !== 'active') continue;
+    if (status && status !== "active") continue;
 
-    parsedRows.push([sku, handle]);
+    rowMap[sku] = handle;
   }
 
-  document.getElementById('process').disabled = parsedRows.length === 0;
+  document.getElementById('process').disabled = Object.keys(rowMap).length === 0;
 });
 
 document.getElementById('process').addEventListener('click', () => {
-  const out = [["SKU","Handle"], ...parsedRows];
+  const out = [["SKU","Handle"]];
+
+  for (const [sku, handle] of Object.entries(rowMap)) {
+    out.push([sku, handle]);
+  }
 
   const ws = XLSX.utils.aoa_to_sheet(out);
   const wb = XLSX.utils.book_new();
