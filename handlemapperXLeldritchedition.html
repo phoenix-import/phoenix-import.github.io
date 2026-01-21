@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SKU ↔ Handle Mapper (XLSX)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 10px; }
+    button { margin-top:10px; padding:8px 12px; border:0; border-radius:4px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .hint { font-size:.9em; color:#9aa0a6; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<h1>SKU ↔ Handle Mapper (XLSX)</h1>
+
+<p class="hint">
+  Works with full Shopify product exports.<br>
+  Output: Column A = SKU, Column B = Handle.
+</p>
+
+<input id="file" type="file" accept=".csv,text/csv"><br><br>
+<button id="process" disabled>Generate XLSX</button>
+
+<script>
+function splitCsvLine(line) {
+  const regex = /("([^"]*)"|[^,]*)(,|$)/g;
+  const result = [];
+  let match;
+  while ((match = regex.exec(line)) !== null) {
+    let value = match[2] !== undefined ? match[2] : match[1];
+    result.push((value || '').trim());
+    if (match[3] === '') break;
+  }
+  return result;
+}
+
+let parsedRows = [];
+
+document.getElementById('file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  parsedRows = [];
+
+  const headers = splitCsvLine(lines[0]).map(h => h.toLowerCase());
+
+  const handleIndex = headers.indexOf('handle');
+  const skuIndex = headers.indexOf('variant sku');
+  const statusIndex = headers.findIndex(h => h === 'status');
+
+  if (handleIndex === -1 || skuIndex === -1) {
+    alert("Required columns not found (Handle / Variant SKU).");
+    return;
+  }
+
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].trim();
+    if (!row) continue;
+
+    const parts = splitCsvLine(row);
+
+    const handle = (parts[handleIndex] || '').trim();
+    const sku = (parts[skuIndex] || '').trim();
+    const status = statusIndex !== -1 ? (parts[statusIndex] || '').toLowerCase() : '';
+
+    if (!handle || !sku) continue;
+    if (sku.startsWith("'")) continue;
+    if (status && status !== 'active') continue;
+
+    parsedRows.push([sku, handle]);
+  }
+
+  document.getElementById('process').disabled = parsedRows.length === 0;
+});
+
+document.getElementById('process').addEventListener('click', () => {
+  const out = [["SKU","Handle"], ...parsedRows];
+
+  const ws = XLSX.utils.aoa_to_sheet(out);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "SKU-Handle");
+
+  XLSX.writeFile(wb, "sku_handle_map.xlsx");
+});
+</script>
+
+</body>
+</html>
