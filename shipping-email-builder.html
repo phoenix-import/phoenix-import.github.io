@@ -88,6 +88,7 @@ const TPL={
 NL:{subject:"Belangrijke wijziging: lagere verzendkosten",
 greeting:"Beste klant,",
 p1:"Goed nieuws: vanaf vandaag verlagen we onze verzendkosten én de grens voor portovrije verzending voor [COUNTRY].",
+p1_no_threshold:"Goed nieuws: vanaf vandaag verlagen we onze verzendkosten voor [COUNTRY].",
 p2:"Je betaalt minder voor verzending, en bestellingen komen eerder in aanmerking voor gratis levering.",
 rates_intro:"De nieuwe tarieven zijn als volgt:",
 auto:"De nieuwe tarieven worden automatisch toegepast op alle bestellingen vanaf vandaag. Je hoeft niets te doen – ze verschijnen automatisch in je winkelwagen en op je facturen.",
@@ -98,6 +99,7 @@ table_headers:["Verzendkosten (oud)","Verzendkosten (nieuw)","Portovrije grens (
 DE:{subject:"Wichtige Änderung: niedrigere Versandkosten",
 greeting:"Sehr geehrter Kunde,",
 p1:"Gute Nachrichten: Ab heute senken wir unsere Versandkosten und die Grenze für versandkostenfreie Bestellungen für [COUNTRY].",
+p1_no_threshold:"Gute Nachrichten: Ab heute senken wir unsere Versandkosten für [COUNTRY].",
 p2:"Sie werden weniger Versandkosten zahlen, und Bestellungen erreichen schneller die kostenlose Lieferung.",
 rates_intro:"Die neuen Tarife sind wie folgt:",
 auto:"Die neuen Tarife werden automatisch auf alle Bestellungen angewendet, die ab heute aufgegeben werden. Sie müssen nichts unternehmen – sie erscheinen automatisch in Ihrem Warenkorb und auf Ihren Rechnungen.",
@@ -108,6 +110,7 @@ table_headers:["Versandkosten (alt)","Versandkosten (neu)","Freigrenze (alt)","F
 EN:{subject:"Important update: reduced shipping costs",
 greeting:"Dear customer,",
 p1:"Good news: from today, we're lowering our shipping costs and the free-shipping threshold for [COUNTRY].",
+p1_no_threshold:"Good news: from today, we're lowering our shipping costs for [COUNTRY].",
 p2:"You'll pay less for delivery, and your orders will qualify for free shipping sooner.",
 rates_intro:"The new rates are as follows:",
 auto:"The new rates will apply automatically to all orders from today onward. No action required – they'll appear in your cart and on your invoices.",
@@ -118,6 +121,7 @@ table_headers:["Shipping cost (old)","Shipping cost (new)","Free-shipping thresh
 FR:{subject:"Information importante : baisse des frais d'expédition",
 greeting:"Cher client,",
 p1:"Bonne nouvelle : dès aujourd'hui, nous réduisons nos frais d'expédition et le seuil de livraison gratuite pour [COUNTRY].",
+p1_no_threshold:"Bonne nouvelle : dès aujourd'hui, nous réduisons nos frais d'expédition pour [COUNTRY].",
 p2:"Vous paierez moins pour la livraison, et vos commandes bénéficieront plus rapidement de la livraison gratuite.",
 rates_intro:"Les nouveaux tarifs sont les suivants :",
 auto:"Les nouveaux tarifs s'appliquent automatiquement à toutes les commandes passées à partir d'aujourd'hui. Aucune action n'est requise – ils apparaîtront automatiquement dans votre panier et sur vos factures.",
@@ -128,6 +132,7 @@ table_headers:["Frais d'expédition (ancien)","Frais d'expédition (nouveau)","S
 ES:{subject:"Aviso importante: tarifas de envío reducidas",
 greeting:"Estimado cliente,",
 p1:"Buenas noticias: desde hoy, reducimos nuestras tarifas de envío y el importe mínimo para envío gratuito en [COUNTRY].",
+p1_no_threshold:"Buenas noticias: desde hoy, reducimos nuestras tarifas de envío en [COUNTRY].",
 p2:"Pagarás menos por el envío, y tus pedidos alcanzarán antes el envío gratuito.",
 rates_intro:"Las nuevas tarifas son las siguientes:",
 auto:"Las nuevas tarifas se aplican automáticamente a todos los pedidos realizados a partir de hoy. No es necesario hacer nada – aparecerán automáticamente en tu carrito y en tus facturas.",
@@ -138,6 +143,7 @@ table_headers:["Coste de envío (anterior)","Coste de envío (nuevo)","Umbral de
 IT:{subject:"Importante aggiornamento: costi di spedizione ridotti",
 greeting:"Gentile cliente,",
 p1:"Buone notizie: da oggi riduciamo i costi di spedizione e la soglia per la spedizione gratuita per [COUNTRY].",
+p1_no_threshold:"Buone notizie: da oggi riduciamo i costi di spedizione per [COUNTRY].",
 p2:"Pagherai meno per la consegna, e i tuoi ordini potranno beneficiare prima della spedizione gratuita.",
 rates_intro:"Le nuove tariffe sono le seguenti:",
 auto:"Le nuove tariffe si applicano automaticamente a tutti gli ordini effettuati a partire da oggi. Non devi fare nulla – appariranno automaticamente nel carrello e sulle fatture.",
@@ -151,11 +157,20 @@ function translatedCountry(c,l){const e=COUNTRY_MAP[c];return e?e[l]||c:c;}
 function fmt(n,l){return n!=null?('€ '+new Intl.NumberFormat(l,{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)):'—';}
 function makeTable(r,l,asHtml){
 const h=TPL[l].table_headers;
+const showThreshold = r.old_free !== r.new_free;
 if(asHtml){
+if(showThreshold){
 return `<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%'><thead><tr><th>${h[0]}</th><th>${h[1]}</th><th>${h[2]}</th><th>${h[3]}</th></tr></thead><tbody><tr><td>${fmt(r.old_rate,l)}</td><td>${fmt(r.new_rate,l)}</td><td>${fmt(r.old_free,l)}</td><td>${fmt(r.new_free,l)}</td></tr></tbody></table>`;
+}else{
+return `<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%'><thead><tr><th>${h[0]}</th><th>${h[1]}</th></tr></thead><tbody><tr><td>${fmt(r.old_rate,l)}</td><td>${fmt(r.new_rate,l)}</td></tr></tbody></table>`;
+}
 }
 else{
+if(showThreshold){
 return `${h[0]}: ${fmt(r.old_rate,l)}\n${h[1]}: ${fmt(r.new_rate,l)}\n${h[2]}: ${fmt(r.old_free,l)}\n${h[3]}: ${fmt(r.new_free,l)}`;
+}else{
+return `${h[0]}: ${fmt(r.old_rate,l)}\n${h[1]}: ${fmt(r.new_rate,l)}`;
+}
 }}
 function render(){
 const l=document.getElementById('langSel').value;
@@ -166,7 +181,12 @@ const t=TPL[l];let f=t.footer;
 if(u){f=f.replace(/\[.*unsubscribe.*\]/g,`<a href='${u}'>click here to unsubscribe</a>`);}
 const cName=translatedCountry(r.country,l);
 const table=makeTable(r,l,m==='html');
-let body=[t.greeting,'',t.p1.replace('[COUNTRY]',cName),'',t.p2,'',t.rates_intro,'',table,'',t.auto,'',t.remote,'',t.closing,t.team,'',f].join('\n');
+const showThreshold = r.old_free !== r.new_free;
+const p1Text = (showThreshold ? t.p1 : t.p1_no_threshold).replace('[COUNTRY]',cName);
+let bodyParts=[t.greeting,'',p1Text];
+if(showThreshold){bodyParts.push('',t.p2);}
+bodyParts.push('',t.rates_intro,'',table,'',t.auto,'',t.remote,'',t.closing,t.team,'',f);
+let body=bodyParts.join('\n');
 if(m==='html'){body=body.replace(/\n/g,'<br>');}
 document.getElementById('subjectOut').value=t.subject;
 document.getElementById('bodyOut').value=body;
