@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phoenix Import – Shipping Email Builder (v10)</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.4;margin:24px;max-width:980px}
+h1{font-size:20px;margin:0 0 16px}
+.card{border:1px solid #ddd;border-radius:10px;padding:16px;margin:16px 0}
+label{display:block;font-size:12px;color:#333;margin-bottom:4px}
+input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font:inherit}
+textarea{min-height:260px;white-space:pre-wrap}
+.actions{margin-top:8px}
+button{padding:8px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}
+button.primary{background:#111;color:#fff;border-color:#111}
+</style>
+</head>
+<body>
+<h1>Shipping Service Email Builder</h1>
+
+<div class="card">
+  <label>Country</label>
+  <select id="countrySel"></select>
+  <label>Language</label>
+  <select id="langSel">
+    <option>NL</option><option>DE</option><option selected>EN</option>
+    <option>FR</option><option>ES</option><option>IT</option>
+  </select>
+  <label>Unsubscribe URL (optional)</label>
+  <input id="unsubUrl" placeholder="https://.../unsubscribe">
+  <label>Output format</label>
+  <select id="modeSel">
+    <option value="text" selected>Text</option>
+    <option value="html">HTML</option>
+  </select>
+</div>
+
+<div class="card">
+  <h2>Subject</h2>
+  <input id="subjectOut">
+</div>
+
+<div class="card">
+  <h2>Email body</h2>
+  <textarea id="bodyOut"></textarea>
+  <div class="actions"><button class="primary" onclick="copyEl('bodyOut')">Copy</button></div>
+</div>
+
+<script>
+const DATA = [
+ {country:"Bulgarije",old_rate:26.95,new_rate:16.95,old_free:450,new_free:400},
+ {country:"Estland",old_rate:23.95,new_rate:16.95,old_free:450,new_free:400},
+ {country:"Finland",old_rate:22.95,new_rate:16.95,old_free:450,new_free:400},
+ {country:"Griekenland",old_rate:34.95,new_rate:16.95,old_free:700,new_free:400},
+ {country:"Hongarije",old_rate:23.95,new_rate:13.95,old_free:450,new_free:400},
+ {country:"Ierland",old_rate:26.95,new_rate:13.95,old_free:450,new_free:400},
+ {country:"Kroatië",old_rate:26.95,new_rate:16.95,old_free:450,new_free:400},
+ {country:"Letland",old_rate:23.95,new_rate:13.95,old_free:450,new_free:400},
+ {country:"Litouwen",old_rate:23.95,new_rate:12.95,old_free:450,new_free:400},
+ {country:"Noorwegen",old_rate:95.00,new_rate:37.50,old_free:1250,new_free:700},
+ {country:"Portugal",old_rate:23.95,new_rate:13.95,old_free:450,new_free:400},
+ {country:"Roemenië",old_rate:26.95,new_rate:16.95,old_free:450,new_free:400},
+ {country:"Servië",old_rate:95.00,new_rate:75.00,old_free:1250,new_free:900},
+ {country:"VK en Noord-Ierland",old_rate:37.50,new_rate:29.50,old_free:500,new_free:500},
+ {country:"Zwitserland",old_rate:69.50,new_rate:37.50,old_free:1250,new_free:700}
+];
+
+const COUNTRY_MAP={
+"Bulgarije":{NL:"Bulgarije",DE:"Bulgarien",EN:"Bulgaria",FR:"Bulgarie",ES:"Bulgaria",IT:"Bulgaria"},
+"Estland":{NL:"Estland",DE:"Estland",EN:"Estonia",FR:"Estonie",ES:"Estonia",IT:"Estonia"},
+"Finland":{NL:"Finland",DE:"Finnland",EN:"Finland",FR:"Finlande",ES:"Finlandia",IT:"Finlandia"},
+"Griekenland":{NL:"Griekenland",DE:"Griechenland",EN:"Greece",FR:"Grèce",ES:"Grecia",IT:"Grecia"},
+"Hongarije":{NL:"Hongarije",DE:"Ungarn",EN:"Hungary",FR:"Hongrie",ES:"Hungría",IT:"Ungheria"},
+"Ierland":{NL:"Ierland",DE:"Irland",EN:"Ireland",FR:"Irlande",ES:"Irlanda",IT:"Irlanda"},
+"Kroatië":{NL:"Kroatië",DE:"Kroatien",EN:"Croatia",FR:"Croatie",ES:"Croacia",IT:"Croazia"},
+"Letland":{NL:"Letland",DE:"Lettland",EN:"Latvia",FR:"Lettonie",ES:"Letonia",IT:"Lettonia"},
+"Litouwen":{NL:"Litouwen",DE:"Litauen",EN:"Lithuania",FR:"Lituanie",ES:"Lituania",IT:"Lituania"},
+"Noorwegen":{NL:"Noorwegen",DE:"Norwegen",EN:"Norway",FR:"Norvège",ES:"Noruega",IT:"Norvegia"},
+"Portugal":{NL:"Portugal",DE:"Portugal",EN:"Portugal",FR:"Portugal",ES:"Portugal",IT:"Portogallo"},
+"Roemenië":{NL:"Roemenië",DE:"Rumänien",EN:"Romania",FR:"Roumanie",ES:"Rumanía",IT:"Romania"},
+"Servië":{NL:"Servië",DE:"Serbien",EN:"Serbia",FR:"Serbie",ES:"Serbia",IT:"Serbia"},
+"VK en Noord-Ierland":{NL:"VK en Noord-Ierland",DE:"Vereinigtes Königreich und Nordirland",EN:"United Kingdom and Northern Ireland",FR:"Royaume-Uni et Irlande du Nord",ES:"Reino Unido e Irlanda del Norte",IT:"Regno Unito e Irlanda del Nord"},
+"Zwitserland":{NL:"Zwitserland",DE:"Schweiz",EN:"Switzerland",FR:"Suisse",ES:"Suiza",IT:"Svizzera"}
+};
+
+const TPL={
+NL:{subject:"Belangrijke wijziging: lagere verzendkosten",
+greeting:"Beste klant,",
+p1:"Goed nieuws: vanaf vandaag verlagen we onze verzendkosten én de grens voor portovrije verzending voor [COUNTRY].",
+p2:"Je betaalt minder voor verzending, en bestellingen komen eerder in aanmerking voor gratis levering.",
+rates_intro:"De nieuwe tarieven zijn als volgt:",
+auto:"De nieuwe tarieven worden automatisch toegepast op alle bestellingen vanaf vandaag. Je hoeft niets te doen – ze verschijnen automatisch in je winkelwagen en op je facturen.",
+closing:"Met vriendelijke groet,",team:"Team Phoenix Import",
+footer:"Je ontvangt dit bericht omdat je klant bent bij Phoenix Import. Wil je geen serviceberichten meer ontvangen? [klik hier om je af te melden].",
+table_headers:["Verzendkosten (oud)","Verzendkosten (nieuw)","Portovrije grens (oud)","Portovrije grens (nieuw)"]},
+DE:{subject:"Wichtige Änderung: niedrigere Versandkosten",
+greeting:"Sehr geehrter Kunde,",
+p1:"Gute Nachrichten: Ab heute senken wir unsere Versandkosten und die Grenze für versandkostenfreie Bestellungen für [COUNTRY].",
+p2:"Sie werden weniger Versandkosten zahlen, und Bestellungen erreichen schneller die kostenlose Lieferung.",
+rates_intro:"Die neuen Tarife sind wie folgt:",
+auto:"Die neuen Tarife werden automatisch auf alle Bestellungen angewendet, die ab heute aufgegeben werden. Sie müssen nichts unternehmen – sie erscheinen automatisch in Ihrem Warenkorb und auf Ihren Rechnungen.",
+closing:"Mit freundlichen Grüßen,",team:"Ihr Phoenix Import-Team",
+footer:"Sie erhalten diese Nachricht, weil Sie Kunde bei Phoenix Import sind. Wenn Sie keine Service-Mitteilungen mehr erhalten möchten, [klicken Sie hier, um sich abzumelden].",
+table_headers:["Versandkosten (alt)","Versandkosten (neu)","Freigrenze (alt)","Freigrenze (neu)"]},
+EN:{subject:"Important update: reduced shipping costs",
+greeting:"Dear customer,",
+p1:"Good news: from today, we're lowering our shipping costs and the free-shipping threshold for [COUNTRY].",
+p2:"You'll pay less for delivery, and your orders will qualify for free shipping sooner.",
+rates_intro:"The new rates are as follows:",
+auto:"The new rates will apply automatically to all orders from today onward. No action required – they'll appear in your cart and on your invoices.",
+closing:"Kind regards,",team:"The Phoenix Import Team",
+footer:"You receive this message because you are a Phoenix Import customer. To stop receiving service messages, [click here to unsubscribe].",
+table_headers:["Shipping cost (old)","Shipping cost (new)","Free-shipping threshold (old)","Free-shipping threshold (new)"]},
+FR:{subject:"Information importante : baisse des frais d'expédition",
+greeting:"Cher client,",
+p1:"Bonne nouvelle : dès aujourd'hui, nous réduisons nos frais d'expédition et le seuil de livraison gratuite pour [COUNTRY].",
+p2:"Vous paierez moins pour la livraison, et vos commandes bénéficieront plus rapidement de la livraison gratuite.",
+rates_intro:"Les nouveaux tarifs sont les suivants :",
+auto:"Les nouveaux tarifs s'appliquent automatiquement à toutes les commandes passées à partir d'aujourd'hui. Aucune action n'est requise – ils apparaîtront automatiquement dans votre panier et sur vos factures.",
+closing:"Cordialement,",team:"L'équipe Phoenix Import",
+footer:"Vous recevez ce message parce que vous êtes client de Phoenix Import. Pour ne plus recevoir de messages de service, [cliquez ici pour vous désinscrire].",
+table_headers:["Frais d'expédition (ancien)","Frais d'expédition (nouveau)","Seuil de gratuité (ancien)","Seuil de gratuité (nouveau)"]},
+ES:{subject:"Aviso importante: tarifas de envío reducidas",
+greeting:"Estimado cliente,",
+p1:"Buenas noticias: desde hoy, reducimos nuestras tarifas de envío y el importe mínimo para envío gratuito en [COUNTRY].",
+p2:"Pagarás menos por el envío, y tus pedidos alcanzarán antes el envío gratuito.",
+rates_intro:"Las nuevas tarifas son las siguientes:",
+auto:"Las nuevas tarifas se aplican automáticamente a todos los pedidos realizados a partir de hoy. No es necesario hacer nada – aparecerán automáticamente en tu carrito y en tus facturas.",
+closing:"Atentamente,",team:"El equipo de Phoenix Import",
+footer:"Recibes este mensaje porque eres cliente de Phoenix Import. Si no deseas recibir más mensajes de servicio, [haz clic aquí para darte de baja].",
+table_headers:["Coste de envío (anterior)","Coste de envío (nuevo)","Umbral de envío gratis (anterior)","Umbral de envío gratis (nuevo)"]},
+IT:{subject:"Importante aggiornamento: costi di spedizione ridotti",
+greeting:"Gentile cliente,",
+p1:"Buone notizie: da oggi riduciamo i costi di spedizione e la soglia per la spedizione gratuita per [COUNTRY].",
+p2:"Pagherai meno per la consegna, e i tuoi ordini potranno beneficiare prima della spedizione gratuita.",
+rates_intro:"Le nuove tariffe sono le seguenti:",
+auto:"Le nuove tariffe si applicano automaticamente a tutti gli ordini effettuati a partire da oggi. Non devi fare nulla – appariranno automaticamente nel carrello e sulle fatture.",
+closing:"Cordiali saluti,",team:"Il team Phoenix Import",
+footer:"Ricevi questo messaggio perché sei cliente di Phoenix Import. Se non desideri più ricevere comunicazioni di servizio, [clicca qui per annullare l'iscrizione].",
+table_headers:["Costo spedizione (precedente)","Costo spedizione (nuovo)","Soglia spedizione gratuita (precedente)","Soglia spedizione gratuita (nuova)"]}
+};
+
+function translatedCountry(c,l){const e=COUNTRY_MAP[c];return e?e[l]||c:c;}
+function fmt(n,l){return n!=null?('€ '+new Intl.NumberFormat(l,{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)):'—';}
+function makeTable(r,l,asHtml){
+const h=TPL[l].table_headers;
+if(asHtml){
+return `<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%'><thead><tr><th>${h[0]}</th><th>${h[1]}</th><th>${h[2]}</th><th>${h[3]}</th></tr></thead><tbody><tr><td>${fmt(r.old_rate,l)}</td><td>${fmt(r.new_rate,l)}</td><td>${fmt(r.old_free,l)}</td><td>${fmt(r.new_free,l)}</td></tr></tbody></table>`;
+}
+else{
+return `${h[0]}: ${fmt(r.old_rate,l)}\n${h[1]}: ${fmt(r.new_rate,l)}\n${h[2]}: ${fmt(r.old_free,l)}\n${h[3]}: ${fmt(r.new_free,l)}`;
+}}
+function render(){
+const l=document.getElementById('langSel').value;
+const r=DATA[document.getElementById('countrySel').selectedIndex];
+const u=document.getElementById('unsubUrl').value.trim();
+const m=document.getElementById('modeSel').value;
+const t=TPL[l];let f=t.footer;
+if(u){f=f.replace(/\[.*unsubscribe.*\]/g,`<a href='${u}'>click here to unsubscribe</a>`);}
+const cName=translatedCountry(r.country,l);
+const table=makeTable(r,l,m==='html');
+let body=[t.greeting,'',t.p1.replace('[COUNTRY]',cName),'',t.p2,'',t.rates_intro,'',table,'',t.auto,'',t.closing,t.team,'',f].join('\n');
+if(m==='html'){body=body.replace(/\n/g,'<br>');}
+document.getElementById('subjectOut').value=t.subject;
+document.getElementById('bodyOut').value=body;
+}
+function copyEl(id){const el=document.getElementById(id);el.select();document.execCommand('copy');}
+function init(){
+const cSel=document.getElementById('countrySel');
+DATA.forEach(r=>{const o=document.createElement('option');o.textContent=r.country;cSel.appendChild(o);});
+['langSel','countrySel','unsubUrl','modeSel'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+render();
+}
+init();
+</script>
+</body>
+</html>
