@@ -91,6 +91,7 @@ p1:"Goed nieuws: vanaf vandaag verlagen we onze verzendkosten én de grens voor 
 p2:"Je betaalt minder voor verzending, en bestellingen komen eerder in aanmerking voor gratis levering.",
 rates_intro:"De nieuwe tarieven zijn als volgt:",
 auto:"De nieuwe tarieven worden automatisch toegepast op alle bestellingen vanaf vandaag. Je hoeft niets te doen – ze verschijnen automatisch in je winkelwagen en op je facturen.",
+remote:"De toeslagen voor afleveradressen in afgelegen gebieden blijven ongewijzigd.",
 closing:"Met vriendelijke groet,",team:"Team Phoenix Import",
 footer:"Je ontvangt dit bericht omdat je klant bent bij Phoenix Import. Wil je geen serviceberichten meer ontvangen? [klik hier om je af te melden].",
 table_headers:["Verzendkosten (oud)","Verzendkosten (nieuw)","Portovrije grens (oud)","Portovrije grens (nieuw)"]},
@@ -100,6 +101,7 @@ p1:"Gute Nachrichten: Ab heute senken wir unsere Versandkosten und die Grenze f�
 p2:"Sie werden weniger Versandkosten zahlen, und Bestellungen erreichen schneller die kostenlose Lieferung.",
 rates_intro:"Die neuen Tarife sind wie folgt:",
 auto:"Die neuen Tarife werden automatisch auf alle Bestellungen angewendet, die ab heute aufgegeben werden. Sie müssen nichts unternehmen – sie erscheinen automatisch in Ihrem Warenkorb und auf Ihren Rechnungen.",
+remote:"Die Zuschläge für Lieferadressen in abgelegenen Gebieten bleiben unverändert.",
 closing:"Mit freundlichen Grüßen,",team:"Ihr Phoenix Import-Team",
 footer:"Sie erhalten diese Nachricht, weil Sie Kunde bei Phoenix Import sind. Wenn Sie keine Service-Mitteilungen mehr erhalten möchten, [klicken Sie hier, um sich abzumelden].",
 table_headers:["Versandkosten (alt)","Versandkosten (neu)","Freigrenze (alt)","Freigrenze (neu)"]},
@@ -109,6 +111,7 @@ p1:"Good news: from today, we're lowering our shipping costs and the free-shippi
 p2:"You'll pay less for delivery, and your orders will qualify for free shipping sooner.",
 rates_intro:"The new rates are as follows:",
 auto:"The new rates will apply automatically to all orders from today onward. No action required – they'll appear in your cart and on your invoices.",
+remote:"Surcharges for delivery addresses in remote areas remain unchanged.",
 closing:"Kind regards,",team:"The Phoenix Import Team",
 footer:"You receive this message because you are a Phoenix Import customer. To stop receiving service messages, [click here to unsubscribe].",
 table_headers:["Shipping cost (old)","Shipping cost (new)","Free-shipping threshold (old)","Free-shipping threshold (new)"]},
@@ -118,6 +121,7 @@ p1:"Bonne nouvelle : dès aujourd'hui, nous réduisons nos frais d'expédition e
 p2:"Vous paierez moins pour la livraison, et vos commandes bénéficieront plus rapidement de la livraison gratuite.",
 rates_intro:"Les nouveaux tarifs sont les suivants :",
 auto:"Les nouveaux tarifs s'appliquent automatiquement à toutes les commandes passées à partir d'aujourd'hui. Aucune action n'est requise – ils apparaîtront automatiquement dans votre panier et sur vos factures.",
+remote:"Les suppléments pour les adresses de livraison dans les zones éloignées restent inchangés.",
 closing:"Cordialement,",team:"L'équipe Phoenix Import",
 footer:"Vous recevez ce message parce que vous êtes client de Phoenix Import. Pour ne plus recevoir de messages de service, [cliquez ici pour vous désinscrire].",
 table_headers:["Frais d'expédition (ancien)","Frais d'expédition (nouveau)","Seuil de gratuité (ancien)","Seuil de gratuité (nouveau)"]},
@@ -127,6 +131,7 @@ p1:"Buenas noticias: desde hoy, reducimos nuestras tarifas de envío y el import
 p2:"Pagarás menos por el envío, y tus pedidos alcanzarán antes el envío gratuito.",
 rates_intro:"Las nuevas tarifas son las siguientes:",
 auto:"Las nuevas tarifas se aplican automáticamente a todos los pedidos realizados a partir de hoy. No es necesario hacer nada – aparecerán automáticamente en tu carrito y en tus facturas.",
+remote:"Los recargos para direcciones de entrega en zonas remotas permanecen sin cambios.",
 closing:"Atentamente,",team:"El equipo de Phoenix Import",
 footer:"Recibes este mensaje porque eres cliente de Phoenix Import. Si no deseas recibir más mensajes de servicio, [haz clic aquí para darte de baja].",
 table_headers:["Coste de envío (anterior)","Coste de envío (nuevo)","Umbral de envío gratis (anterior)","Umbral de envío gratis (nuevo)"]},
@@ -136,6 +141,7 @@ p1:"Buone notizie: da oggi riduciamo i costi di spedizione e la soglia per la sp
 p2:"Pagherai meno per la consegna, e i tuoi ordini potranno beneficiare prima della spedizione gratuita.",
 rates_intro:"Le nuove tariffe sono le seguenti:",
 auto:"Le nuove tariffe si applicano automaticamente a tutti gli ordini effettuati a partire da oggi. Non devi fare nulla – appariranno automaticamente nel carrello e sulle fatture.",
+remote:"I supplementi per gli indirizzi di consegna in zone remote rimangono invariati.",
 closing:"Cordiali saluti,",team:"Il team Phoenix Import",
 footer:"Ricevi questo messaggio perché sei cliente di Phoenix Import. Se non desideri più ricevere comunicazioni di servizio, [clicca qui per annullare l'iscrizione].",
 table_headers:["Costo spedizione (precedente)","Costo spedizione (nuovo)","Soglia spedizione gratuita (precedente)","Soglia spedizione gratuita (nuova)"]}
@@ -160,7 +166,7 @@ const t=TPL[l];let f=t.footer;
 if(u){f=f.replace(/\[.*unsubscribe.*\]/g,`<a href='${u}'>click here to unsubscribe</a>`);}
 const cName=translatedCountry(r.country,l);
 const table=makeTable(r,l,m==='html');
-let body=[t.greeting,'',t.p1.replace('[COUNTRY]',cName),'',t.p2,'',t.rates_intro,'',table,'',t.auto,'',t.closing,t.team,'',f].join('\n');
+let body=[t.greeting,'',t.p1.replace('[COUNTRY]',cName),'',t.p2,'',t.rates_intro,'',table,'',t.auto,'',t.remote,'',t.closing,t.team,'',f].join('\n');
 if(m==='html'){body=body.replace(/\n/g,'<br>');}
 document.getElementById('subjectOut').value=t.subject;
 document.getElementById('bodyOut').value=body;
