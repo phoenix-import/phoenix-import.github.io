@@ -1,0 +1,2136 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Carnatia – Magic Within You • Product Copy Generator</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:16px; line-height:1.35}
+    header{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px}
+    label{font-size:12px; display:block; margin-bottom:4px}
+    select,button{padding:8px 10px; font-size:14px}
+    button{cursor:pointer}
+    .card{border:1px solid #ddd; border-radius:10px; padding:12px; margin-top:12px}
+    .meta{font-size:13px; color:#333}
+    .tabs{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 10px}
+    .tab{border:1px solid #ccc; background:#f7f7f7; padding:6px 10px; border-radius:999px}
+    .tab[aria-selected="true"]{background:#fff; border-color:#666}
+    textarea{width:100%; min-height:340px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; padding:10px; border-radius:10px; border:1px solid #ddd}
+    .grid{display:grid; grid-template-columns:1fr; gap:12px}
+    @media (min-width: 980px){ .grid{grid-template-columns: 1fr 1fr;} }
+    .muted{color:#666; font-size:12px}
+    .pill{display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; margin-left:6px}
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <label for="sku">SKU</label>
+      <select id="sku"></select>
+    </div>
+
+    <div>
+      <label for="lang">Preview language</label>
+      <select id="lang"></select>
+    </div>
+
+    <div>
+      <label>&nbsp;</label>
+      <button id="copyBtn" type="button">Copy HTML (current language)</button>
+    </div>
+
+    <div>
+      <label>&nbsp;</label>
+      <button id="copyAllBtn" type="button">Copy ALL languages (JSON bundle)</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="meta" id="meta"></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Languages"></div>
+
+    <div class="grid">
+      <div>
+        <div class="muted">Generated HTML (copy into PIM)</div>
+        <textarea id="out" spellcheck="false"></textarea>
+      </div>
+      <div>
+        <div class="muted">Rendered preview (sanity-check only)</div>
+        <div class="card" id="preview"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   DATA (SKU order is truth)
+   ========================= */
+
+const DATA = {
+  lineName: "Carnatia Magic Within You",
+
+  languages: [
+    { code: "NL", label: "NL" },
+    { code: "EN", label: "EN" },
+    { code: "DE", label: "DE" },
+	{ code: "IT", label: "IT" },
+    { code: "FR", label: "FR" },
+    { code: "ES", label: "ES" },
+  ],
+
+  // Theme-scent mapping
+  themeToScent: {
+  "Believe in Miracles": "Myrrh Mystique",
+  "Chase your Dreams": "Iris Illusion",
+  "Embrace Harmony": "Lunar Lavender",
+  "Find your Centre": "Patchouli Mandala",
+  "Rise, Renew, Flourish": "Sacred Palo Santo",
+  "Seek your Truth": "Lotus Blossom",
+},
+
+  // Sensory-led scent profiles (no “customers who like…” language), translated
+  scentProfiles: {
+    "Myrrh Mystique": {
+      EN: "Warm, resinous myrrh forms the heart of this fragrance: earthy, slightly smoky and softly balsamic, with a touch of bittersweet spice. The scent feels ancient and rounded, carrying a dry wood undertone and a gentle ambery glow that lingers close to the air.",
+      NL: "Warme, harsachtige mirre vormt het hart van deze geur: aards, licht rokerig en zacht balsemachtig, met een vleugje kruidige bitters. De geur voelt oud en rond, met een droge houttoon en een milde amberachtige gloed die rustig blijft hangen.",
+      DE: "Warmer, harziger Myrrhe bildet das Zentrum dieses Duftes: erdig, leicht rauchig und sanft balsamisch, mit einer Spur bittersüßer Würze. Der Charakter wirkt alt und rund, getragen von trockenen Holznoten und einem leisen, bernsteinartigen Nachklang.",
+      FR: "La myrrhe résineuse et chaude compose le cœur du parfum : terreuse, légèrement fumée et doucement balsamique, relevée d’une pointe d’épices amères. L’ensemble évoque une présence ancienne, arrondie, portée par un fond boisé sec et un halo ambré discret.",
+      IT: "La mirra calda e resinosa domina la fragranza: terrosa, leggermente affumicata e morbida, con un accenno di spezie amare. Il profumo appare antico e rotondo, sostenuto da note legnose secche e da un delicato riflesso ambrato.",
+      ES: "La mirra cálida y resinosa es el eje del aroma: terroso, levemente ahumado y balsámico, con un matiz de especias amargas. Se percibe antiguo y envolvente, con un fondo de madera seca y un suave resplandor ambarino.",
+    },
+
+    "Iris Illusion": {
+      EN: "Powdered iris meets a soft violet sweetness, delicate and velvety with a cool floral clarity. Subtle hints of clean linen and pale wood keep the fragrance airy, almost translucent, like petals brushed with morning light.",
+      NL: "Poederige iris ontmoet een vioolachtige zoetheid, delicaat en fluweelzacht met een koele, heldere bloemtoon. Fijne accenten van fris linnen en bleek hout houden de geur luchtig en bijna doorschijnend, als bloemblaadjes in ochtendlicht.",
+      DE: "Pudrige Iris verbindet sich mit sanfter Veilchensüße, zart und samtig mit kühler floraler Klarheit. Leise Anklänge von frischem Leinen und hellem Holz lassen den Duft luftig und beinahe transparent wirken.",
+      FR: "L’iris poudré rencontre une douceur de violette, délicate et veloutée, d’une clarté florale fraîche. De légers accents de linge propre et de bois pâle rendent la fragrance aérienne, presque diaphane.",
+      IT: "L’iris talcato si unisce a una dolcezza di violetta, delicata e vellutata, con una limpidezza floreale fresca. Sfumature di lino pulito e legno chiaro mantengono il profumo leggero e quasi trasparente.",
+      ES: "El iris empolvado se funde con una dulzura de violeta, delicada y aterciopelada, de claridad floral fresca. Toques de lino limpio y madera clara vuelven el aroma ligero, casi translúcido.",
+    },
+
+    "Lunar Lavender": {
+      EN: "True lavender, herbaceous and calm, balanced with a faint creamy warmth. The fragrance is clean and breathable, carrying a touch of green stems and a soft evening sweetness without becoming heavy.",
+      NL: "Echte lavendel, kruidig en rustig, in balans met een lichte romige warmte. De geur is schoon en ademend, met een zweem van groene stelen en een zachte avondzoetheid zonder zwaar te worden.",
+      DE: "Echter Lavendel, kräuterig und ruhig, ausbalanciert von einer leichten cremigen Wärme. Der Duft wirkt sauber und offen, mit einem Hauch grüner Stängel und milder Abendsüße.",
+      FR: "Lavande authentique, herbacée et sereine, adoucie par une fine chaleur crémeuse. La fragrance reste claire et respirante, teintée de tiges vertes et d’une douceur du soir.",
+      IT: "Lavanda autentica, erbacea e tranquilla, equilibrata da un leggero calore cremoso. Il profumo è limpido e arioso, con sfumature di steli verdi e una dolcezza serale delicata.",
+      ES: "Lavanda genuina, herbal y serena, equilibrada por un leve calor cremoso. El aroma es limpio y respirable, con matices de tallos verdes y una suave dulzura de atardecer.",
+    },
+
+    "Patchouli Mandala": {
+      EN: "Deep patchouli with a dark, earthy richness, softened by hints of warm wood and dry cacao. The scent is grounded and textured, slightly smoky with a gentle sweetness that unfolds slowly.",
+      NL: "Diepe patchoeli met een donkere, aardse rijkdom, verzacht door warme houttonen en droge cacao. De geur is gegrond en gelaagd, licht rokerig met een zachte zoetheid die langzaam openbloeit.",
+      DE: "Tiefer Patchouli mit dunkler, erdiger Fülle, gemilderd durch warme Hölzer und trockenen Kakao. Der Duft ist geerdet und strukturiert, leicht rauchig mit sanfter, sich entfaltender Süße.",
+      FR: "Patchouli profond à la richesse terreuse, adouci par des bois chauds et un cacao sec. La fragrance est ancrée et texturée, légèrement fumée avec une douceur qui se déploie peu à peu.",
+      IT: "Patchouli intenso e terroso, ammorbidito da legni caldi e cacao secco. Il profumo è radicato e materico, leggermente affumicato con una dolcezza che emerge lentamente.",
+      ES: "Patchouli profundo de riqueza terrosa, suavizado por maderas cálidas y cacao seco. El aroma es arraigado y con textura, levemente ahumado y de dulzor pausado.",
+    },
+
+    "Sacred Palo Santo": {
+      EN: "Bright palo santo opens with citrus-like freshness, then settles into creamy wood and gentle resin. The fragrance feels luminous and clean, carrying a soft incense warmth beneath its airy top notes.",
+      NL: "Helder Palo Santo opent met citrusachtige frisheid en verzacht naar romig hout en milde hars. De geur voelt licht en zuiver, met een zachte wierookwarmte onder de luchtige top.",
+      DE: "Klares Palo Santo beginnt mit zitrischer Frische und geht über in cremiges Holz und sanfte Harze. Der Duft wirkt leuchtend und sauber, getragen von warmer, dezenter Weihrauchtiefe.",
+      FR: "Le Palo Santo s’ouvre sur une fraîcheur presque citronnée, puis se pose sur un bois crémeux et une résine douce. La fragrance est lumineuse et claire, réchauffée d’un fond d’encens léger.",
+      IT: "Il Palo Santo si apre con freschezza agrumata, per poi adagiarsi su legni cremosi e resine delicate. Il profumo è luminoso e pulito, con un calore d’incenso appena percepibile.",
+      ES: "El Palo Santo inicia con frescor cítrico y se asienta en madera cremosa y resina suave. El aroma es luminoso y limpio, con un discreto calor de incienso de fondo.",
+    },
+
+    "Lotus Blossom": {
+      EN: "Lotus unfolds as a watery floral: fresh, slightly sweet and tranquil, touched by green stems and a hint of white musk. The fragrance feels smooth and reflective, like petals resting on still water.",
+      NL: "Lotus opent met een lichte, aquatische bloemengeur: fris, licht zoet en sereen, met groene stelen en een zweem van witte musk. De geur is zacht en beschouwend, als bloemblaadjes op stil water.",
+      DE: "Lotus wirkt frisch und zart blumig mit einer aquatischen Nuance: frisch, sanft süß und ruhig, begleitet von grünen Stielen und einem Hauch weißen Moschus. Der Duft wirkt weich und nachdenklich.",
+      FR: "Le lotus s’ouvre en fleur aquatique : fraîche, légèrement sucrée et paisible, nuancée de tiges vertes et d’un souffle de musc blanc. La fragrance est lisse et contemplative.",
+      IT: "Il loto emerge come fiore acquatico: fresco, lievemente dolce e tranquillo, con steli verdi e un accenno di muschio bianco. Il profumo è morbido e meditativo.",
+      ES: "El loto se despliega como flor acuática: fresco, apenas dulce y sereno, con tallos verdes y un toque de almizcle blanco. El aroma resulta suave y contemplativo.",
+    },
+  },
+
+  packagingLine: (lang, qty) => {
+    if (!qty) return "";
+    const q = Number(qty);
+    const t = {
+      NL: `Prijs per stuk, verkocht per ${q} stuks.`,
+      EN: `Price per piece, sold per ${q} pieces.`,
+      DE: `Preis pro Stück, verkauft pro ${q} Stück.`,
+      FR: `Prix à la pièce, vendu par ${q} pièces.`,
+      IT: `Prezzo al pezzo, venduto per ${q} pezzi.`,
+      ES: `Precio por pieza, vendido por ${q} piezas.`,
+    };
+    return t[lang] || "";
+  },
+
+  headings: {
+    scent: { NL:"Geurprofiel", EN:"Scent profile", DE:"Duftprofil", FR:"Profil olfactif", IT:"Profilo olfattivo", ES:"Perfil olfativo" },
+    about: { NL:"Over het product", EN:"About the product", DE:"Über das Produkt", FR:"À propos du produit", IT:"Informazioni sul prodotto", ES:"Sobre el producto" },
+    safety:{ NL:"Gebruik en veiligheid", EN:"Usage and safety", DE:"Anwendung und Sicherheit", FR:"Utilisation et sécurité", IT:"Uso e sicurezza", ES:"Uso y seguridad" },
+    aboutLine:{ NL:"Over Carnatia Magic Within You", EN:"About Carnatia Magic Within You", DE:"Über Carnatia Magic Within You", FR:"À propos de Carnatia Magic Within You", IT:"Su Carnatia Magic Within You", ES:"Sobre Carnatia Magic Within You" },
+  },
+
+  aboutLineText: {
+    EN: "Magic Within You invites a slower pace: nature-inspired fragrances designed to spark inner reflection and a sense of calm. Artwork and scent names run consistently across candles, sprays, incense, diffusers and oils, so the range groups cleanly on the shelf and supports easy add-on sales.",
+    NL: "Magic Within You draait om onthaasten: op de natuur geïnspireerde geuren die ruimte geven aan reflectie en rust. Artwork en geurnamen lopen door over kaarsen, sprays, wierook, diffusers en oliën, waardoor de lijn overzichtelijk te groeperen is en add-on sales eenvoudig worden.",
+    DE: "Magic Within You steht für ein entschleunigtes Tempo: naturinspirierte Düfte, die innere Reflexion und Ruhe unterstützen. Artwork und Duftnamen ziehen sich durch Kerzen, Sprays, Räucherwerk, Diffuser und Öle, sodass die Linie im Regal sauber gruppiert und leicht weiterverkauft werden kann.",
+    FR: "Magic Within You invite à ralentir : des fragrances inspirées par la nature, pensées pour encourager l’introspection et le calme. Visuels et noms de senteurs restent cohérents sur bougies, sprays, encens, diffuseurs et huiles, ce qui facilite le regroupement en rayon et les ventes additionnelles.",
+    IT: "Magic Within You è un invito a rallentare: fragranze ispirate alla natura, pensate per favorire riflessione e calma. Grafica e nomi delle profumazioni restano coerenti tra candele, spray, incenso, diffusori e oli, così la linea si raggruppa facilmente a scaffale e rende semplici le vendite abbinate.",
+    ES: "Magic Within You invita a bajar el ritmo: fragancias inspiradas en la naturaleza, pensadas para despertar reflexión y calma. El diseño y los nombres de las fragancias se mantienen coherentes en velas, sprays, incienso, difusores y aceites, facilitando la agrupación en estantería y las ventas complementarias.",
+  },
+
+  productTerms: {
+    INCENSE: { NL:"wierook", EN:"incense", DE:"Räucherwerk", FR:"encens", IT:"incenso", ES:"incienso" },
+    OIL: { NL:"geurolie", EN:"fragrance oil", DE:"Duftöl", FR:"huile parfumée", IT:"olio profumato", ES:"aceite perfumado" },
+    SPRAY: { NL:"roomspray", EN:"room spray", DE:"Raumspray", FR:"spray d’ambiance", IT:"spray per ambienti", ES:"spray ambiental" },
+    DIFFUSER: { NL:"geurstokjes", EN:"reed diffuser", DE:"Duftstäbchen", FR:"diffuseur à bâtonnets", IT:"diffusore a bastoncini", ES:"difusor de varillas" },
+    CANDLE_CONCRETE_300: { NL:"sojawaskaars", EN:"soy wax candle", DE:"Sojawachskerze", FR:"bougie en cire de soja", IT:"candela in cera di soia", ES:"vela de cera de soja" },
+    CANDLE_GLASS_80: { NL:"sojawaskaars", EN:"soy wax candle", DE:"Sojawachskerze", FR:"bougie en cire de soja", IT:"candela in cera di soia", ES:"vela de cera de soja" },
+  },
+
+  products: [
+    // Incense 64811–64816 (sold per 6)
+    { sku:"64811", type:"INCENSE", theme:"Believe in Miracles", spec:{EN:"20 sticks", NL:"20 stokjes", DE:"20 Stäbchen", FR:"20 bâtonnets", IT:"20 bastoncini", ES:"20 varillas"}, packQty:6 },
+    { sku:"64812", type:"INCENSE", theme:"Chase your Dreams", spec:{EN:"20 sticks", NL:"20 stokjes", DE:"20 Stäbchen", FR:"20 bâtonnets", IT:"20 bastoncini", ES:"20 varillas"}, packQty:6 },
+    { sku:"64813", type:"INCENSE", theme:"Embrace Harmony", spec:{EN:"20 sticks", NL:"20 stokjes", DE:"20 Stäbchen", FR:"20 bâtonnets", IT:"20 bastoncini", ES:"20 varillas"}, packQty:6 },
+    { sku:"64814", type:"INCENSE", theme:"Find your Centre", spec:{EN:"20 sticks", NL:"20 stokjes", DE:"20 Stäbchen", FR:"20 bâtonnets", IT:"20 bastoncini", ES:"20 varillas"}, packQty:6 },
+    { sku:"64815", type:"INCENSE", theme:"Rise, Renew, Flourish", spec:{EN:"20 sticks", NL:"20 stokjes", DE:"20 Stäbchen", FR:"20 bâtonnets", IT:"20 bastoncini", ES:"20 varillas"}, packQty:6 },
+    { sku:"64816", type:"INCENSE", theme:"Seek your Truth", spec:{EN:"20 sticks", NL:"20 stokjes", DE:"20 Stäbchen", FR:"20 bâtonnets", IT:"20 bastoncini", ES:"20 varillas"}, packQty:6 },
+
+    // Oils 64817–64822 (sold per 3)
+    { sku:"64817", type:"OIL", theme:"Believe in Miracles", spec:{EN:"10 ml", NL:"10 ml", DE:"10 ml", FR:"10 ml", IT:"10 ml", ES:"10 ml"}, packQty:3 },
+    { sku:"64818", type:"OIL", theme:"Chase your Dreams", spec:{EN:"10 ml", NL:"10 ml", DE:"10 ml", FR:"10 ml", IT:"10 ml", ES:"10 ml"}, packQty:3 },
+    { sku:"64819", type:"OIL", theme:"Embrace Harmony", spec:{EN:"10 ml", NL:"10 ml", DE:"10 ml", FR:"10 ml", IT:"10 ml", ES:"10 ml"}, packQty:3 },
+    { sku:"64820", type:"OIL", theme:"Find your Centre", spec:{EN:"10 ml", NL:"10 ml", DE:"10 ml", FR:"10 ml", IT:"10 ml", ES:"10 ml"}, packQty:3 },
+    { sku:"64821", type:"OIL", theme:"Rise, Renew, Flourish", spec:{EN:"10 ml", NL:"10 ml", DE:"10 ml", FR:"10 ml", IT:"10 ml", ES:"10 ml"}, packQty:3 },
+    { sku:"64822", type:"OIL", theme:"Seek your Truth", spec:{EN:"10 ml", NL:"10 ml", DE:"10 ml", FR:"10 ml", IT:"10 ml", ES:"10 ml"}, packQty:3 },
+
+    // Sprays 64823–64828 (sold per piece; don't mention)
+    { sku:"64823", type:"SPRAY", theme:"Believe in Miracles", spec:{EN:"100 ml", NL:"100 ml", DE:"100 ml", FR:"100 ml", IT:"100 ml", ES:"100 ml"}, packQty:null },
+    { sku:"64824", type:"SPRAY", theme:"Chase your Dreams", spec:{EN:"100 ml", NL:"100 ml", DE:"100 ml", FR:"100 ml", IT:"100 ml", ES:"100 ml"}, packQty:null },
+    { sku:"64825", type:"SPRAY", theme:"Embrace Harmony", spec:{EN:"100 ml", NL:"100 ml", DE:"100 ml", FR:"100 ml", IT:"100 ml", ES:"100 ml"}, packQty:null },
+    { sku:"64826", type:"SPRAY", theme:"Find your Centre", spec:{EN:"100 ml", NL:"100 ml", DE:"100 ml", FR:"100 ml", IT:"100 ml", ES:"100 ml"}, packQty:null },
+    { sku:"64827", type:"SPRAY", theme:"Rise, Renew, Flourish", spec:{EN:"100 ml", NL:"100 ml", DE:"100 ml", FR:"100 ml", IT:"100 ml", ES:"100 ml"}, packQty:null },
+    { sku:"64828", type:"SPRAY", theme:"Seek your Truth", spec:{EN:"100 ml", NL:"100 ml", DE:"100 ml", FR:"100 ml", IT:"100 ml", ES:"100 ml"}, packQty:null },
+
+    // Diffusers 64829–64834 (sold per 6)
+    { sku:"64829", type:"DIFFUSER", theme:"Believe in Miracles", spec:{EN:"30 ml", NL:"30 ml", DE:"30 ml", FR:"30 ml", IT:"30 ml", ES:"30 ml"}, packQty:6 },
+    { sku:"64830", type:"DIFFUSER", theme:"Chase your Dreams", spec:{EN:"30 ml", NL:"30 ml", DE:"30 ml", FR:"30 ml", IT:"30 ml", ES:"30 ml"}, packQty:6 },
+    { sku:"64831", type:"DIFFUSER", theme:"Embrace Harmony", spec:{EN:"30 ml", NL:"30 ml", DE:"30 ml", FR:"30 ml", IT:"30 ml", ES:"30 ml"}, packQty:6 },
+    { sku:"64832", type:"DIFFUSER", theme:"Find your Centre", spec:{EN:"30 ml", NL:"30 ml", DE:"30 ml", FR:"30 ml", IT:"30 ml", ES:"30 ml"}, packQty:6 },
+    { sku:"64833", type:"DIFFUSER", theme:"Rise, Renew, Flourish", spec:{EN:"30 ml", NL:"30 ml", DE:"30 ml", FR:"30 ml", IT:"30 ml", ES:"30 ml"}, packQty:6 },
+    { sku:"64834", type:"DIFFUSER", theme:"Seek your Truth", spec:{EN:"30 ml", NL:"30 ml", DE:"30 ml", FR:"30 ml", IT:"30 ml", ES:"30 ml"}, packQty:6 },
+
+    // Candles 300 g (concrete) 64835–64840 (sold per 2)
+    { sku:"64835", type:"CANDLE_CONCRETE_300", theme:"Believe in Miracles", spec:{EN:"300 g", NL:"300 g", DE:"300 g", FR:"300 g", IT:"300 g", ES:"300 g"}, packQty:2 },
+    { sku:"64836", type:"CANDLE_CONCRETE_300", theme:"Chase your Dreams", spec:{EN:"300 g", NL:"300 g", DE:"300 g", FR:"300 g", IT:"300 g", ES:"300 g"}, packQty:2 },
+    { sku:"64837", type:"CANDLE_CONCRETE_300", theme:"Embrace Harmony", spec:{EN:"300 g", NL:"300 g", DE:"300 g", FR:"300 g", IT:"300 g", ES:"300 g"}, packQty:2 },
+    { sku:"64838", type:"CANDLE_CONCRETE_300", theme:"Find your Centre", spec:{EN:"300 g", NL:"300 g", DE:"300 g", FR:"300 g", IT:"300 g", ES:"300 g"}, packQty:2 },
+    { sku:"64839", type:"CANDLE_CONCRETE_300", theme:"Rise, Renew, Flourish", spec:{EN:"300 g", NL:"300 g", DE:"300 g", FR:"300 g", IT:"300 g", ES:"300 g"}, packQty:2 },
+    { sku:"64840", type:"CANDLE_CONCRETE_300", theme:"Seek your Truth", spec:{EN:"300 g", NL:"300 g", DE:"300 g", FR:"300 g", IT:"300 g", ES:"300 g"}, packQty:2 },
+
+    // Candles 80 g (glass) 64841–64846 (sold per 4)
+    { sku:"64841", type:"CANDLE_GLASS_80", theme:"Believe in Miracles", spec:{EN:"80 g", NL:"80 g", DE:"80 g", FR:"80 g", IT:"80 g", ES:"80 g"}, packQty:4 },
+    { sku:"64842", type:"CANDLE_GLASS_80", theme:"Chase your Dreams", spec:{EN:"80 g", NL:"80 g", DE:"80 g", FR:"80 g", IT:"80 g", ES:"80 g"}, packQty:4 },
+    { sku:"64843", type:"CANDLE_GLASS_80", theme:"Embrace Harmony", spec:{EN:"80 g", NL:"80 g", DE:"80 g", FR:"80 g", IT:"80 g", ES:"80 g"}, packQty:4 },
+    { sku:"64844", type:"CANDLE_GLASS_80", theme:"Find your Centre", spec:{EN:"80 g", NL:"80 g", DE:"80 g", FR:"80 g", IT:"80 g", ES:"80 g"}, packQty:4 },
+    { sku:"64845", type:"CANDLE_GLASS_80", theme:"Rise, Renew, Flourish", spec:{EN:"80 g", NL:"80 g", DE:"80 g", FR:"80 g", IT:"80 g", ES:"80 g"}, packQty:4 },
+    { sku:"64846", type:"CANDLE_GLASS_80", theme:"Seek your Truth", spec:{EN:"80 g", NL:"80 g", DE:"80 g", FR:"80 g", IT:"80 g", ES:"80 g"}, packQty:4 },
+  ],
+
+  templates: {
+    INCENSE: {
+      EN: `<p>
+  Natural incense scented with {{SCENT}}. Light one, breathe deep, and let the fragrance take you somewhere quieter.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Steady burn, suitable for daily ritual, yoga classes or simple wind-down moments at home.
+  <br>
+  Slim pack that fits standard pegboards, counter displays and mail-order boxes.
+  <br>
+  Clear {{LINE}} branding so customers can recognise the same scent across other products.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Place in a suitable incense burner.
+  <br>
+  Do not leave burning incense unattended.
+  <br>
+  Keep out of the reach of children and pets.
+  <br>
+  Ventilate well.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      NL: `<p>
+  Natuurlijke {{TERM}} met de geur {{SCENT}}. Steek er één aan, adem rustig in, en laat de geur de ruimte even zachter maken.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Brandt gelijkmatig, geschikt voor dagelijkse rituelen, yogalessen of een eenvoudig ontspanmoment.
+  <br>
+  Slanke verpakking voor standaard pegboards, toonbankpresentaties en verzenddozen.
+  <br>
+  Herkenbare {{LINE}}-branding zodat klanten dezelfde geur terugvinden in andere producten.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Plaats in een geschikte wierookhouder.
+  <br>
+  Laat brandende wierook niet onbeheerd achter.
+  <br>
+  Buiten bereik van kinderen en huisdieren houden.
+  <br>
+  Zorg voor voldoende ventilatie.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      DE: `<p>
+  Natürliches {{TERM}} mit dem Duft {{SCENT}}. Anzünden, tief durchatmen – und der Duft macht den Raum für einen Moment ruhiger.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Gleichmäßiger Abbrand, geeignet für tägliche Rituale, Yogakurse oder ruhige Auszeiten.
+  <br>
+  Schlanke Verpackung für Standard-Pegboards, Thekenpräsentationen und Versandkartons.
+  <br>
+  Klare {{LINE}}-Kennzeichnung, damit Kund:innen denselben Duft in anderen Produkten wiederfinden.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  In einem geeigneten Räuchergefäß verwenden.
+  <br>
+  Brennendes Räucherwerk nicht unbeaufsichtigt lassen.
+  <br>
+  Außer Reichweite von Kindern und Haustieren aufbewahren.
+  <br>
+  Gut lüften.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      FR: `<p>
+  Encens naturel parfumé {{SCENT}}. Allumez-en un, respirez, et laissez la fragrance apaiser l’espace.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Brûle de façon régulière, adapté aux rituels quotidiens, aux cours de yoga ou aux moments de détente.
+  <br>
+  Format fin, pratique pour pegboards, comptoirs et expédition.
+  <br>
+  Marquage {{LINE}} clair pour retrouver la même senteur dans d’autres produits.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Placer dans un porte-encens adapté.
+  <br>
+  Ne pas laisser l’encens brûler sans surveillance.
+  <br>
+  Tenir hors de portée des enfants et des animaux.
+  <br>
+  Bien ventiler.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      IT: `<p>
+  Incenso naturale profumato {{SCENT}}. Accendine uno, respira a fondo e lascia che la fragranza renda l’ambiente più quieto.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Brucia in modo uniforme, adatto a rituali quotidiani, lezioni di yoga o momenti di relax.
+  <br>
+  Confezione sottile, pratica per espositori a ganci, banco e spedizioni.
+  <br>
+  Branding {{LINE}} ben riconoscibile per ritrovare la stessa profumazione in altri prodotti.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Posizionare in un portaincenso adatto.
+  <br>
+  Non lasciare l’incenso acceso incustodito.
+  <br>
+  Tenere fuori dalla portata di bambini e animali.
+  <br>
+  Aerare bene.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      ES: `<p>
+  Incienso natural con aroma {{SCENT}}. Enciende uno, respira hondo y deja que la fragancia suavice el ambiente.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Arde de forma uniforme, adecuado para rituales diarios, clases de yoga o momentos de desconexión.
+  <br>
+  Formato fino, ideal para paneles con ganchos, mostradores y envíos.
+  <br>
+  Branding {{LINE}} claro para reconocer el mismo aroma en otros productos.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Colocar en un portainciensos adecuado.
+  <br>
+  No dejar el incienso encendido sin supervisión.
+  <br>
+  Mantener fuera del alcance de niños y mascotas.
+  <br>
+  Ventilar bien.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+    },
+
+    OIL: {
+      EN: `<p>
+  A {{SPEC}} fragrance oil scented with {{SCENT}}. Designed for aroma burners and diffusers, it adds fragrance to a space without smoke or heat.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Individual fragrance oil bottle, suitable for most burners and diffusers.
+  <br>
+  Easy add-on to candles and incense within the same theme.
+  <br>
+  Compact size that fits gift assortments and travel displays.
+  <br>
+  Consistent {{LINE}} branding for cross-selling across categories.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Fragrance oils are intended for aroma burners or diffusers; do not apply on skin.
+  <br>
+  Keep all bottles out of reach of children and pets.
+  <br>
+  Do not ingest.
+  <br>
+  Avoid contact with eyes; in case of contact, rinse with plenty of water.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      NL: `<p>
+  Een {{SPEC}} {{TERM}} met de geur {{SCENT}}. Bedoeld voor aromabranders en diffusers, om de {{LINE}}-sfeer eenvoudig in de ruimte te brengen.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Los flesje {{TERM}}, geschikt voor de meeste branders en diffusers.
+  <br>
+  Eenvoudig te combineren met kaarsen en wierook binnen hetzelfde thema.
+  <br>
+  Compact formaat voor cadeau-assortimenten en travel displays.
+  <br>
+  Consistente {{LINE}}-branding voor cross-selling over productcategorieën.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Geuroliën zijn bedoeld voor aromabranders of diffusers; niet op de huid aanbrengen.
+  <br>
+  Buiten bereik van kinderen en huisdieren houden.
+  <br>
+  Niet inslikken.
+  <br>
+  Vermijd contact met de ogen; bij contact ruim met water spoelen.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      DE: `<p>
+  Ein {{SPEC}} {{TERM}} mit dem Duft {{SCENT}}. Für Duftlampen und Diffuser gedacht – so kommt die {{LINE}}-Stimmung unkompliziert in den Raum.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Einzelne Flasche {{TERM}}, geeignet für die meisten Duftlampen und Diffuser.
+  <br>
+  Leicht mit Kerzen und Räucherwerk im selben Thema kombinierbar.
+  <br>
+  Kompaktes Format für Geschenk-Sortimente und Travel-Displays.
+  <br>
+  Einheitliches {{LINE}}-Branding für Cross-Selling über Kategorien hinweg.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Duftöle sind für Duftlampen oder Diffuser bestimmt; nicht auf die Haut auftragen.
+  <br>
+  Alle Flaschen außer Reichweite von Kindern und Haustieren aufbewahren.
+  <br>
+  Nicht einnehmen.
+  <br>
+  Augenkontakt vermeiden; bei Kontakt mit viel Wasser spülen.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      FR: `<p>
+  Une {{SPEC}} huile parfumée {{SCENT}}. Prévue pour brûleurs et diffuseurs, elle parfume l’espace sans fumée ni chaleur.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Flacon individuel d’huile parfumée, compatible avec la plupart des brûleurs et diffuseurs.
+  <br>
+  Facile à associer avec bougies et encens du même thème.
+  <br>
+  Format compact pour assortiments cadeaux et présentoirs voyage.
+  <br>
+  Branding {{LINE}} cohérent pour favoriser les ventes croisées.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Les huiles parfumées sont destinées aux brûleurs ou diffuseurs; ne pas appliquer sur la peau.
+  <br>
+  Tenir tous les flacons hors de portée des enfants et des animaux.
+  <br>
+  Ne pas ingérer.
+  <br>
+  Éviter le contact avec les yeux; en cas de contact, rincer abondamment à l’eau.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      IT: `<p>
+  Un {{SPEC}} olio profumato {{SCENT}}. Pensato per bruciatori aromatici e diffusori, profuma l’ambiente senza fumo né calore.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Flacone singolo di olio profumato, adatto alla maggior parte di bruciatori e diffusori.
+  <br>
+  Facile da abbinare a candele e incenso dello stesso tema.
+  <br>
+  Formato compatto per assortimenti regalo e espositori viaggio.
+  <br>
+  Branding {{LINE}} coerente per il cross-selling tra categorie.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Gli oli profumati sono destinati a bruciatori o diffusori; non applicare sulla pelle.
+  <br>
+  Tenere tutti i flaconi fuori dalla portata di bambini e animali.
+  <br>
+  Non ingerire.
+  <br>
+  Evitare il contatto con gli occhi; in caso di contatto, sciacquare con abbondante acqua.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      ES: `<p>
+  Un {{SPEC}} aceite perfumado con aroma {{SCENT}}. Pensado para quemadores y difusores, perfuma el espacio sin humo ni calor.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Frasco individual de aceite perfumado, apto para la mayoría de quemadores y difusores.
+  <br>
+  Fácil de combinar con velas e incienso del mismo tema.
+  <br>
+  Tamaño compacto para surtidos regalo y expositores de viaje.
+  <br>
+  Branding {{LINE}} coherente para facilitar la venta cruzada.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Los aceites perfumados son para quemadores o difusores; no aplicar sobre la piel.
+  <br>
+  Mantener todos los frascos fuera del alcance de niños y mascotas.
+  <br>
+  No ingerir.
+  <br>
+  Evitar el contacto con los ojos; en caso de contacto, enjuagar con abundante agua.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+    },
+
+    SPRAY: {
+      EN: `<p>
+  A room spray scented with {{SCENT}}. A quick way to freshen the room and reset the mood—no smoke, no ashes, no drama.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Smokeless alternative to incense, suitable for treatment rooms, studios and shared spaces.
+  <br>
+  {{SPEC}} bottle with fine mist spray that covers the room without soaking textiles.
+  <br>
+  Simple way to add fragrance without burning anything.
+  <br>
+  Sits naturally beside {{LINE}} candles, incense and oils as the quick-fix option.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Avoid contact with eyes and mucous membranes.
+  <br>
+  Flammable: do not spray near open flame or heat sources.
+  <br>
+  Keep out of reach of children and pets.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      NL: `<p>
+  Een roomspray met de geur {{SCENT}}. Snel de ruimte opfrissen en de sfeer resetten—zonder rook, zonder as, zonder gedoe.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Rookloos alternatief voor wierook, geschikt voor behandelruimtes, studio’s en gedeelde ruimtes.
+  <br>
+  {{SPEC}} flacon met fijne verstuiver die de ruimte verfrist zonder textiel doorweekt te maken.
+  <br>
+  Eenvoudige manier om geur toe te voegen zonder iets te branden.
+  <br>
+  Past logisch naast {{LINE}}-kaarsen, wierook en oliën als snelle optie.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Vermijd contact met ogen en slijmvliezen.
+  <br>
+  Ontvlambaar: niet sprayen in de buurt van open vuur of warmtebronnen.
+  <br>
+  Buiten bereik van kinderen en huisdieren houden.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      DE: `<p>
+  Ein Raumspray mit dem Duft {{SCENT}}. Schnell den Raum auffrischen und die Stimmung neu setzen – ohne Rauch, ohne Asche, ohne Drama.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Rauchfreie Alternative zu Räucherwerk, geeignet für Behandlungsräume, Studios und Gemeinschaftsbereiche.
+  <br>
+  {{SPEC}} Flasche mit feinem Sprühnebel, der den Raum beduftet, ohne Textilien zu durchnässen.
+  <br>
+  Einfache Möglichkeit, Duft zu erzeugen, ohne etwas anzuzünden.
+  <br>
+  Passt als schnelle Option neben {{LINE}}-Kerzen, Räucherwerk und Ölen.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Kontakt mit Augen und Schleimhäuten vermeiden.
+  <br>
+  Entzündlich: nicht in der Nähe von offener Flamme oder Wärmequellen sprühen.
+  <br>
+  Außer Reichweite von Kindern und Haustieren aufbewahren.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      FR: `<p>
+  Un spray d’ambiance parfumé {{SCENT}}. Un moyen rapide de rafraîchir la pièce et de relancer l’atmosphère – sans fumée, sans cendres, sans complications.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Alternative sans fumée à l’encens, adaptée aux salles de soins, studios et espaces partagés.
+  <br>
+  Flacon {{SPEC}} avec brume fine pour parfumer sans détremper les textiles.
+  <br>
+  Façon simple d’ajouter du parfum sans rien brûler.
+  <br>
+  Se place naturellement à côté des bougies, encens et huiles {{LINE}}.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Éviter le contact avec les yeux et les muqueuses.
+  <br>
+  Inflammable : ne pas vaporiser près d’une flamme nue ou de sources de chaleur.
+  <br>
+  Tenir hors de portée des enfants et des animaux.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      IT: `<p>
+  Uno spray per ambienti profumato {{SCENT}}. Un modo rapido per rinfrescare la stanza e resettare l’atmosfera – senza fumo, senza cenere, senza drammi.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Alternativa senza fumo all’incenso, adatta a sale trattamenti, studi e spazi condivisi.
+  <br>
+  Flacone {{SPEC}} con nebulizzazione fine che profuma senza bagnare i tessuti.
+  <br>
+  Un modo semplice per aggiungere profumo senza bruciare nulla.
+  <br>
+  Si affianca naturalmente a candele, incenso e oli {{LINE}} come opzione rapida.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Evitare il contatto con occhi e mucose.
+  <br>
+  Infiammabile: non spruzzare vicino a fiamme libere o fonti di calore.
+  <br>
+  Tenere fuori dalla portata di bambini e animali.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      ES: `<p>
+  Un spray ambiental con aroma {{SCENT}}. Una forma rápida de refrescar la habitación y reiniciar el ambiente – sin humo, sin ceniza, sin drama.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Alternativa sin humo al incienso, adecuada para salas de tratamiento, estudios y espacios compartidos.
+  <br>
+  Botella {{SPEC}} con niebla fina para perfumar sin empapar textiles.
+  <br>
+  Forma sencilla de añadir fragancia sin quemar nada.
+  <br>
+  Encaja junto a velas, incienso y aceites {{LINE}} como opción rápida.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Evitar el contacto con los ojos y las mucosas.
+  <br>
+  Inflamable: no pulverizar cerca de llama abierta o fuentes de calor.
+  <br>
+  Mantener fuera del alcance de niños y mascotas.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+    },
+
+    DIFFUSER: {
+      EN: `<p>
+  A reed diffuser scented with {{SCENT}}. Fragrance that slowly moves through the room—no flame, low effort, constant presence.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Reed diffuser for continuous fragrance without the need for an open flame.
+  <br>
+  Bottle and illustrated packaging suited to reception desks and shop shelves.
+  <br>
+  Ideal for places where candles are impractical or not allowed.
+  <br>
+  Gives you a non-flame option within the {{LINE}} story to place alongside candles and sprays.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Keep out of reach of children and pets.
+  <br>
+  Do not ingest.
+  <br>
+  Avoid contact with skin and eyes; in case of contact, rinse with plenty of water.
+  <br>
+  Do not place directly on polished or painted surfaces; use a coaster or tray.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      NL: `<p>
+  Geurstokjes met de geur {{SCENT}}. Geur die langzaam door de ruimte beweegt—geen vlam, weinig gedoe, continu aanwezig.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Geurstokjes voor doorlopende geurverspreiding zonder open vuur.
+  <br>
+  Flesje en geïllustreerde verpakking, als stijlvolle toevoeging aan receptiebalie en winkelschap.
+  <br>
+  Ideaal waar kaarsen onpraktisch zijn of niet zijn toegestaan.
+  <br>
+  Een niet-vlam optie binnen het {{LINE}}-verhaal, naast kaarsen en sprays.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Buiten bereik van kinderen en huisdieren houden.
+  <br>
+  Niet inslikken.
+  <br>
+  Vermijd contact met huid en ogen; bij contact ruim met water spoelen.
+  <br>
+  Niet direct op gelakte of geverfde oppervlakken plaatsen; gebruik een onderzetter of schaaltje.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      DE: `<p>
+  Duftstäbchen mit dem Duft {{SCENT}}. Duft, der sich langsam im Raum verteilt – ohne Flamme, wenig Aufwand, konstant präsent.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Duftstäbchen-Diffuser für kontinuierlichen Duft ohne offene Flamme.
+  <br>
+  Flakon und illustrierte Verpackung als stilvolle Ergänzung für Empfangstresen und Verkaufsregale.
+  <br>
+  Ideal, wo Kerzen unpraktisch sind oder nicht erlaubt sind.
+  <br>
+  Eine flammenfreie Option innerhalb der {{LINE}}-Story – passend neben Kerzen und Sprays.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Außer Reichweite von Kindern und Haustieren aufbewahren.
+  <br>
+  Nicht einnehmen.
+  <br>
+  Haut- und Augenkontakt vermeiden; bei Kontakt mit viel Wasser spülen.
+  <br>
+  Nicht direkt auf polierte oder lackierte Oberflächen stellen; Untersetzer oder Tablett verwenden.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      FR: `<p>
+  Un diffuseur à bâtonnets parfumé {{SCENT}}. Une fragrance qui se diffuse lentement – sans flamme, sans effort, présence continue.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Diffuseur à bâtonnets pour une fragrance continue sans flamme.
+  <br>
+  Flacon et emballage illustré, ajout élégant pour comptoirs d’accueil et étagères de magasin.
+  <br>
+  Idéal lorsque les bougies sont impraticables ou interdites.
+  <br>
+  Une option sans flamme dans l’univers {{LINE}}, à placer à côté des bougies et sprays.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Tenir hors de portée des enfants et des animaux.
+  <br>
+  Ne pas ingérer.
+  <br>
+  Éviter le contact avec la peau et les yeux; en cas de contact, rincer abondamment à l’eau.
+  <br>
+  Ne pas poser directement sur des surfaces peintes ou vernies; utiliser un dessous de verre ou un plateau.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      IT: `<p>
+  Un diffusore a bastoncini profumato {{SCENT}}. Fragranza che si diffonde lentamente – senza fiamma, poco impegno, presenza costante.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Diffusore a bastoncini per una profumazione continua senza fiamma.
+  <br>
+  Flacone e confezione illustrata, aggiunta elegante per banchi reception e scaffali di vendita.
+  <br>
+  Ideale dove le candele sono poco pratiche o non consentite.
+  <br>
+  Un’opzione senza fiamma nell’universo {{LINE}}, da affiancare a candele e spray.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Tenere fuori dalla portata di bambini e animali.
+  <br>
+  Non ingerire.
+  <br>
+  Evitare il contatto con pelle e occhi; in caso di contatto, sciacquare con abbondante acqua.
+  <br>
+  Non posizionare direttamente su superfici lucide o verniciate; usare un sottobicchiere o un vassoio.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      ES: `<p>
+  Un difusor de varillas con aroma {{SCENT}}. Fragancia que se mueve lentamente por la estancia – sin llama, poco esfuerzo, presencia constante.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Difusor de varillas para fragancia continua sin necesidad de llama.
+  <br>
+  Frasco y embalaje ilustrado como complemento elegante para mostradores y estanterías.
+  <br>
+  Ideal donde las velas son poco prácticas o no están permitidas.
+  <br>
+  Opción sin llama dentro del universo {{LINE}}, para colocar junto a velas y sprays.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Mantener fuera del alcance de niños y mascotas.
+  <br>
+  No ingerir.
+  <br>
+  Evitar el contacto con la piel y los ojos; en caso de contacto, enjuagar con abundante agua.
+  <br>
+  No colocar directamente sobre superficies pulidas o pintadas; usar posavasos o bandeja.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+    },
+
+    CANDLE_CONCRETE_300: {
+      EN: `<p>
+  A soy wax candle in a decorative concrete jar with motif, scented with {{SCENT}}. Soft light, steady burn, and a scent that hangs in the air just long enough.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Soy wax candle poured into a decorative concrete jar with motif.
+  <br>
+  Balanced throw for living rooms, studios and treatment spaces without becoming overpowering.
+  <br>
+  Artwork ties directly into the {{LINE}} theme for instant recognition.
+  <br>
+  Easy gift item that also works as an everyday self-care candle for repeat sales.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Do not place in a drafty spot; this will shorten the burning time.
+  <br>
+  Trim the wick to approx. 1 cm to prevent the candle from burning too fast.
+  <br>
+  Place on a heat resistant surface.
+  <br>
+  Do not leave a burning candle unattended.
+  <br>
+  Keep out of reach of children and pets.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      NL: `<p>
+  Een sojawaskaars in een decoratieve betonnen pot met motief, met de geur {{SCENT}}. Zacht licht, rustige vlam, en een geur die net lang genoeg blijft hangen.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Sojawaskaars gegoten in een decoratieve betonnen pot met motief.
+  <br>
+  Gebalanceerde geurverspreiding voor woonkamers, studio’s en behandelruimtes zonder overheersend te worden.
+  <br>
+  Artwork sluit direct aan op het {{LINE}}-thema voor snelle herkenning.
+  <br>
+  Cadeauwaardig, maar ook geschikt als dagelijkse self-care kaars voor herhaalaankoop.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Niet in de tocht plaatsen; dit verkort de brandduur.
+  <br>
+  Knip de lont tot ca. 1 cm om te voorkomen dat de kaars te snel brandt.
+  <br>
+  Plaats op een hittebestendige ondergrond.
+  <br>
+  Laat een brandende kaars niet onbeheerd achter.
+  <br>
+  Buiten bereik van kinderen en huisdieren houden.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      DE: `<p>
+  Eine Sojawachskerze in einem dekorativen Betongefäß mit Motiv, beduftet mit {{SCENT}}. Sanftes Licht, ruhige Flamme und ein Duft, der genau lange genug nachklingt.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Sojawachskerze, gegossen in ein dekoratives Betongefäß mit Motiv.
+  <br>
+  Ausgewogene Duftabgabe für Wohnräume, Studios und Behandlungsbereiche, ohne aufdringlich zu werden.
+  <br>
+  Artwork ist direkt mit dem {{LINE}}-Thema verknüpft und sorgt für schnelle Wiedererkennung.
+  <br>
+  Geschenkgeeignet und zugleich als Alltagskerze für Wiederkäufe interessant.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Nicht in Zugluft stellen; das verkürzt die Brenndauer.
+  <br>
+  Docht auf ca. 1 cm kürzen, damit die Kerze nicht zu schnell abbrennt.
+  <br>
+  Auf eine hitzebeständige Unterlage stellen.
+  <br>
+  Brennende Kerzen nicht unbeaufsichtigt lassen.
+  <br>
+  Außer Reichweite von Kindern und Haustieren aufbewahren.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      FR: `<p>
+  Une bougie en cire de soja dans un pot en béton décoratif avec motif, parfumée {{SCENT}}. Lumière douce, flamme stable et une fragrance qui reste juste ce qu’il faut.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Bougie en cire de soja coulée dans un pot en béton décoratif avec motif.
+  <br>
+  Diffusion équilibrée pour salons, studios et espaces de soins, sans devenir envahissante.
+  <br>
+  Visuel directement lié au thème {{LINE}} pour une reconnaissance immédiate.
+  <br>
+  Article cadeau, mais aussi bougie “self-care” du quotidien pour les achats répétés.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Ne pas placer dans un courant d’air; cela réduira le temps de combustion.
+  <br>
+  Couper la mèche à env. 1 cm pour éviter une combustion trop rapide.
+  <br>
+  Poser sur une surface résistante à la chaleur.
+  <br>
+  Ne pas laisser une bougie allumée sans surveillance.
+  <br>
+  Tenir hors de portée des enfants et des animaux.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      IT: `<p>
+  Una candela in cera di soia in un vaso di cemento decorativo con motivo, profumata {{SCENT}}. Luce morbida, fiamma stabile e una fragranza che resta nell’aria il tempo giusto.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Candela in cera di soia colata in un vaso di cemento decorativo con motivo.
+  <br>
+  Diffusione equilibrata per soggiorni, studi e sale trattamenti senza risultare invadente.
+  <br>
+  Grafica collegata al tema {{LINE}} per un riconoscimento immediato.
+  <br>
+  Articolo regalo, ma anche candela “self-care” quotidiana per vendite ripetute.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Non posizionare in zone con correnti d’aria; questo riduce il tempo di combustione.
+  <br>
+  Tagliare lo stoppino a circa 1 cm per evitare che la candela bruci troppo velocemente.
+  <br>
+  Posizionare su una superficie resistente al calore.
+  <br>
+  Non lasciare una candela accesa incustodita.
+  <br>
+  Tenere fuori dalla portata di bambini e animali.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      ES: `<p>
+  Una vela de cera de soja en un recipiente decorativo de cemento con motivo, perfumada {{SCENT}}. Luz suave, llama estable y una fragancia que permanece el tiempo justo.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Vela de cera de soja vertida en un recipiente decorativo de cemento con motivo.
+  <br>
+  Difusión equilibrada para salas, estudios y espacios de tratamiento sin resultar intensa.
+  <br>
+  El diseño se vincula directamente con el tema {{LINE}} para un reconocimiento inmediato.
+  <br>
+  Buen artículo de regalo y también vela de “self-care” para uso diario y compras repetidas.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  No colocar en zonas con corrientes de aire; esto acortará el tiempo de combustión.
+  <br>
+  Recortar la mecha a aprox. 1 cm para evitar que la vela se consuma demasiado rápido.
+  <br>
+  Colocar sobre una superficie resistente al calor.
+  <br>
+  No dejar una vela encendida sin supervisión.
+  <br>
+  Mantener fuera del alcance de niños y mascotas.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+    },
+
+    CANDLE_GLASS_80: {
+      EN: `<p>
+  A soy wax candle in a glass jar, scented with {{SCENT}}. Soft light, steady burn, and a scent that hangs in the air just long enough.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Soy wax candle poured into a reusable glass container.
+  <br>
+  Balanced throw for living rooms, studios and treatment spaces without becoming overpowering.
+  <br>
+  Artwork ties directly into the {{LINE}} theme for instant recognition.
+  <br>
+  Easy gift item that also works as an everyday self-care candle for repeat sales.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Do not place in a drafty spot; this will shorten the burning time.
+  <br>
+  Trim the wick to approx. 1 cm to prevent the candle from burning too fast.
+  <br>
+  Place on a heat resistant surface.
+  <br>
+  Do not leave a burning candle unattended.
+  <br>
+  Keep out of reach of children and pets.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      NL: `<p>
+  Een sojawaskaars in een glazen pot met de geur {{SCENT}}. Zacht licht, rustige vlam, en een geur die net lang genoeg blijft hangen.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Sojawaskaars gegoten in een herbruikbare glazen pot.
+  <br>
+  Gebalanceerde geurverspreiding voor woonkamers, studio’s en behandelruimtes zonder overheersend te worden.
+  <br>
+  Artwork sluit direct aan op het {{LINE}}-thema voor snelle herkenning.
+  <br>
+  Cadeauwaardig, maar ook geschikt als dagelijkse self-care kaars voor herhaalaankoop.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Niet in de tocht plaatsen; dit verkort de brandduur.
+  <br>
+  Knip de lont tot ca. 1 cm om te voorkomen dat de kaars te snel brandt.
+  <br>
+  Plaats op een hittebestendige ondergrond.
+  <br>
+  Laat een brandende kaars niet onbeheerd achter.
+  <br>
+  Buiten bereik van kinderen en huisdieren houden.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      DE: `<p>
+  Eine Sojawachskerze im Glas, beduftet mit {{SCENT}}. Sanftes Licht, ruhige Flamme und ein Duft, der genau lange genug nachklingt.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Sojawachskerze, gegossen in ein wiederverwendbares Glasgefäß.
+  <br>
+  Ausgewogene Duftabgabe für Wohnräume, Studios und Behandlungsbereiche, ohne aufdringlich zu werden.
+  <br>
+  Artwork ist direkt mit dem {{LINE}}-Thema verknüpft und sorgt für schnelle Wiedererkennung.
+  <br>
+  Geschenkgeeignet und zugleich als Alltagskerze für Wiederkäufe interessant.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Nicht in Zugluft stellen; das verkürzt die Brenndauer.
+  <br>
+  Docht auf ca. 1 cm kürzen, damit die Kerze nicht zu schnell abbrennt.
+  <br>
+  Auf eine hitzebeständige Unterlage stellen.
+  <br>
+  Brennende Kerzen nicht unbeaufsichtigt lassen.
+  <br>
+  Außer Reichweite von Kindern und Haustieren aufbewahren.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      FR: `<p>
+  Une bougie en cire de soja dans un pot en verre, parfumée {{SCENT}}. Lumière douce, flamme stable et une fragrance qui reste juste ce qu’il faut.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Bougie en cire de soja coulée dans un pot en verre réutilisable.
+  <br>
+  Diffusion équilibrée pour salons, studios et espaces de soins, sans devenir envahissante.
+  <br>
+  Visuel directement lié au thème {{LINE}} pour une reconnaissance immédiate.
+  <br>
+  Article cadeau, mais aussi bougie “self-care” du quotidien pour les achats répétés.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Ne pas placer dans un courant d’air; cela réduira le temps de combustion.
+  <br>
+  Couper la mèche à env. 1 cm pour éviter une combustion trop rapide.
+  <br>
+  Poser sur une surface résistante à la chaleur.
+  <br>
+  Ne pas laisser une bougie allumée sans surveillance.
+  <br>
+  Tenir hors de portée des enfants et des animaux.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      IT: `<p>
+  Una candela in cera di soia in un barattolo di vetro, profumata {{SCENT}}. Luce morbida, fiamma stabile e una fragranza che resta nell’aria il tempo giusto.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Candela in cera di soia colata in un contenitore di vetro riutilizzabile.
+  <br>
+  Diffusione equilibrata per soggiorni, studi e sale trattamenti senza risultare invadente.
+  <br>
+  Grafica collegata al tema {{LINE}} per un riconoscimento immediato.
+  <br>
+  Articolo regalo, ma anche candela “self-care” quotidiana per vendite ripetute.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  Non posizionare in zone con correnti d’aria; questo riduce il tempo di combustione.
+  <br>
+  Tagliare lo stoppino a circa 1 cm per evitare che la candela bruci troppo velocemente.
+  <br>
+  Posizionare su una superficie resistente al calore.
+  <br>
+  Non lasciare una candela accesa incustodita.
+  <br>
+  Tenere fuori dalla portata di bambini e animali.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+
+      ES: `<p>
+  Una vela de cera de soja en un tarro de vidrio, perfumada {{SCENT}}. Luz suave, llama estable y una fragancia que permanece el tiempo justo.
+  <br>
+  <br>
+  {{PACK_LINE}}
+  <br>
+  <br>
+  <strong>
+    {{H_SCENT}}
+  </strong>
+  <br>
+  {{SCENT_PROFILE}}
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUT}}
+  </strong>
+  <br>
+  Vela de cera de soja vertida en un tarro de vidrio reutilizable.
+  <br>
+  Difusión equilibrada para salas, estudios y espacios de tratamiento sin resultar intensa.
+  <br>
+  El diseño se vincula directamente con el tema {{LINE}} para un reconocimiento inmediato.
+  <br>
+  Buen artículo de regalo y también vela de “self-care” para uso diario y compras repetidas.
+  <br>
+  <br>
+  <strong>
+    {{H_SAFETY}}
+  </strong>
+  <br>
+  No colocar en zonas con corrientes de aire; esto acortará el tiempo de combustión.
+  <br>
+  Recortar la mecha a aprox. 1 cm para evitar que la vela se consuma demasiado rápido.
+  <br>
+  Colocar sobre una superficie resistente al calor.
+  <br>
+  No dejar una vela encendida sin supervisión.
+  <br>
+  Mantener fuera del alcance de niños y mascotas.
+  <br>
+  <br>
+  <strong>
+    {{H_ABOUTLINE}}
+  </strong>
+  <br>
+  {{ABOUT_LINE_TEXT}}
+  <br>
+</p>`,
+    },
+  }
+};
+
+/* =========================
+   ENGINE
+   ========================= */
+
+function renderFor(product, lang) {
+  const theme = product.theme;
+  const scent = DATA.themeToScent[theme];
+  const spec = product.spec[lang] || product.spec.EN;
+  const term = (DATA.productTerms[product.type] && DATA.productTerms[product.type][lang]) ? DATA.productTerms[product.type][lang] : "";
+  const packLine = (DATA.packagingLine(lang, product.packQty) || "").trim();
+  const scentProfile = (DATA.scentProfiles[scent] && DATA.scentProfiles[scent][lang]) ? DATA.scentProfiles[scent][lang] : "";
+
+  const tpl = (DATA.templates[product.type] && DATA.templates[product.type][lang])
+    ? DATA.templates[product.type][lang]
+    : (DATA.templates[product.type] ? DATA.templates[product.type].EN : "");
+
+  let filled = tpl
+    .replaceAll("{{LINE}}", DATA.lineName)
+    .replaceAll("{{THEME}}", theme)
+    .replaceAll("{{SCENT}}", scent)
+    .replaceAll("{{SPEC}}", spec)
+    .replaceAll("{{TERM}}", term)
+    .replaceAll("{{PACK_LINE}}", packLine)
+    .replaceAll("{{SCENT_PROFILE}}", scentProfile)
+    .replaceAll("{{H_SCENT}}", DATA.headings.scent[lang])
+    .replaceAll("{{H_ABOUT}}", DATA.headings.about[lang])
+    .replaceAll("{{H_SAFETY}}", DATA.headings.safety[lang])
+    .replaceAll("{{H_ABOUTLINE}}", DATA.headings.aboutLine[lang])
+    .replaceAll("{{ABOUT_LINE_TEXT}}", DATA.aboutLineText[lang]);
+
+  if (!packLine) {
+    filled = filled.replace(/\s*\{\{PACK_LINE\}\}\s*\n/g, "");
+  }
+  return filled;
+}
+
+function buildBundle(product) {
+  const bundle = {};
+  for (const L of DATA.languages) bundle[L.code] = renderFor(product, L.code);
+  return bundle;
+}
+
+/* =========================
+   UI
+   ========================= */
+
+const skuSel = document.getElementById("sku");
+const langSel = document.getElementById("lang");
+const out = document.getElementById("out");
+const preview = document.getElementById("preview");
+const meta = document.getElementById("meta");
+const tabs = document.getElementById("tabs");
+const copyBtn = document.getElementById("copyBtn");
+const copyAllBtn = document.getElementById("copyAllBtn");
+
+let currentLang = "EN";
+
+function refreshTabs() {
+  tabs.innerHTML = "";
+  for (const L of DATA.languages) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(L.code === currentLang));
+    b.textContent = L.label;
+    b.addEventListener("click", () => {
+      currentLang = L.code;
+      langSel.value = currentLang;
+      update();
+    });
+    tabs.appendChild(b);
+  }
+}
+
+function update() {
+  const sku = skuSel.value;
+  const product = DATA.products.find(p => p.sku === sku);
+  if (!product) return;
+
+  const theme = product.theme;
+  const scent = DATA.themeToScent[theme];
+  const packQty = product.packQty;
+
+  meta.innerHTML =
+    `SKU <span class="pill">${product.sku}</span>` +
+    ` Theme <span class="pill">${theme}</span>` +
+    ` Scent <span class="pill">${scent}</span>` +
+    ` Type <span class="pill">${product.type}</span>` +
+    (packQty ? ` Pack <span class="pill">sold per ${packQty}</span>` : ` <span class="pill">sold per piece</span>`);
+
+  const html = renderFor(product, currentLang);
+  out.value = html;
+  preview.innerHTML = html;
+
+  refreshTabs();
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const tmp = document.createElement("textarea");
+    tmp.value = text;
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand("copy");
+    document.body.removeChild(tmp);
+  }
+}
+
+copyBtn.addEventListener("click", async () => {
+  await copyText(out.value);
+});
+
+copyAllBtn.addEventListener("click", async () => {
+  const sku = skuSel.value;
+  const product = DATA.products.find(p => p.sku === sku);
+  const bundle = {
+    sku: product.sku,
+    line: DATA.lineName,
+    theme: product.theme,
+    scent: DATA.themeToScent[product.theme],
+    type: product.type,
+    html: buildBundle(product),
+  };
+  await copyText(JSON.stringify(bundle, null, 2));
+});
+
+skuSel.addEventListener("change", update);
+langSel.addEventListener("change", () => {
+  currentLang = langSel.value;
+  update();
+});
+
+(function init() {
+  for (const p of DATA.products) {
+    const opt = document.createElement("option");
+    opt.value = p.sku;
+    opt.textContent = p.sku;
+    skuSel.appendChild(opt);
+  }
+  for (const L of DATA.languages) {
+    const opt = document.createElement("option");
+    opt.value = L.code;
+    opt.textContent = L.label;
+    langSel.appendChild(opt);
+  }
+  skuSel.value = DATA.products[0].sku;
+  currentLang = "EN";
+  langSel.value = currentLang;
+  update();
+})();
+</script>
+</body>
+</html>
