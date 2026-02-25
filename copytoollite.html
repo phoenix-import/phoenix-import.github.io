@@ -816,7 +816,7 @@ function renderFor(product, lang) {
 
   let filled = tpl
     .replaceAll("{{PACK_LINE}}", packLine ? `<p>${packLine}</p>` : "")
-    .replaceAll("{{DISCLAIMER}}", disclaimer)
+    .replaceAll("<br>\n<em>{{DISCLAIMER}}</em>", "")
     .replaceAll("{{BEADS}}", product.beads || "")
     .replaceAll("{{SIZE}}", product.size || "")
     .replaceAll("{{STONE_LIST}}", stoneList)
