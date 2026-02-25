@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Thinkingway Jewellery • Product Copy Generator</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:16px; line-height:1.35}
+    header{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px}
+    label{font-size:12px; display:block; margin-bottom:4px}
+    select,button{padding:8px 10px; font-size:14px}
+    button{cursor:pointer}
+    .card{border:1px solid #ddd; border-radius:10px; padding:12px; margin-top:12px}
+    .meta{font-size:13px; color:#333}
+    .tabs{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 10px}
+    .tab{border:1px solid #ccc; background:#f7f7f7; padding:6px 10px; border-radius:999px}
+    .tab[aria-selected="true"]{background:#fff; border-color:#666}
+    textarea{width:100%; min-height:340px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; padding:10px; border-radius:10px; border:1px solid #ddd}
+    .grid{display:grid; grid-template-columns:1fr; gap:12px}
+    @media (min-width: 980px){ .grid{grid-template-columns: 1fr 1fr;} }
+    .muted{color:#666; font-size:12px}
+    .pill{display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; font-size:12px; margin-left:6px}
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <label for="sku">SKU</label>
+      <select id="sku"></select>
+    </div>
+
+    <div>
+      <label for="lang">Preview language</label>
+      <select id="lang"></select>
+    </div>
+
+    <div>
+      <label>&nbsp;</label>
+      <button id="copyBtn" type="button">Copy HTML (current language)</button>
+    </div>
+
+    <div>
+      <label>&nbsp;</label>
+      <button id="copyAllBtn" type="button">Copy ALL languages (JSON bundle)</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="meta" id="meta"></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Languages"></div>
+
+    <div class="grid">
+      <div>
+        <div class="muted">Generated HTML (copy into PIM)</div>
+        <textarea id="out" spellcheck="false"></textarea>
+      </div>
+      <div>
+        <div class="muted">Rendered preview (sanity-check only)</div>
+        <div class="card" id="preview"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   DATA
+   ========================= */
+
+const DATA = {
+  lineName: "Thinkingway Jewellery",
+
+  languages: [
+    { code: "NL", label: "NL" },
+    { code: "EN", label: "EN" },
+    { code: "DE", label: "DE" },
+    { code: "FR", label: "FR" },
+    { code: "ES", label: "ES" },
+    { code: "IT", label: "IT" },
+  ],
+
+  packLine: (product, lang) => {
+    if (product.suppressPackLine) return "";
+    if (product.pack && product.pack[lang]) return String(product.pack[lang]).trim();
+    return "";
+  },
+
+  disclaimer: {
+    NL: "Edelstenen zijn natuurproducten; kleur, tekening en vorm kunnen afwijken van de foto.",
+    EN: "Gemstones are natural materials; colour, pattern and shape may vary from the image shown.",
+    DE: "Edelsteine sind Naturprodukte; Farbe, Maserung und Form können von der Abbildung abweichen.",
+    FR: "Les pierres sont des matériaux naturels ; la couleur, le motif et la forme peuvent varier par rapport à la photo.",
+    ES: "Las piedras son materiales naturales; el color, el dibujo y la forma pueden variar de la imagen.",
+    IT: "Le pietre sono materiali naturali; colore, venature e forma possono variare rispetto all’immagine.",
+  },
+
+  stones: {
+    black_tourmaline: { NL:"zwarte toermalijn", EN:"black tourmaline", DE:"schwarzer Turmalin", FR:"tourmaline noire", ES:"turmalina negra", IT:"tormalina nera" },
+    hematite:         { NL:"hematiet", EN:"hematite", DE:"Hämatit", FR:"hématite", ES:"hematita", IT:"ematite" },
+    amazonite:        { NL:"amazoniet", EN:"amazonite", DE:"Amazonit", FR:"amazonite", ES:"amazonita", IT:"amazzonite" },
+    rose_quartz:      { NL:"rozenkwarts", EN:"rose quartz", DE:"Rosenquarz", FR:"quartz rose", ES:"cuarzo rosa", IT:"quarzo rosa" },
+    amethyst:         { NL:"amethist", EN:"amethyst", DE:"Amethyst", FR:"améthyste", ES:"amatista", IT:"ametista" },
+
+    white_agate:      { NL:"witte agaat", EN:"white agate", DE:"weißer Achat", FR:"agate blanche", ES:"ágata blanca", IT:"agata bianca" },
+    sunstone:         { NL:"zonnesteen", EN:"sunstone", DE:"Sonnenstein", FR:"pierre de soleil", ES:"piedra del sol", IT:"pietra del sole" },
+
+    moss_agate:       { NL:"mosagaat", EN:"moss agate", DE:"Moosachat", FR:"agate mousse", ES:"ágata musgosa", IT:"agata muschiata" },
+    green_aventurine: { NL:"groene aventurijn", EN:"green aventurine", DE:"grüner Aventurin", FR:"aventurine verte", ES:"aventurina verde", IT:"avventurina verde" },
+    lepidolite:       { NL:"lepidoliet", EN:"lepidolite", DE:"Lepidolith", FR:"lépidolite", ES:"lepidolita", IT:"lepidolite" },
+
+    yellow_jasper:    { NL:"gele jaspis", EN:"yellow jasper", DE:"gelber Jaspis", FR:"jaspe jaune", ES:"jaspe amarillo", IT:"diaspro giallo" },
+    tiger_eye:        { NL:"tijgeroog", EN:"tiger eye", DE:"Tigerauge", FR:"œil de tigre", ES:"ojo de tigre", IT:"occhio di tigre" },
+    smoky_quartz:     { NL:"rookkwarts", EN:"smoky quartz", DE:"Rauchquarz", FR:"quartz fumé", ES:"cuarzo ahumado", IT:"quarzo fumé" },
+  },
+
+  // Dutch uses “veelal”; reduced “traditional/tradition” language
+  stoneBlurbs: {
+    black_tourmaline: {
+      NL:"Wordt veelal gekoppeld aan aarding en bescherming.",
+      EN:"Often associated with grounding and protection.",
+      DE:"Wird oft mit Erdung und Schutz in Verbindung gebracht.",
+      FR:"Souvent associée à l’ancrage et à la protection.",
+      ES:"A menudo asociada con enraizamiento y protección.",
+      IT:"Spesso associata a radicamento e protezione.",
+    },
+    hematite: {
+      NL:"Bekend om de metalen glans; wordt veelal gekoppeld aan focus en balans.",
+      EN:"Known for its metallic sheen; often linked to focus and balance.",
+      DE:"Bekannt für den metallischen Glanz; oft mit Fokus und Ausgleich verbunden.",
+      FR:"Connue pour son éclat métallique ; souvent liée à la concentration et à l’équilibre.",
+      ES:"Conocida por su brillo metálico; a menudo vinculada con enfoque y equilibrio.",
+      IT:"Nota per la lucentezza metallica; spesso collegata a concentrazione ed equilibrio.",
+    },
+    amazonite: {
+      NL:"Wordt veelal gekoppeld aan kalmte, evenwicht en helder communiceren.",
+      EN:"Often linked to calm, balance and clear communication.",
+      DE:"Oft verbunden mit Ruhe, Ausgleich und klarer Kommunikation.",
+      FR:"Souvent liée au calme, à l’équilibre et à une communication claire.",
+      ES:"A menudo vinculada con calma, equilibrio y comunicación clara.",
+      IT:"Spesso collegata a calma, equilibrio e comunicazione chiara.",
+    },
+    rose_quartz: {
+      NL:"Wordt veelal gekoppeld aan zachtheid, zelfliefde en harmonie.",
+      EN:"Often linked to gentleness, self-love and harmony.",
+      DE:"Oft verbunden mit Sanftheit, Selbstliebe und Harmonie.",
+      FR:"Souvent liée à la douceur, à l’amour de soi et à l’harmonie.",
+      ES:"A menudo vinculada con suavidad, amor propio y armonía.",
+      IT:"Spesso collegata a dolcezza, amor proprio e armonia.",
+    },
+    amethyst: {
+      NL:"Wordt veelal gekoppeld aan rust, helderheid en inzicht.",
+      EN:"Often linked to calm, clarity and insight.",
+      DE:"Oft verbunden mit Ruhe, Klarheit und Erkenntnis.",
+      FR:"Souvent liée au calme, à la clarté et à l’intuition.",
+      ES:"A menudo vinculada con calma, claridad e intuición.",
+      IT:"Spesso collegata a calma, chiarezza e intuizione.",
+    },
+    white_agate: {
+      NL:"Wordt veelal gezien als een rustige, stabiliserende steen.",
+      EN:"Often seen as a calm, stabilising stone.",
+      DE:"Gilt oft als ruhiger, stabilisierender Stein.",
+      FR:"Souvent considérée comme une pierre douce et stabilisante.",
+      ES:"A menudo considerada una piedra calmante y estabilizadora.",
+      IT:"Spesso considerata una pietra calma e stabilizzante.",
+    },
+    sunstone: {
+      NL:"Wordt veelal gekoppeld aan warmte, optimisme en vitaliteit.",
+      EN:"Often linked to warmth, optimism and vitality.",
+      DE:"Oft verbunden mit Wärme, Optimismus und Vitalität.",
+      FR:"Souvent liée à la chaleur, l’optimisme et la vitalité.",
+      ES:"A menudo vinculada con calidez, optimismo y vitalidad.",
+      IT:"Spesso collegata a calore, ottimismo e vitalità.",
+    },
+    moss_agate: {
+      NL:"Wordt veelal geassocieerd met natuur, groei en aarding.",
+      EN:"Often associated with nature, growth and grounding themes.",
+      DE:"Oft mit Natur, Wachstum und Erdung assoziiert.",
+      FR:"Souvent associée à la nature, la croissance et l’ancrage.",
+      ES:"A menudo asociada con naturaleza, crecimiento y enraizamiento.",
+      IT:"Spesso associata a natura, crescita e radicamento.",
+    },
+    green_aventurine: {
+      NL:"Wordt veelal gekoppeld aan rust, vertrouwen en ‘nieuwe kansen’.",
+      EN:"Often linked to calm, confidence and ‘new opportunities’.",
+      DE:"Oft verbunden mit Ruhe, Zuversicht und „neuen Chancen“.",
+      FR:"Souvent liée au calme, à la confiance et aux « nouvelles opportunités ».",
+      ES:"A menudo vinculada con calma, confianza y ‘nuevas oportunidades’.",
+      IT:"Spesso collegata a calma, fiducia e ‘nuove opportunità’.",
+    },
+    lepidolite: {
+      NL:"Wordt veelal genoemd bij ontspanning en emotionele rust.",
+      EN:"Often mentioned in relation to relaxation and emotional calm.",
+      DE:"Wird oft mit Entspannung und innerer Ruhe verbunden.",
+      FR:"Souvent citée pour la détente et le calme émotionnel.",
+      ES:"A menudo mencionada por su asociación con relajación y calma emocional.",
+      IT:"Spesso citata per rilassamento e calma emotiva.",
+    },
+    yellow_jasper: {
+      NL:"Wordt veelal gekoppeld aan stabiliteit en doorzettingskracht.",
+      EN:"Often associated with steadiness and perseverance.",
+      DE:"Oft mit Beständigkeit und Durchhaltevermögen verbunden.",
+      FR:"Souvent associée à la stabilité et à la persévérance.",
+      ES:"A menudo asociada con estabilidad y perseverancia.",
+      IT:"Spesso associata a stabilità e perseveranza.",
+    },
+    tiger_eye: {
+      NL:"Wordt veelal gekoppeld aan focus, moed en een nuchtere blik.",
+      EN:"Often linked to focus, courage and a clear-headed outlook.",
+      DE:"Oft mit Fokus, Mut und klarem Blick verbunden.",
+      FR:"Souvent lié à la concentration, au courage et à la lucidité.",
+      ES:"A menudo vinculado con enfoque, valentía y una visión clara.",
+      IT:"Spesso collegato a concentrazione, coraggio e lucidità.",
+    },
+    smoky_quartz: {
+      NL:"Wordt veelal gekoppeld aan aarding en het loslaten van spanning.",
+      EN:"Often associated with grounding and letting go of tension.",
+      DE:"Oft mit Erdung und dem Loslassen von Anspannung verbunden.",
+      FR:"Souvent associée à l’ancrage et au lâcher-prise.",
+      ES:"A menudo asociada con enraizamiento y soltar tensiones.",
+      IT:"Spesso associata a radicamento e lasciar andare le tensioni.",
+    },
+  },
+
+  symbols: {
+    tree_of_life: {
+      name:  { NL:"Levensboom", EN:"Tree of Life", DE:"Lebensbaum", FR:"Arbre de Vie", ES:"Árbol de la Vida", IT:"Albero della Vita" },
+      blurb: { NL:"Symbool voor groei, verbinding en continuïteit.", EN:"A symbol of growth, connection and continuity.", DE:"Symbol für Wachstum, Verbundenheit und Kontinuität.", FR:"Symbole de croissance, de lien et de continuité.", ES:"Símbolo de crecimiento, conexión y continuidad.", IT:"Simbolo di crescita, connessione e continuità." }
+    },
+    moon_phases: {
+      name:  { NL:"maanfasen", EN:"moon phases", DE:"Mondphasen", FR:"phases de la lune", ES:"fases lunares", IT:"fasi lunari" },
+      blurb: { NL:"Verwijst naar ritme, verandering en cycli.", EN:"Refers to rhythm, change and cycles.", DE:"Steht für Rhythmus, Wandel und Zyklen.", FR:"Évoque le rythme, le changement et les cycles.", ES:"Hace referencia a ritmo, cambio y ciclos.", IT:"Richiama ritmo, cambiamento e cicli." }
+    },
+    mandala: {
+      name:  { NL:"mandala", EN:"mandala", DE:"Mandala", FR:"mandala", ES:"mandala", IT:"mandala" },
+      blurb: { NL:"Symbool voor structuur en samenhang.", EN:"A symbol of structure and wholeness.", DE:"Symbol für Struktur und Ganzheit.", FR:"Symbole de structure et d’unité.", ES:"Símbolo de estructura y unidad.", IT:"Simbolo di struttura e unità." }
+    },
+    infinity: {
+      name:  { NL:"infinity symbool", EN:"Infinity symbol", DE:"Unendlichkeitssymbol", FR:"symbole infini", ES:"símbolo infinito", IT:"simbolo infinito" },
+      blurb: { NL:"Symbool voor oneindigheid en verbondenheid.", EN:"A symbol of infinity and connection.", DE:"Symbol für Unendlichkeit und Verbundenheit.", FR:"Symbole d’infini et de lien.", ES:"Símbolo de infinitud y conexión.", IT:"Simbolo di infinito e connessione." }
+    }
+  },
+
+  products: [
+    // 12721–12723: packed per 3
+    {
+      sku: "12721",
+      type: "BRACELET_SINGLE",
+      title: {
+        NL: "Armband zwarte toermalijn & hematiet met Levensboom en kwastje -- 4–6 mm",
+        DE: "Armband schwarzer Turmalin & Hämatit mit Lebensbaum und Quaste -- 4–6 mm",
+        EN: "Bracelet black tourmaline & hematite with Tree of Life and tassel -- 4–6 mm",
+        FR: "Bracelet tourmaline noire & hématite avec Arbre de Vie et pompon -- 4–6 mm",
+        ES: "Pulsera turmalina negra & hematita con Árbol de la Vida y borla -- 4–6 mm",
+        IT: "Bracciale tormalina nera & ematite con Albero della Vita e nappina -- 4–6 mm",
+      },
+      beads: "4–6 mm",
+      constituents: ["black_tourmaline", "hematite"],
+      symbol: "tree_of_life",
+      pack: {
+        NL:"Verpakt per 3 stuks, prijs per stuk.",
+        EN:"Packed per 3 pcs, price per piece.",
+        DE:"Verpackt zu 3 Stk., Preis pro Stück.",
+        FR:"Emballé par 3 pcs, prix par pièce.",
+        ES:"Empaquetado por 3 uds., precio por unidad.",
+        IT:"Confezionato da 3 pz, prezzo per pezzo.",
+      }
+    },
+
+    {
+      sku:"12722", type:"BRACELET_SINGLE",
+      title:{
+        NL:"Armband zwarte toermalijn & hematiet met Levensboom bedels -- 4–6 mm",
+        DE:"Armband schwarzer Turmalin & Hämatit mit Lebensbaum-Anhängern -- 4–6 mm",
+        EN:"Bracelet black tourmaline & hematite with Tree of Life charms -- 4–6 mm",
+        FR:"Bracelet tourmaline noire & hématite avec breloques Arbre de Vie -- 4–6 mm",
+        ES:"Pulsera turmalina negra & hematita con dijes Árbol de la Vida -- 4–6 mm",
+        IT:"Bracciale tormalina nera & ematite con ciondoli Albero della Vita -- 4–6 mm",
+      },
+      beads:"4–6 mm", constituents:["black_tourmaline","hematite"], symbol:"tree_of_life",
+      pack:{
+        NL:"Verpakt per 3 stuks, prijs per stuk.",
+        EN:"Packed per 3 pcs, price per piece.",
+        DE:"Verpackt zu 3 Stk., Preis pro Stück.",
+        FR:"Emballé par 3 pcs, prix par pièce.",
+        ES:"Empaquetado por 3 uds., precio por unidad.",
+        IT:"Confezionato da 3 pz, prezzo per pezzo.",
+      }
+    },
+
+    {
+      sku:"12723", type:"BRACELET_SINGLE",
+      title:{
+        NL:"Armband zwarte toermalijn & hematiet met infinity symbool -- 4–6 mm",
+        DE:"Armband schwarzer Turmalin & Hämatit mit Unendlichkeitssymbol -- 4–6 mm",
+        EN:"Bracelet black tourmaline & hematite with Infinity symbol -- 4–6 mm",
+        FR:"Bracelet tourmaline noire & hématite avec symbole infini -- 4–6 mm",
+        ES:"Pulsera turmalina negra & hematita con símbolo infinito -- 4–6 mm",
+        IT:"Bracciale tormalina nera & ematite con simbolo infinito -- 4–6 mm",
+      },
+      beads:"4–6 mm", constituents:["black_tourmaline","hematite"], symbol:"infinity",
+      pack:{
+        NL:"Verpakt per 3 stuks, prijs per stuk.",
+        EN:"Packed per 3 pcs, price per piece.",
+        DE:"Verpackt zu 3 Stk., Preis pro Stück.",
+        FR:"Emballé par 3 pcs, prix par pièce.",
+        ES:"Empaquetado por 3 uds., precio por unidad.",
+        IT:"Confezionato da 3 pz, prezzo per pezzo.",
+      }
+    },
+
+    // 12725–12729: packed per 2
+    { sku:"12725", type:"BRACELET_SET2", title: {
+        NL:"Armband zwarte toermalijn & hematiet set van 2 -- 3–8 mm",
+        DE:"Armband schwarzer Turmalin & Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet black tourmaline & hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet tourmaline noire & hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera turmalina negra & hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale tormalina nera & ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["black_tourmaline","hematite"],
+      pack:{
+        NL:"Verpakt per 2 stuks, prijs per stuk.",
+        EN:"Packed per 2 pcs, price per piece.",
+        DE:"Verpackt zu 2 Stk., Preis pro Stück.",
+        FR:"Emballé par 2 pcs, prix par pièce.",
+        ES:"Empaquetado por 2 uds., precio por unidad.",
+        IT:"Confezionato da 2 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12726", type:"BRACELET_SET2", title: {
+        NL:"Armband zonnesteen & hematiet set van 2 -- 3–8 mm",
+        DE:"Armband Sonnenstein & Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet sunstone & hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet pierre de soleil & hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera piedra del sol & hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale pietra del sole & ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["sunstone","hematite"],
+      pack:{
+        NL:"Verpakt per 2 stuks, prijs per stuk.",
+        EN:"Packed per 2 pcs, price per piece.",
+        DE:"Verpackt zu 2 Stk., Preis pro Stück.",
+        FR:"Emballé par 2 pcs, prix par pièce.",
+        ES:"Empaquetado por 2 uds., precio por unidad.",
+        IT:"Confezionato da 2 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12727", type:"BRACELET_SET2", title: {
+        NL:"Armband amazoniet & hematiet set van 2 -- 3–8 mm",
+        DE:"Armband Amazonit & Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet amazonite & hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet amazonite & hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera amazonita & hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale amazzonite & ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["amazonite","hematite"],
+      pack:{
+        NL:"Verpakt per 2 stuks, prijs per stuk.",
+        EN:"Packed per 2 pcs, price per piece.",
+        DE:"Verpackt zu 2 Stk., Preis pro Stück.",
+        FR:"Emballé par 2 pcs, prix par pièce.",
+        ES:"Empaquetado por 2 uds., precio por unidad.",
+        IT:"Confezionato da 2 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12728", type:"BRACELET_SET2", title: {
+        NL:"Armband rozenkwarts & hematiet set van 2 -- 3–8 mm",
+        DE:"Armband Rosenquarz & Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet rose quartz & hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet quartz rose & hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera cuarzo rosa & hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale quarzo rosa & ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["rose_quartz","hematite"],
+      pack:{
+        NL:"Verpakt per 2 stuks, prijs per stuk.",
+        EN:"Packed per 2 pcs, price per piece.",
+        DE:"Verpackt zu 2 Stk., Preis pro Stück.",
+        FR:"Emballé par 2 pcs, prix par pièce.",
+        ES:"Empaquetado por 2 uds., precio por unidad.",
+        IT:"Confezionato da 2 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12729", type:"BRACELET_SET2", title: {
+        NL:"Armband amethist & hematiet set van 2 -- 3–8 mm",
+        DE:"Armband Amethyst & Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet amethyst & hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet améthyste & hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera amatista & hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale ametista & ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["amethyst","hematite"],
+      pack:{
+        NL:"Verpakt per 2 stuks, prijs per stuk.",
+        EN:"Packed per 2 pcs, price per piece.",
+        DE:"Verpackt zu 2 Stk., Preis pro Stück.",
+        FR:"Emballé par 2 pcs, prix par pièce.",
+        ES:"Empaquetado por 2 uds., precio por unidad.",
+        IT:"Confezionato da 2 pz, prezzo per pezzo.",
+      }
+    },
+
+    // 12730–12732: packed per 3
+    { sku:"12730", type:"BRACELET_SET2", title: {
+        NL:"Armband meerkleurige gemengde edelstenen met hematiet set van 2 -- 3–8 mm",
+        DE:"Armband mehrfarbige gemischte Edelsteine mit Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet multicolour mixed gemstones with hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet pierres précieuses mélangées multicolores avec hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera piedras semipreciosas mixtas multicolor con hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale pietre miste multicolore con ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["hematite"],
+      pack:{
+        NL:"Verpakt per 3 stuks, prijs per stuk.",
+        EN:"Packed per 3 pcs, price per piece.",
+        DE:"Verpackt zu 3 Stk., Preis pro Stück.",
+        FR:"Emballé par 3 pcs, prix par pièce.",
+        ES:"Empaquetado por 3 uds., precio por unidad.",
+        IT:"Confezionato da 3 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12731", type:"BRACELET_SET2", title: {
+        NL:"Armband pastel gemengde edelstenen met hematiet set van 2 -- 3–8 mm",
+        DE:"Armband pastell gemischte Edelsteine mit Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet pastel mixed gemstones with hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet pierres précieuses mélangées pastel avec hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera piedras semipreciosas mixtas pastel con hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale pietre miste pastel con ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["hematite"],
+      pack:{
+        NL:"Verpakt per 3 stuks, prijs per stuk.",
+        EN:"Packed per 3 pcs, price per piece.",
+        DE:"Verpackt zu 3 Stk., Preis pro Stück.",
+        FR:"Emballé par 3 pcs, prix par pièce.",
+        ES:"Empaquetado por 3 uds., precio por unidad.",
+        IT:"Confezionato da 3 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12732", type:"BRACELET_SET2", title: {
+        NL:"Armband antraciet gemengde edelstenen met hematiet set van 2 -- 3–8 mm",
+        DE:"Armband anthrazit gemischte Edelsteine mit Hämatit Set von 2 -- 3–8 mm",
+        EN:"Bracelet anthracite mixed gemstones with hematite set of 2 -- 3–8 mm",
+        FR:"Bracelet pierres précieuses mélangées anthracite avec hématite lot de 2 -- 3–8 mm",
+        ES:"Pulsera piedras semipreciosas mixtas antracita con hematita set de 2 -- 3–8 mm",
+        IT:"Bracciale pietre miste antracite con ematite set da 2 -- 3–8 mm",
+      },
+      beads:"3–8 mm", constituents:["hematite"],
+      pack:{
+        NL:"Verpakt per 3 stuks, prijs per stuk.",
+        EN:"Packed per 3 pcs, price per piece.",
+        DE:"Verpackt zu 3 Stk., Preis pro Stück.",
+        FR:"Emballé par 3 pcs, prix par pièce.",
+        ES:"Empaquetado por 3 uds., precio por unidad.",
+        IT:"Confezionato da 3 pz, prezzo per pezzo.",
+      }
+    },
+
+    // Rings: packed per 4
+    { sku:"12737", type:"RING", title: {
+        NL:"Ring maanfasen met witte agaat -- ±2 cm",
+        DE:"Ring Mondphasen mit weißem Achat -- ±2 cm",
+        EN:"Ring Moon phases with white agate -- ±2 cm",
+        FR:"Bague phases de la lune avec agate blanche -- ±2 cm",
+        ES:"Anillo fases lunares con ágata blanca -- ±2 cm",
+        IT:"Anello fasi lunari con agata bianca -- ±2 cm",
+      },
+      size:"±2 cm", constituents:["white_agate"], symbol:"moon_phases",
+      pack:{
+        NL:"Verpakt per 4 stuks, prijs per stuk.",
+        EN:"Packed per 4 pcs, price per piece.",
+        DE:"Verpackt zu 4 Stk., Preis pro Stück.",
+        FR:"Emballé par 4 pcs, prix par pièce.",
+        ES:"Empaquetado por 4 uds., precio por unidad.",
+        IT:"Confezionato da 4 pz, prezzo per pezzo.",
+      }
+    },
+
+    { sku:"12738", type:"RING", title: {
+        NL:"Ring maanfasen met zonnesteen -- ±2 cm",
+        DE:"Ring Mondphasen mit Sonnenstein -- ±2 cm",
+        EN:"Ring Moon phases with sunstone -- ±2 cm",
+        FR:"Bague phases de la lune avec pierre de soleil -- ±2 cm",
+        ES:"Anillo fases lunares con piedra del sol -- ±2 cm",
+        IT:"Anello fasi lunari con pietra del sole -- ±2 cm",
+      },
+      size:"±2 cm", constituents:["sunstone"], symbol:"moon_phases",
+      pack:{
+        NL:"Verpakt per 4 stuks, prijs per stuk.",
+        EN:"Packed per 4 pcs, price per piece.",
+        DE:"Verpackt zu 4 Stk., Preis pro Stück.",
+        FR:"Emballé par 4 pcs, prix par pièce.",
+        ES:"Empaquetado por 4 uds., precio por unidad.",
+        IT:"Confezionato da 4 pz, prezzo per pezzo.",
+      }
+    },
+
+    // Malas: suppress pack line entirely
+    { sku:"12741", type:"MALA", title: {
+        NL:"Mala mosagaat, groene aventurijn, lepidoliet, zonnesteen & mandala hanger -- 8 mm",
+        DE:"Mala Moosachat, grüner Aventurin, Lepidolith, Sonnenstein & Mandala-Anhänger -- 8 mm",
+        EN:"Mala moss agate, green aventurine, lepidolite, sunstone & mandala pendant -- 8 mm",
+        FR:"Mala agate mousse, aventurine verte, lépidolite, pierre de soleil & pendentif mandala -- 8 mm",
+        ES:"Mala ágata musgosa, aventurina verde, lepidolita, piedra del sol & colgante mandala -- 8 mm",
+        IT:"Mala agata muschiata, avventurina verde, lepidolite, pietra del sole & pendente mandala -- 8 mm",
+      },
+      beads:"8 mm", constituents:["moss_agate","green_aventurine","lepidolite","sunstone"], symbol:"mandala",
+      suppressPackLine:true
+    },
+
+    { sku:"12742", type:"MALA", title: {
+        NL:"Mala gele jaspis, tijgeroog & rookkwarts -- 8 mm",
+        DE:"Mala gelber Jaspis, Tigerauge & Rauchquarz -- 8 mm",
+        EN:"Mala yellow jasper, tiger eye & smoky quartz -- 8 mm",
+        FR:"Mala jaspe jaune, œil de tigre & quartz fumé -- 8 mm",
+        ES:"Mala jaspe amarillo, ojo de tigre & cuarzo ahumado -- 8 mm",
+        IT:"Mala diaspro giallo, occhio di tigre & quarzo fumé -- 8 mm",
+      },
+      beads:"8 mm", constituents:["yellow_jasper","tiger_eye","smoky_quartz"],
+      suppressPackLine:true
+    },
+  ],
+
+  // IMPORTANT: gemstones are rendered one-per-line in the info paragraph(s)
+  templates: {
+    BRACELET_SINGLE: {
+      EN: `<p>A casual chic gemstone bracelet made of {{BEADS}} {{STONE_LIST}} with a {{SYMBOL_NAME}} charm and tassel.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      NL: `<p>Een casual chic edelsteenarmband van {{BEADS}} {{STONE_LIST}} met een {{SYMBOL_NAME}}-bedel en kwastje.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      DE: `<p>Ein casual-chices Edelsteinarmband aus {{BEADS}} {{STONE_LIST}} mit {{SYMBOL_NAME}}-Anhänger und Quaste.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      FR: `<p>Un bracelet bijoux casual chic en pierres de {{BEADS}} {{STONE_LIST}} avec breloque {{SYMBOL_NAME}} et pompon.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      ES: `<p>Una pulsera bijoux casual chic de piedras de {{BEADS}} {{STONE_LIST}} con dije {{SYMBOL_NAME}} y borla.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      IT: `<p>Un bracciale bijoux casual chic in pietre da {{BEADS}} {{STONE_LIST}} con ciondolo {{SYMBOL_NAME}} e nappina.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+    },
+
+    BRACELET_SET2: {
+      EN: `<p>A coordinated set of two elastic gemstone bracelets made of {{BEADS}} {{STONE_LIST}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      NL: `<p>Een set van twee elastische edelsteenarmbanden van {{BEADS}} {{STONE_LIST}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      DE: `<p>Ein Set aus zwei elastischen Edelsteinarmbändern aus {{BEADS}} {{STONE_LIST}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      FR: `<p>Un lot de deux bracelets élastiques en pierres de {{BEADS}} {{STONE_LIST}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      ES: `<p>Un set de dos pulseras elásticas de piedras de {{BEADS}} {{STONE_LIST}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      IT: `<p>Un set di due bracciali elastici in pietre da {{BEADS}} {{STONE_LIST}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{S2_NAME}}</strong> {{S2_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+    },
+
+    RING: {
+      EN: `<p>An adjustable ring with a {{SYMBOL_NAME}} motif, set with {{STONE_LIST}} ({{SIZE}}).</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      NL: `<p>Een verstelbare ring met {{SYMBOL_NAME}}-motief, gezet met {{STONE_LIST}} ({{SIZE}}).</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      DE: `<p>Ein verstellbarer Ring mit {{SYMBOL_NAME}}-Motiv, besetzt mit {{STONE_LIST}} ({{SIZE}}).</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      FR: `<p>Une bague ajustable avec motif {{SYMBOL_NAME}}, sertie de {{STONE_LIST}} ({{SIZE}}).</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      ES: `<p>Un anillo ajustable con motivo {{SYMBOL_NAME}}, con {{STONE_LIST}} ({{SIZE}}).</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      IT: `<p>Un anello regolabile con motivo {{SYMBOL_NAME}}, con {{STONE_LIST}} ({{SIZE}}).</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p><strong>{{S1_NAME}}</strong> {{S1_BLURB}}<br>
+<strong>{{SYMBOL_NAME}}</strong> {{SYMBOL_BLURB}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+    },
+
+    MALA: {
+      EN: `<p>A traditional mala made of {{BEADS}} {{STONE_LIST}}{{MALA_EXTRA}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p>{{STONE_BLOCKS}}{{SYMBOL_BLOCK}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      NL: `<p>Een traditionele mala van {{BEADS}} {{STONE_LIST}}{{MALA_EXTRA}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p>{{STONE_BLOCKS}}{{SYMBOL_BLOCK}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      DE: `<p>Eine traditionelle Mala aus {{BEADS}} {{STONE_LIST}}{{MALA_EXTRA}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p>{{STONE_BLOCKS}}{{SYMBOL_BLOCK}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      FR: `<p>Un mala traditionnel en {{BEADS}} {{STONE_LIST}}{{MALA_EXTRA}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p>{{STONE_BLOCKS}}{{SYMBOL_BLOCK}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      ES: `<p>Un mala tradicional de {{BEADS}} {{STONE_LIST}}{{MALA_EXTRA}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p>{{STONE_BLOCKS}}{{SYMBOL_BLOCK}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+
+      IT: `<p>Un mala tradizionale in {{BEADS}} {{STONE_LIST}}{{MALA_EXTRA}}.</p>
+<br>
+{{PACK_LINE}}
+<br>
+<p>{{STONE_BLOCKS}}{{SYMBOL_BLOCK}}</p>
+<br>
+<em>{{DISCLAIMER}}</em>`,
+    },
+  },
+};
+
+/* =========================
+   ENGINE
+   ========================= */
+
+function listWithAnd(items, lang) {
+  const andWord = { EN:"and", NL:"en", DE:"und", FR:"et", ES:"y", IT:"e" }[lang] || "and";
+  const arr = items.filter(Boolean);
+  if (arr.length <= 1) return arr[0] || "";
+  if (arr.length === 2) return `${arr[0]} ${andWord} ${arr[1]}`;
+  return `${arr.slice(0,-1).join(", ")} ${andWord} ${arr[arr.length-1]}`;
+}
+
+function renderFor(product, lang) {
+  const tpl = (DATA.templates[product.type] && DATA.templates[product.type][lang])
+    ? DATA.templates[product.type][lang]
+    : (DATA.templates[product.type] ? DATA.templates[product.type].EN : "");
+
+  const packLine = (DATA.packLine(product, lang) || "").trim();
+  const disclaimer = DATA.disclaimer[lang] || DATA.disclaimer.EN;
+
+  const stoneNames = (product.constituents || []).map(k => (DATA.stones[k] && DATA.stones[k][lang]) ? DATA.stones[k][lang] : k);
+  const stoneList = listWithAnd(stoneNames, lang);
+
+  const symbolName = product.symbol && DATA.symbols[product.symbol]
+    ? DATA.symbols[product.symbol].name[lang]
+    : "";
+  const symbolBlurb = product.symbol && DATA.symbols[product.symbol]
+    ? DATA.symbols[product.symbol].blurb[lang]
+    : "";
+
+  const s1k = product.constituents && product.constituents[0] ? product.constituents[0] : null;
+  const s2k = product.constituents && product.constituents[1] ? product.constituents[1] : null;
+
+  const s1Name = s1k && DATA.stones[s1k] ? DATA.stones[s1k][lang] : "";
+  const s2Name = s2k && DATA.stones[s2k] ? DATA.stones[s2k][lang] : "";
+
+  const s1Blurb = s1k && DATA.stoneBlurbs[s1k] ? DATA.stoneBlurbs[s1k][lang] : "";
+  const s2Blurb = s2k && DATA.stoneBlurbs[s2k] ? DATA.stoneBlurbs[s2k][lang] : "";
+
+  // Malas: one stone per line
+  const stoneBlocks = (product.constituents || []).map((k, idx) => {
+    const n = (DATA.stones[k] && DATA.stones[k][lang]) ? DATA.stones[k][lang] : k;
+    const b = (DATA.stoneBlurbs[k] && DATA.stoneBlurbs[k][lang]) ? DATA.stoneBlurbs[k][lang] : "";
+    const br = (idx === (product.constituents.length - 1)) ? "" : "<br>";
+    return `<strong>${n}</strong> ${b}${br}`;
+  }).join("");
+
+  const symbolBlock = symbolName
+    ? `<br><strong>${symbolName}</strong> ${symbolBlurb}`
+    : "";
+
+  const malaExtra = (product.symbol && product.symbol === "mandala")
+    ? ({ EN:" with a mandala pendant", NL:" met mandala hanger", DE:" mit Mandala-Anhänger", FR:" avec pendentif mandala", ES:" con colgante mandala", IT:" con pendente mandala" }[lang] || "")
+    : "";
+
+  let filled = tpl
+    .replaceAll("{{PACK_LINE}}", packLine ? `<p>${packLine}</p>` : "")
+    .replaceAll("{{DISCLAIMER}}", disclaimer)
+    .replaceAll("{{BEADS}}", product.beads || "")
+    .replaceAll("{{SIZE}}", product.size || "")
+    .replaceAll("{{STONE_LIST}}", stoneList)
+    .replaceAll("{{S1_NAME}}", s1Name)
+    .replaceAll("{{S2_NAME}}", s2Name)
+    .replaceAll("{{S1_BLURB}}", s1Blurb)
+    .replaceAll("{{S2_BLURB}}", s2Blurb)
+    .replaceAll("{{SYMBOL_NAME}}", symbolName)
+    .replaceAll("{{SYMBOL_BLURB}}", symbolBlurb)
+    .replaceAll("{{STONE_BLOCKS}}", stoneBlocks)
+    .replaceAll("{{SYMBOL_BLOCK}}", symbolBlock)
+    .replaceAll("{{MALA_EXTRA}}", malaExtra);
+
+  return filled;
+}
+
+function buildBundle(product) {
+  const bundle = {};
+  for (const L of DATA.languages) bundle[L.code] = renderFor(product, L.code);
+  return bundle;
+}
+
+/* =========================
+   UI
+   ========================= */
+
+const skuSel = document.getElementById("sku");
+const langSel = document.getElementById("lang");
+const out = document.getElementById("out");
+const preview = document.getElementById("preview");
+const meta = document.getElementById("meta");
+const tabs = document.getElementById("tabs");
+const copyBtn = document.getElementById("copyBtn");
+const copyAllBtn = document.getElementById("copyAllBtn");
+
+let currentLang = "EN";
+
+function refreshTabs() {
+  tabs.innerHTML = "";
+  for (const L of DATA.languages) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(L.code === currentLang));
+    b.textContent = L.label;
+    b.addEventListener("click", () => {
+      currentLang = L.code;
+      langSel.value = currentLang;
+      update();
+    });
+    tabs.appendChild(b);
+  }
+}
+
+function update() {
+  const sku = skuSel.value;
+  const product = DATA.products.find(p => p.sku === sku);
+  if (!product) return;
+
+  const title = product.title && product.title[currentLang] ? product.title[currentLang] : (product.title ? product.title.EN : "");
+  meta.innerHTML =
+    `SKU <span class="pill">${product.sku}</span>` +
+    ` Type <span class="pill">${product.type}</span>` +
+    (title ? ` <span class="pill">${title}</span>` : "");
+
+  const html = renderFor(product, currentLang);
+  out.value = html;
+  preview.innerHTML = html;
+
+  refreshTabs();
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const tmp = document.createElement("textarea");
+    tmp.value = text;
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand("copy");
+    document.body.removeChild(tmp);
+  }
+}
+
+copyBtn.addEventListener("click", async () => {
+  await copyText(out.value);
+});
+
+copyAllBtn.addEventListener("click", async () => {
+  const sku = skuSel.value;
+  const product = DATA.products.find(p => p.sku === sku);
+  const bundle = {
+    sku: product.sku,
+    line: DATA.lineName,
+    type: product.type,
+    html: buildBundle(product),
+  };
+  await copyText(JSON.stringify(bundle, null, 2));
+});
+
+skuSel.addEventListener("change", update);
+langSel.addEventListener("change", () => {
+  currentLang = langSel.value;
+  update();
+});
+
+(function init() {
+  for (const p of DATA.products) {
+    const opt = document.createElement("option");
+    opt.value = p.sku;
+    opt.textContent = p.sku;
+    skuSel.appendChild(opt);
+  }
+  for (const L of DATA.languages) {
+    const opt = document.createElement("option");
+    opt.value = L.code;
+    opt.textContent = L.label;
+    langSel.appendChild(opt);
+  }
+  skuSel.value = DATA.products[0].sku;
+  currentLang = "EN";
+  langSel.value = currentLang;
+  update();
+})();
+</script>
+</body>
+</html>
