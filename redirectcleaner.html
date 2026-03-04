@@ -260,6 +260,13 @@ document.getElementById('process').addEventListener('click', function() {
     const src = row.src_url;
     const tgt = row.tgt_url;
 
+    // Flag dirty URLs (trailing empty query string)
+    if (src.endsWith('?') || tgt.endsWith('?')) {
+      row.chain_detail = 'Dirty URL: trailing empty query string (?)';
+      tabs.errors.push(row);
+      continue;
+    }
+
     // Check webshop first (in either src or tgt)
     if (WEBSHOP_RE.test(src) || WEBSHOP_RE.test(tgt)) {
       tabs.webshop.push(row);
