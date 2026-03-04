@@ -47,6 +47,17 @@ function log(msg, cls) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// Normalize URL for chain matching: strip scheme, www., trailing slash, trailing empty query
+// Keeps actual query strings intact to avoid false circular matches (e.g. ?language=NL)
+function normalizeUrl(url) {
+  let u = url.trim().toLowerCase();
+  u = u.replace(/^https?:\/\//, '');
+  if (u.startsWith('www.')) u = u.substring(4);
+  u = u.replace(/\/+$/, '');
+  if (u.endsWith('?')) u = u.slice(0, -1); // strip trailing empty query only
+  return u;
+}
+
 const NON_COM_DOMAINS = [
   'phoeniximport.nl',
   'phoeniximport.de',
@@ -141,10 +152,10 @@ document.getElementById('process').addEventListener('click', function() {
   log('Remaining: ' + comRows.length + ' rows');
 
   // Step 3: Resolve redirect chains
-  // Build a map: src_url -> row data
+  // Build a map: normalized src_url -> row indices (for chain detection)
   var srcMap = {};
   for (let i = 0; i < comRows.length; i++) {
-    const key = comRows[i].src_url;
+    const key = normalizeUrl(comRows[i].src_url);
     if (!srcMap[key]) {
       srcMap[key] = [];
     }
@@ -164,21 +175,21 @@ document.getElementById('process').addEventListener('click', function() {
     const row = comRows[i];
     let finalTarget = row.tgt_url;
     const visited = new Set();
-    visited.add(row.src_url);
+    visited.add(normalizeUrl(row.src_url));
     let hops = 0;
     let chainParts = [row.src_url];
     let isError = false;
 
     while (true) {
-      // Check if finalTarget is also a src_url
-      const nextIndices = srcMap[finalTarget];
+      // Check if finalTarget is also a src_url (using normalized comparison)
+      const nextIndices = srcMap[normalizeUrl(finalTarget)];
       if (!nextIndices || nextIndices.length === 0) break;
 
       // Take the first matching row
       const nextIdx = nextIndices[0];
       const nextRow = comRows[nextIdx];
 
-      if (visited.has(nextRow.src_url)) {
+      if (visited.has(normalizeUrl(nextRow.src_url))) {
         // Circular chain
         isError = true;
         chainParts.push(nextRow.src_url + ' (CIRCULAR)');
@@ -186,7 +197,7 @@ document.getElementById('process').addEventListener('click', function() {
       }
 
       hops++;
-      visited.add(nextRow.src_url);
+      visited.add(normalizeUrl(nextRow.src_url));
       chainParts.push(nextRow.src_url);
       consumed.add(nextIdx);
       finalTarget = nextRow.tgt_url;
@@ -248,6 +259,13 @@ document.getElementById('process').addEventListener('click', function() {
     const row = resolved[i];
     const src = row.src_url;
     const tgt = row.tgt_url;
+
+    // Flag dirty URLs (trailing empty query string)
+    if (src.endsWith('?') || tgt.endsWith('?')) {
+      row.chain_detail = 'Dirty URL: trailing empty query string (?)';
+      tabs.errors.push(row);
+      continue;
+    }
 
     // Check webshop first (in either src or tgt)
     if (WEBSHOP_RE.test(src) || WEBSHOP_RE.test(tgt)) {
