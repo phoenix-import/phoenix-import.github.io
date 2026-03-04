@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Redirect Cleaner &amp; Categorizer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
+    h1 { margin:0 0 10px; }
+    button { margin-top:10px; padding:8px 12px; border:0; border-radius:4px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .hint { font-size:.9em; color:#9aa0a6; }
+    #log { background:#1a1c22; border:1px solid #333; padding:12px; margin-top:14px; min-height:120px; max-height:500px; overflow-y:auto; font-family:'Courier New',monospace; font-size:.85em; white-space:pre-wrap; }
+    .stat { color:#6ccb6c; }
+    .warn { color:#e8a838; }
+    .err  { color:#e85858; }
+    table.summary { border-collapse:collapse; margin-top:10px; }
+    table.summary td, table.summary th { border:1px solid #444; padding:4px 10px; text-align:left; }
+    table.summary th { background:#1a1c22; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Redirect Cleaner &amp; Categorizer</h1>
+  <p class="hint">
+    Upload the URL redirects XLSX export.<br>
+    Expected columns: <code>rec_id | src_url | tgt_url | shop_code | status_code</code><br><br>
+    <strong>What this tool does:</strong><br>
+    1. Removes rows where the source URL belongs to a non-.com domain (.nl, .de, .fr, .it, .es)<br>
+    2. Resolves redirect chains (A&rarr;B, B&rarr;C becomes A&rarr;C)<br>
+    3. Categorizes remaining redirects into tabs: type_1, type_2, type_3, type_4, webshop, errors<br>
+    4. Outputs a clean XLSX with 6 tabs
+  </p>
+
+  <input id="file" type="file" accept=".xlsx,.xls"><br><br>
+  <button id="process" disabled>Process &amp; Download</button>
+
+  <div id="log"></div>
+
+<script>
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  const span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = msg + '\n';
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+const NON_COM_DOMAINS = [
+  'phoeniximport.nl',
+  'phoeniximport.de',
+  'phoeniximport.fr',
+  'phoeniximport.it',
+  'phoeniximport.es'
+];
+
+// Pattern: /xx/N/ where xx is a 2-letter country code and N is a digit
+const PAGE_TYPE_RE = /\/([a-z]{2})\/(\d+)\//i;
+const WEBSHOP_RE = /\/webshop\//i;
+
+let workbookData = null;
+
+document.getElementById('file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  logEl.innerHTML = '';
+  log('Reading file: ' + file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)');
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      if (rows.length < 2) {
+        log('Error: File appears empty or has no data rows.', 'err');
+        return;
+      }
+
+      // Validate header
+      const header = rows[0].map(function(h) { return String(h || '').toLowerCase().trim(); });
+      log('Detected columns: ' + header.join(', '));
+
+      workbookData = rows;
+      document.getElementById('process').disabled = false;
+      log('Loaded ' + (rows.length - 1) + ' data rows. Ready to process.', 'stat');
+    } catch (ex) {
+      log('Error reading file: ' + ex.message, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+document.getElementById('process').addEventListener('click', function() {
+  if (!workbookData) return;
+
+  const rows = workbookData;
+  const header = rows[0];
+
+  log('\n--- Processing ---');
+  log('Total input rows: ' + (rows.length - 1));
+
+  // Step 1: Parse all rows into objects
+  const allRows = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    allRows.push({
+      rec_id:      String(r[0] || '').trim(),
+      src_url:     String(r[1] || '').trim(),
+      tgt_url:     String(r[2] || '').trim(),
+      shop_code:   String(r[3] || '').trim(),
+      status_code: String(r[4] || '').trim(),
+      original_row: i
+    });
+  }
+
+  // Step 2: Remove non-.com domain rows (check column B / src_url)
+  const comRows = [];
+  let removedDomain = 0;
+  for (let i = 0; i < allRows.length; i++) {
+    const src = allRows[i].src_url.toLowerCase();
+    let isNonCom = false;
+    for (let d = 0; d < NON_COM_DOMAINS.length; d++) {
+      if (src.indexOf(NON_COM_DOMAINS[d]) !== -1) {
+        isNonCom = true;
+        break;
+      }
+    }
+    if (isNonCom) {
+      removedDomain++;
+    } else {
+      comRows.push(allRows[i]);
+    }
+  }
+  log('Removed ' + removedDomain + ' non-.com domain rows', 'stat');
+  log('Remaining: ' + comRows.length + ' rows');
+
+  // Step 3: Resolve redirect chains
+  // Build a map: src_url -> row data
+  var srcMap = {};
+  for (let i = 0; i < comRows.length; i++) {
+    const key = comRows[i].src_url;
+    if (!srcMap[key]) {
+      srcMap[key] = [];
+    }
+    srcMap[key].push(i);
+  }
+
+  // For each row, check if its tgt_url is also a src_url in another row
+  // If so, resolve the chain: follow tgt until we reach a final destination
+  const resolved = [];
+  const consumed = new Set(); // indices of rows that were "middle links" and got consumed
+  let chainCount = 0;
+  const chainErrors = []; // chains that are too long or circular
+
+  for (let i = 0; i < comRows.length; i++) {
+    if (consumed.has(i)) continue;
+
+    const row = comRows[i];
+    let finalTarget = row.tgt_url;
+    const visited = new Set();
+    visited.add(row.src_url);
+    let hops = 0;
+    let chainParts = [row.src_url];
+    let isError = false;
+
+    while (true) {
+      // Check if finalTarget is also a src_url
+      const nextIndices = srcMap[finalTarget];
+      if (!nextIndices || nextIndices.length === 0) break;
+
+      // Take the first matching row
+      const nextIdx = nextIndices[0];
+      const nextRow = comRows[nextIdx];
+
+      if (visited.has(nextRow.src_url)) {
+        // Circular chain
+        isError = true;
+        chainParts.push(nextRow.src_url + ' (CIRCULAR)');
+        break;
+      }
+
+      hops++;
+      visited.add(nextRow.src_url);
+      chainParts.push(nextRow.src_url);
+      consumed.add(nextIdx);
+      finalTarget = nextRow.tgt_url;
+
+      if (hops > 10) {
+        isError = true;
+        chainParts.push('... (CHAIN TOO LONG)');
+        break;
+      }
+    }
+
+    if (hops > 0) {
+      chainCount++;
+      chainParts.push(finalTarget);
+    }
+
+    if (isError) {
+      chainErrors.push({
+        rec_id:      'chain_err_' + (chainErrors.length + 1),
+        src_url:     row.src_url,
+        tgt_url:     finalTarget,
+        shop_code:   row.shop_code,
+        status_code: row.status_code,
+        chain_detail: chainParts.join(' -> ')
+      });
+    } else {
+      resolved.push({
+        rec_id:      hops > 0 ? 'chain_' + chainCount : row.rec_id,
+        src_url:     row.src_url,
+        tgt_url:     finalTarget,
+        shop_code:   row.shop_code,
+        status_code: row.status_code
+      });
+    }
+  }
+
+  log('Resolved ' + chainCount + ' redirect chains', chainCount > 0 ? 'warn' : 'stat');
+  if (chainErrors.length > 0) {
+    log(chainErrors.length + ' chains had errors (circular/too long)', 'err');
+  }
+  log('After chain resolution: ' + resolved.length + ' rows');
+
+  // Step 4: Categorize into tabs
+  const tabs = {
+    type_1: [],   // content pages (/xx/1/)
+    type_2: [],   // content pages (/xx/2/)
+    type_3: [],   // category pages (/xx/3/)
+    type_4: [],   // product pages (/xx/4/)
+    webshop: [],  // /webshop/
+    errors: []    // unmatched + chain errors
+  };
+
+  // Add chain errors to errors tab
+  for (let i = 0; i < chainErrors.length; i++) {
+    tabs.errors.push(chainErrors[i]);
+  }
+
+  for (let i = 0; i < resolved.length; i++) {
+    const row = resolved[i];
+    const src = row.src_url;
+    const tgt = row.tgt_url;
+
+    // Check webshop first (in either src or tgt)
+    if (WEBSHOP_RE.test(src) || WEBSHOP_RE.test(tgt)) {
+      tabs.webshop.push(row);
+      continue;
+    }
+
+    // Check page type pattern - prioritize src_url, fall back to tgt_url
+    let match = PAGE_TYPE_RE.exec(src);
+    if (!match) {
+      match = PAGE_TYPE_RE.exec(tgt);
+    }
+
+    if (match) {
+      const pageType = match[2];
+      if (pageType === '1') {
+        tabs.type_1.push(row);
+      } else if (pageType === '2') {
+        tabs.type_2.push(row);
+      } else if (pageType === '3') {
+        tabs.type_3.push(row);
+      } else if (pageType === '4') {
+        tabs.type_4.push(row);
+      } else {
+        // Unknown page type number, goes to errors
+        row.chain_detail = 'Unknown page type: ' + pageType;
+        tabs.errors.push(row);
+      }
+    } else {
+      // No pattern match at all
+      row.chain_detail = 'No category pattern detected';
+      tabs.errors.push(row);
+    }
+  }
+
+  // Log summary
+  log('\n--- Results ---', 'stat');
+  log('Type 1 (content):   ' + tabs.type_1.length);
+  log('Type 2 (content):   ' + tabs.type_2.length);
+  log('Type 3 (category):  ' + tabs.type_3.length);
+  log('Type 4 (product):   ' + tabs.type_4.length);
+  log('Webshop:            ' + tabs.webshop.length);
+  log('Errors/unmatched:   ' + tabs.errors.length);
+  var total = tabs.type_1.length + tabs.type_2.length + tabs.type_3.length +
+              tabs.type_4.length + tabs.webshop.length + tabs.errors.length;
+  log('Total output rows:  ' + total);
+  log('\nReduction: ' + (rows.length - 1) + ' -> ' + total + ' rows (' +
+      ((1 - total / (rows.length - 1)) * 100).toFixed(1) + '% removed)', 'stat');
+
+  // Step 5: Build output XLSX
+  const outputHeaders = ['rec_id', 'src_url', 'tgt_url', 'shop_code', 'status_code'];
+  const errorHeaders  = ['rec_id', 'src_url', 'tgt_url', 'shop_code', 'status_code', 'notes'];
+
+  function makeSheet(rowArray, hasNotes) {
+    const hdrs = hasNotes ? errorHeaders : outputHeaders;
+    const aoa = [hdrs];
+    for (let i = 0; i < rowArray.length; i++) {
+      const r = rowArray[i];
+      const out = [r.rec_id, r.src_url, r.tgt_url, r.shop_code, r.status_code];
+      if (hasNotes) {
+        out.push(r.chain_detail || '');
+      }
+      aoa.push(out);
+    }
+    return XLSX.utils.aoa_to_sheet(aoa);
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, makeSheet(tabs.type_1, false), 'type_1_content');
+  XLSX.utils.book_append_sheet(wb, makeSheet(tabs.type_2, false), 'type_2_content');
+  XLSX.utils.book_append_sheet(wb, makeSheet(tabs.type_3, false), 'type_3_category');
+  XLSX.utils.book_append_sheet(wb, makeSheet(tabs.type_4, false), 'type_4_product');
+  XLSX.utils.book_append_sheet(wb, makeSheet(tabs.webshop, false), 'webshop');
+  XLSX.utils.book_append_sheet(wb, makeSheet(tabs.errors, true),  'errors');
+
+  XLSX.writeFile(wb, 'redirects_cleaned.xlsx');
+  log('\nDownload started: redirects_cleaned.xlsx', 'stat');
+});
+</script>
+</body>
+</html>
