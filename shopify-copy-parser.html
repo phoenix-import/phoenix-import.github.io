@@ -121,19 +121,70 @@ function wholesaleLabel(handle, lang) {
   return base + " " + pick(WHOLESALE_TERMS[lang]);
 }
 
+// Simple stemmer: strip common suffixes to improve matching across plurals/conjugations
+function stem(word, lang) {
+  if (word.length < 5) return word;
+  switch (lang) {
+    case "NL": return word.replace(/(tjes|jes|en|er|je|s)$/, "");
+    case "EN": return word.replace(/(tion|ing|ies|es|ed|er|s)$/, "");
+    case "DE": return word.replace(/(ung|heit|keit|chen|lein|ern|en|er|es|em|e|s)$/, "");
+    case "FR": return word.replace(/(tion|ment|eux|euse|eur|eurs|ais|ait|ant|es|er|s)$/, "");
+    case "ES": return word.replace(/(cion|iones|mente|ando|endo|ado|ido|es|as|os|s)$/, "");
+    case "IT": return word.replace(/(zione|zioni|mente|ando|endo|ato|ito|ata|ita|ere|are|ire|oni|one|ie|ei|i|e|o|a)$/, "");
+    default:   return word;
+  }
+}
+
 function scoreMatch(linkTextWords, handle, lang) {
   const hw = handle.split("-").filter(w => w.length > 1);
   const stops = STOP_WORDS[lang] || new Set();
-  let score = 0;
+  let score = 0, matched = 0;
+  const hwMatched = new Set();
+  let lastHwIdx = -1, orderBonus = 0;
+
   for (const lw of linkTextWords) {
     if (lw.length < 3 || stops.has(lw)) continue;
-    for (const h of hw) {
+    const lwStem = stem(lw, lang);
+    let bestPts = 0, bestHwIdx = -1;
+
+    for (let i = 0; i < hw.length; i++) {
+      const h = hw[i];
       if (h.length < 3) continue;
-      if (h === lw)                            { score += 3; break; }
-      if (h.startsWith(lw) || lw.startsWith(h)){ score += 2; break; }
-      if (h.includes(lw)   || lw.includes(h))  { score += 1; break; }
+      let pts = 0;
+      if (h === lw)                              pts = 3;
+      else if (h.startsWith(lw) || lw.startsWith(h)) pts = 2;
+      else if (h.includes(lw)   || lw.includes(h))   pts = 1;
+      // Stemmed fallback
+      if (!pts) {
+        const hStem = stem(h, lang);
+        if (hStem.length >= 3 && lwStem.length >= 3) {
+          if (hStem === lwStem)                                    pts = 2;
+          else if (hStem.startsWith(lwStem) || lwStem.startsWith(hStem)) pts = 1;
+        }
+      }
+      if (pts > bestPts) { bestPts = pts; bestHwIdx = i; }
+    }
+
+    if (bestPts > 0) {
+      score += bestPts;
+      matched++;
+      hwMatched.add(bestHwIdx);
+      if (bestHwIdx > lastHwIdx) orderBonus++;
+      lastHwIdx = bestHwIdx;
     }
   }
+
+  // Bonus: all meaningful handle words covered by the link text
+  const hwContent = hw.filter(w => w.length >= 3 && !(stops.has(w)));
+  if (hwContent.length > 0 && hwMatched.size >= hwContent.length) {
+    score += 2;
+  }
+
+  // Bonus: words matched in the same order as the handle
+  if (matched >= 2 && orderBonus >= matched) {
+    score += 1;
+  }
+
   return score;
 }
 
