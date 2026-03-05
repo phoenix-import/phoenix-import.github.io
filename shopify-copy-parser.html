@@ -94,12 +94,12 @@ function slugify(str) {
 }
 
 const STOP_WORDS = {
-  NL: new Set(["en","de","het","van","in","op","te","een","met","voor","aan","bij","uit","is","zijn","naar","over","ook","maar","als","dan","er","dit","dat","we","ze","hij","al","meer","niet","of","door","om","zo","nog","die","den","der","des","ons","hun","heeft","haar","hem","zij","onze"]),
-  EN: new Set(["and","the","of","in","for","to","a","an","with","or","on","at","by","from","is","are","its","it","this","that","our","we","all","more"]),
-  DE: new Set(["und","die","der","das","in","von","zu","mit","auf","an","fur","bei","ist","ein","eine","den","des","dem","im","am","zum","zur","als","auch","oder","noch","sich","sie","wir","ihr"]),
-  FR: new Set(["et","les","des","de","la","le","en","pour","avec","ou","sur","au","aux","un","une","ce","se","son","sa","ses","ils","nous","vous","par","dans","est","plus","aussi"]),
-  ES: new Set(["y","los","las","de","la","el","en","para","con","o","un","una","se","su","sus","es","por","del","al","lo","como","mas","tambien","son","nos"]),
-  IT: new Set(["e","i","le","di","la","il","in","per","con","o","un","una","si","su","gli","lo","al","dal","del","nel","piu","anche","sono","loro","questa","questo"]),
+  NL: new Set(["en","de","het","van","in","op","te","een","met","voor","aan","bij","uit","is","zijn","naar","over","ook","maar","als","dan","er","dit","dat","we","ze","hij","al","meer","niet","of","door","om","zo","nog","die","den","der","des","ons","hun","heeft","haar","hem","zij","onze","groothandel"]),
+  EN: new Set(["and","the","of","in","for","to","a","an","with","or","on","at","by","from","is","are","its","it","this","that","our","we","all","more","wholesale"]),
+  DE: new Set(["und","die","der","das","in","von","zu","mit","auf","an","fur","bei","ist","ein","eine","den","des","dem","im","am","zum","zur","als","auch","oder","noch","sich","sie","wir","ihr","grosshandel"]),
+  FR: new Set(["et","les","des","de","la","le","en","pour","avec","ou","sur","au","aux","un","une","ce","se","son","sa","ses","ils","nous","vous","par","dans","est","plus","aussi","grossiste"]),
+  ES: new Set(["y","los","las","de","la","el","en","para","con","o","un","una","se","su","sus","es","por","del","al","lo","como","mas","tambien","son","nos","mayorista"]),
+  IT: new Set(["e","i","le","di","la","il","in","per","con","o","un","una","si","su","gli","lo","al","dal","del","nel","piu","anche","sono","loro","questa","questo","ingrosso"]),
 };
 
 const WHOLESALE_TERMS = {
