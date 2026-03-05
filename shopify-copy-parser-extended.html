@@ -476,6 +476,32 @@ document.getElementById("parseBtn").addEventListener("click", () => {
           if (ci === 0) opt.selected = true; // pre-select top candidate
           sel.appendChild(opt);
         });
+        // Add related main categories that aren't already in the candidates list
+        const candidateHandles = new Set(item.candidates.map(c => c.handle));
+        const mainSet = MAIN_CATEGORIES[lang] || new Set();
+        const relatedMains = new Set();
+        for (const cand of item.candidates) {
+          const candWords = cand.handle.split("-");
+          for (const mh of mainSet) {
+            if (candidateHandles.has(mh)) continue; // already a candidate
+            const mainWords = mh.split("-");
+            // Related if they share a meaningful word (skip short connectors)
+            const shared = mainWords.some(w => w.length > 2 && candWords.includes(w));
+            if (shared) relatedMains.add(mh);
+          }
+        }
+        if (relatedMains.size > 0) {
+          const sep = document.createElement("option");
+          sep.disabled = true;
+          sep.textContent = "\u2500\u2500 Main categories \u2500\u2500";
+          sel.appendChild(sep);
+          for (const mh of relatedMains) {
+            const opt = document.createElement("option");
+            opt.value = mh;
+            opt.textContent = "\u2605 " + handleToLabel(mh) + "  (/collections/" + mh + ")  [main]";
+            sel.appendChild(opt);
+          }
+        }
         // Pre-select top candidate (not homepage)
         if (item.candidates.length > 0) sel.value = item.candidates[0].handle;
         div.appendChild(sel);
