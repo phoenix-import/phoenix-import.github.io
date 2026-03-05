@@ -124,15 +124,22 @@ function wholesaleLabel(handle, lang) {
 function scoreMatch(linkTextWords, handle, lang) {
   const hw = handle.split("-").filter(w => w.length > 1);
   const stops = STOP_WORDS[lang] || new Set();
-  let score = 0;
+  let score = 0, contentWords = 0, matched = 0;
   for (const lw of linkTextWords) {
     if (lw.length < 3 || stops.has(lw)) continue;
+    contentWords++;
+    let hit = false;
     for (const h of hw) {
       if (h.length < 3) continue;
-      if (h === lw)                            { score += 3; break; }
-      if (h.startsWith(lw) || lw.startsWith(h)){ score += 2; break; }
-      if (h.includes(lw)   || lw.includes(h))  { score += 1; break; }
+      if (h === lw)                            { score += 3; hit = true; break; }
+      if (h.startsWith(lw) || lw.startsWith(h)){ score += 2; hit = true; break; }
+      if (h.includes(lw)   || lw.includes(h))  { score += 1; hit = true; break; }
     }
+    if (hit) matched++;
+  }
+  // Penalize if many content words went unmatched (wrong collection)
+  if (contentWords > 1 && matched < contentWords) {
+    score -= (contentWords - matched);
   }
   return score;
 }
