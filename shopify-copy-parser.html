@@ -178,16 +178,27 @@ function processHTML(rawHTML, lang, useWholesale) {
     parent.removeChild(span);
   });
 
-  // 3. Replace phoeniximport.com links
+  // 3. Replace phoeniximport links (all TLDs)
+  const PI_DOMAIN = /phoeniximport\.(com|de|nl|fr|es|it)/i;
+  const HOMEPAGE_RE = /^https?:\/\/(www\.)?phoeniximport\.(com|de|nl|fr|es|it)\/?(\?[^#]*)?(#.*)?$/i;
+  const WHOLESALE_ANCHOR = /groothandel|wholesale|gro(ss|ß)handel|grossiste|al\s*por\s*mayor|all.ingrosso|en\s*gros/i;
   let linksTotal = 0, linksMatched = 0, linksFallback = 0;
   doc.body.querySelectorAll("a[href]").forEach(a => {
     const href = a.getAttribute("href") || "";
-    if (!href.includes("phoeniximport.com")) return;
+    if (!PI_DOMAIN.test(href)) return;
     linksTotal++;
     // Remove target/rel while we're here
     a.removeAttribute("target");
     a.removeAttribute("rel");
     const linkText = a.textContent.trim();
+
+    // Homepage links or "spiritual wholesaler"-style anchor text: just normalize domain
+    if (HOMEPAGE_RE.test(href) || WHOLESALE_ANCHOR.test(linkText)) {
+      a.setAttribute("href", HOMEPAGE);
+      logs.push({ type:"info", msg: '\u2139 "' + linkText + '" \u2192 kept as homepage link' });
+      return;
+    }
+
     const handle = findHandle(linkText, lang);
     if (handle) {
       a.setAttribute("href", "/collections/" + handle);
