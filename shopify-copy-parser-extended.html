@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phoenix Import – Shopify Copy Parser</title>
+<title>Phoenix Import – Shopify Copy Parser (Extended)</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f5; color: #1a1a2e; min-height: 100vh; display: flex; flex-direction: column; }
@@ -34,13 +34,24 @@
   .log .warn { color: #f9e2af; }
   .log .err { color: #f38ba8; }
   .log .info { color: #89dceb; }
+
+  /* Resolution panel */
+  #resolvePanel { display:none; background:#fffbeb; border:2px solid #f59e0b; border-radius:8px; margin:8px 24px; padding:16px; max-height:300px; overflow-y:auto; }
+  #resolvePanel h3 { font-size:14px; font-weight:700; color:#92400e; margin-bottom:12px; }
+  .resolve-item { background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:10px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .resolve-item .link-text { font-weight:600; color:#1a1a2e; font-size:13px; min-width:180px; }
+  .resolve-item .link-text em { font-weight:400; color:#6b7280; font-style:normal; font-size:11px; display:block; }
+  .resolve-item select { flex:1; min-width:200px; padding:6px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:13px; }
+  .resolve-item .score-hint { font-size:11px; color:#9ca3af; white-space:nowrap; }
+  #resolveApplyBtn { margin-top:10px; background:#f59e0b; color:#fff; border:none; border-radius:6px; padding:8px 20px; font-size:14px; font-weight:600; cursor:pointer; }
+  #resolveApplyBtn:hover { background:#d97706; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Phoenix Import — Shopify Copy Parser</h1>
-  <span>Converts old-site HTML to Shopify-ready copy</span>
+  <h1>Phoenix Import — Shopify Copy Parser (Extended)</h1>
+  <span>Converts old-site HTML to Shopify-ready copy — with interactive link resolution</span>
 </header>
 
 <div class="controls">
@@ -75,6 +86,11 @@
     </div>
     <textarea id="output" readonly placeholder="Converted HTML will appear here after parsing…" spellcheck="false"></textarea>
   </div>
+</div>
+<div id="resolvePanel">
+  <h3>Uncertain matches — pick the right collection:</h3>
+  <div id="resolveList"></div>
+  <button id="resolveApplyBtn">Apply selections &amp; update output</button>
 </div>
 <div id="log" class="log"><span class="info">Ready. Paste HTML on the left and click Parse &amp; Convert.</span>
 </div>
@@ -145,14 +161,23 @@ function scoreMatch(linkTextWords, handle, lang) {
 }
 
 function findHandle(linkText, lang) {
+  const result = findTopHandles(linkText, lang);
+  return result.confident ? result.top[0].handle : null;
+}
+
+function findTopHandles(linkText, lang) {
   const handles = COLLECTIONS[lang] || [];
   const words = slugify(linkText);
-  let best = null, bestScore = 0;
+  const scored = [];
   for (const h of handles) {
     const s = scoreMatch(words, h, lang);
-    if (s > bestScore) { bestScore = s; best = h; }
+    if (s >= 1) scored.push({ handle: h, score: s });
   }
-  return bestScore >= 2 ? best : null;
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 3);
+  // Confident = top score >= 3 AND clear lead over #2
+  const confident = top.length > 0 && top[0].score >= 3 && (top.length < 2 || top[0].score > top[1].score);
+  return { top, confident };
 }
 
 function handleToLabel(handle) {
@@ -189,7 +214,8 @@ function processHTML(rawHTML, lang, useWholesale) {
   const PI_DOMAIN = /phoeniximport\.(com|de|nl|fr|es|it)/i;
   const HOMEPAGE_RE = /^https?:\/\/(www\.)?phoeniximport\.(com|de|nl|fr|es|it)\/?(\?[^#]*)?(#.*)?$/i;
   const WHOLESALE_ANCHOR = /groothandel|wholesale|gro(ss|ß)handel|grossiste|al\s*por\s*mayor|all.ingrosso|en\s*gros/i;
-  let linksTotal = 0, linksMatched = 0, linksFallback = 0;
+  let linksTotal = 0, linksMatched = 0, linksFallback = 0, linksUncertain = 0;
+  const uncertainLinks = [];
   doc.body.querySelectorAll("a[href]").forEach(a => {
     const href = a.getAttribute("href") || "";
     if (!PI_DOMAIN.test(href)) return;
@@ -206,16 +232,24 @@ function processHTML(rawHTML, lang, useWholesale) {
       return;
     }
 
-    const handle = findHandle(linkText, lang);
-    if (handle) {
-      a.setAttribute("href", "/collections/" + handle);
-      if (useWholesale) a.textContent = wholesaleLabel(handle, lang);
+    const result = findTopHandles(linkText, lang);
+    if (result.confident) {
+      a.setAttribute("href", "/collections/" + result.top[0].handle);
+      if (useWholesale) a.textContent = wholesaleLabel(result.top[0].handle, lang);
       linksMatched++;
-      logs.push({ type:"ok",   msg: '\u2713 "' + linkText + '" \u2192 /collections/' + handle });
+      logs.push({ type:"ok",   msg: '\u2713 "' + linkText + '" \u2192 /collections/' + result.top[0].handle });
+    } else if (result.top.length > 0) {
+      // Uncertain — mark with placeholder, collect for resolution
+      const placeholderId = "resolve-" + uncertainLinks.length;
+      a.setAttribute("href", HOMEPAGE);
+      a.setAttribute("data-resolve-id", placeholderId);
+      uncertainLinks.push({ id: placeholderId, linkText, candidates: result.top, element: a });
+      linksUncertain++;
+      logs.push({ type:"warn", msg: '? "' + linkText + '" \u2192 NEEDS RESOLUTION (top: ' + result.top.map(c => c.handle + ":" + c.score).join(", ") + ')' });
     } else {
       a.setAttribute("href", HOMEPAGE);
       linksFallback++;
-      logs.push({ type:"warn", msg: '? "' + linkText + '" \u2192 fallback homepage' });
+      logs.push({ type:"warn", msg: '? "' + linkText + '" \u2192 fallback homepage (no candidates)' });
     }
   });
 
@@ -238,7 +272,7 @@ function processHTML(rawHTML, lang, useWholesale) {
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 
-  return { output, logs, linksTotal, linksMatched, linksFallback };
+  return { output, logs, linksTotal, linksMatched, linksFallback, linksUncertain, uncertainLinks, doc };
 }
 
 function detectRelatedBlock(body) {
@@ -321,11 +355,58 @@ document.getElementById("parseBtn").addEventListener("click", () => {
 
   try {
     const useWholesale = document.getElementById("wholesaleChk").checked;
-    const { output, logs, linksTotal, linksMatched, linksFallback } = processHTML(raw, lang, useWholesale);
+    const result = processHTML(raw, lang, useWholesale);
+    const { output, logs, linksTotal, linksMatched, linksFallback, linksUncertain, uncertainLinks, doc } = result;
     outputEl.value = output;
     logs.forEach(l => appendLog(l.type, l.msg));
-    appendLog("info", "\u2014 " + linksTotal + " link(s) found: " + linksMatched + " matched, " + linksFallback + " \u2192 homepage");
-    if (linksFallback === 0 && linksTotal > 0) {
+
+    // Store for resolution
+    window._lastParseDoc = doc;
+    window._lastUncertain = uncertainLinks;
+    window._lastLang = lang;
+    window._lastWholesale = useWholesale;
+
+    // Build resolution panel
+    const panel = document.getElementById("resolvePanel");
+    const list = document.getElementById("resolveList");
+    list.innerHTML = "";
+    if (uncertainLinks.length > 0) {
+      uncertainLinks.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "resolve-item";
+        div.innerHTML = '<div class="link-text">"' + item.linkText + '"<em>Top scores: ' +
+          item.candidates.map(c => c.score).join(", ") + '</em></div>';
+        const sel = document.createElement("select");
+        sel.id = "resolve-select-" + idx;
+        // Homepage option first
+        const optHome = document.createElement("option");
+        optHome.value = "__homepage__";
+        optHome.textContent = "\u2192 Keep as homepage link";
+        sel.appendChild(optHome);
+        item.candidates.forEach((c, ci) => {
+          const opt = document.createElement("option");
+          opt.value = c.handle;
+          opt.textContent = handleToLabel(c.handle) + "  (/collections/" + c.handle + ")  [score: " + c.score + "]";
+          if (ci === 0) opt.selected = true; // pre-select top candidate
+          sel.appendChild(opt);
+        });
+        // Pre-select top candidate (not homepage)
+        if (item.candidates.length > 0) sel.value = item.candidates[0].handle;
+        div.appendChild(sel);
+        list.appendChild(div);
+      });
+      panel.style.display = "block";
+      appendLog("warn", "\u26a0 " + uncertainLinks.length + " link(s) need your input \u2014 see resolution panel above.");
+    } else {
+      panel.style.display = "none";
+    }
+
+    const total = linksMatched + linksFallback + linksUncertain;
+    appendLog("info", "\u2014 " + linksTotal + " link(s): " + linksMatched + " confident, " + linksUncertain + " uncertain, " + linksFallback + " \u2192 homepage");
+    if (linksUncertain > 0) {
+      badge.textContent = linksUncertain + " need resolution";
+      badge.className = "status-badge warn";
+    } else if (linksFallback === 0 && linksTotal > 0) {
       badge.textContent = "All " + linksMatched + " links matched";
       badge.className = "status-badge ok";
     } else if (linksMatched > 0) {
@@ -340,6 +421,45 @@ document.getElementById("parseBtn").addEventListener("click", () => {
     badge.textContent = "Error";
     badge.className = "status-badge warn";
   }
+});
+
+document.getElementById("resolveApplyBtn").addEventListener("click", () => {
+  const uncertain = window._lastUncertain || [];
+  const doc = window._lastParseDoc;
+  const useWholesale = window._lastWholesale;
+  const lang = window._lastLang;
+  if (!doc || !uncertain.length) return;
+
+  let resolved = 0;
+  uncertain.forEach((item, idx) => {
+    const sel = document.getElementById("resolve-select-" + idx);
+    if (!sel) return;
+    const chosen = sel.value;
+    // Find the element in the doc by data-resolve-id
+    const el = doc.body.querySelector('[data-resolve-id="' + item.id + '"]');
+    if (!el) return;
+    if (chosen === "__homepage__") {
+      el.setAttribute("href", HOMEPAGE);
+    } else {
+      el.setAttribute("href", "/collections/" + chosen);
+      if (useWholesale) el.textContent = wholesaleLabel(chosen, lang);
+    }
+    el.removeAttribute("data-resolve-id");
+    resolved++;
+    appendLog("ok", '\u2713 Resolved "' + item.linkText + '" \u2192 ' + (chosen === "__homepage__" ? "homepage" : "/collections/" + chosen));
+  });
+
+  // Re-serialize
+  const output = doc.body.innerHTML.replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim();
+  document.getElementById("output").value = output;
+
+  // Hide panel, update badge
+  document.getElementById("resolvePanel").style.display = "none";
+  window._lastUncertain = [];
+  const badge = document.getElementById("statusBadge");
+  badge.textContent = resolved + " resolved";
+  badge.className = "status-badge ok";
+  appendLog("ok", "\u2713 All " + resolved + " uncertain link(s) resolved. Output updated.");
 });
 
 document.getElementById("copyBtn").addEventListener("click", () => {
