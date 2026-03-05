@@ -55,6 +55,9 @@
   </select>
   <button id="parseBtn">▶ Parse &amp; Convert</button>
   <button id="copyBtn">Copy Output</button>
+  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;font-size:13px;font-weight:500;color:#374151;">
+    <input type="checkbox" id="wholesaleChk"> Wholesale phrasing
+  </label>
   <span id="statusBadge" class="status-badge">Idle</span>
 </div>
 
@@ -99,6 +102,25 @@ const STOP_WORDS = {
   IT: new Set(["e","i","le","di","la","il","in","per","con","o","un","una","si","su","gli","lo","al","dal","del","nel","piu","anche","sono","loro","questa","questo"]),
 };
 
+const WHOLESALE_TERMS = {
+  NL: ["Groothandel"], EN: ["Wholesale"], DE: ["Großhandel"],
+  FR: ["Grossiste"], ES: ["Al Por Mayor"], IT: ["All'Ingrosso"]
+};
+const BULK_TERMS = {
+  NL: ["in Bulk"], EN: ["Bulk", "in Bulk"], DE: ["in Großen Mengen"],
+  FR: ["en Gros", "en Vrac"], ES: ["a Granel"], IT: ["Sfuso", "All'Ingrosso"]
+};
+const BULK_PATTERNS = /incense|wierook|raucherwerk|encens|incienso|incenso|mineral|edelsteen|edelstein|gemstone|gemas|pietre|mineraux|mineralen|trommelstein|tumbled|pierres|piedras|pietre|crystal|kristal|singing.bowl|klankschaal|campane|cuencos|bols.chantant|palo.santo|salie|sage|salvia|sauge/i;
+
+function wholesaleLabel(handle, lang) {
+  const base = handleToLabel(handle);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  if (BULK_PATTERNS.test(handle)) {
+    return Math.random() < 0.5 ? base + " " + pick(BULK_TERMS[lang]) : base + " " + pick(WHOLESALE_TERMS[lang]);
+  }
+  return base + " " + pick(WHOLESALE_TERMS[lang]);
+}
+
 function scoreMatch(linkTextWords, handle, lang) {
   const hw = handle.split("-").filter(w => w.length > 1);
   const stops = STOP_WORDS[lang] || new Set();
@@ -136,7 +158,7 @@ function handleToLabel(handle) {
 
 // ─── HTML Processing ─────────────────────────────────────────────────────────────
 
-function processHTML(rawHTML, lang) {
+function processHTML(rawHTML, lang, useWholesale) {
   const logs = [];
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHTML, "text/html");
@@ -169,6 +191,7 @@ function processHTML(rawHTML, lang) {
     const handle = findHandle(linkText, lang);
     if (handle) {
       a.setAttribute("href", "/collections/" + handle);
+      if (useWholesale) a.textContent = wholesaleLabel(handle, lang);
       linksMatched++;
       logs.push({ type:"ok",   msg: '\u2713 "' + linkText + '" \u2192 /collections/' + handle });
     } else {
@@ -184,7 +207,7 @@ function processHTML(rawHTML, lang) {
     logs.push({ type:"info", msg: "\u2139 Related links block detected \u2014 links updated above." });
   } else {
     logs.push({ type:"info", msg: "\u2139 No related links block found \u2014 generating one." });
-    const generated = generateRelatedBlock(doc.body, lang);
+    const generated = generateRelatedBlock(doc.body, lang, useWholesale);
     if (generated) {
       doc.body.appendChild(generated);
       logs.push({ type:"ok", msg: "\u2713 Generated related links block with " + generated.querySelectorAll("a").length + " collections." });
@@ -211,7 +234,7 @@ function detectRelatedBlock(body) {
   return null;
 }
 
-function generateRelatedBlock(body, lang) {
+function generateRelatedBlock(body, lang, useWholesale) {
   const handles = COLLECTIONS[lang] || [];
   if (!handles.length) return null;
   const bodyWords = slugify(body.textContent);
@@ -236,12 +259,13 @@ function generateRelatedBlock(body, lang) {
   }
   if (!picked.length) return null;
 
+  const labelFn = useWholesale ? (h) => wholesaleLabel(h, lang) : handleToLabel;
   const p = document.createElement("p");
   const strong = document.createElement("strong");
   picked.forEach((h, i) => {
     const a = document.createElement("a");
     a.href = "/collections/" + h;
-    a.textContent = handleToLabel(h);
+    a.textContent = labelFn(h);
     strong.appendChild(a);
     if (i < picked.length - 1) strong.appendChild(document.createTextNode(" | "));
   });
@@ -278,7 +302,8 @@ document.getElementById("parseBtn").addEventListener("click", () => {
   badge.className = "status-badge";
 
   try {
-    const { output, logs, linksTotal, linksMatched, linksFallback } = processHTML(raw, lang);
+    const useWholesale = document.getElementById("wholesaleChk").checked;
+    const { output, logs, linksTotal, linksMatched, linksFallback } = processHTML(raw, lang, useWholesale);
     outputEl.value = output;
     logs.forEach(l => appendLog(l.type, l.msg));
     appendLog("info", "\u2014 " + linksTotal + " link(s) found: " + linksMatched + " matched, " + linksFallback + " \u2192 homepage");
