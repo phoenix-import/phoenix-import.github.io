@@ -5,19 +5,27 @@
   <title>SKU ↔ Identification Joiner (XLSX)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
-    h1 { margin:0 0 10px; }
+    body { font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#fff; color:#333; margin:0; padding:0; }
+    header { background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:18px; font-weight:600; margin:0; }
+    header img { height:36px; margin-left:auto; }
+    .content { padding:20px; }
     label { display:block; margin-top:15px; }
-    button { margin-top:20px; padding:8px 12px; border:0; border-radius:4px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button { margin-top:20px; padding:8px 12px; border:0; border-radius:4px; background:#ca427e; color:#fff; cursor:pointer; }
+    button:hover { background:#b33a6f; }
     button:disabled { opacity:.6; cursor:not-allowed; }
-    .hint { font-size:.9em; color:#9aa0a6; }
-    #report { margin-top:15px; font-size:.9em; color:#a9aa9f; white-space:pre; }
+    .hint { font-size:.9em; color:#666; }
+    #report { margin-top:15px; font-size:.9em; color:#666; white-space:pre; }
   </style>
   <!-- SheetJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h1>SKU ↔ Identification Joiner (XLSX)</h1>
+  <header>
+    <h1>SKU ↔ Identification Joiner (XLSX)</h1>
+    <img src="logo.png" alt="Phoenix Import">
+  </header>
+  <div class="content">
   <p class="hint">
     Upload:<br>
     1. Identification–Handle file (<em>either</em> 2-column Identification|Handle <em>or</em> 3-row Shopify format).<br>
@@ -34,6 +42,7 @@
   <button id="process" disabled>Generate Join XLSX</button>
 
   <pre id="report"></pre>
+  </div>
 
 <script>
 async function readWorkbook(file) {

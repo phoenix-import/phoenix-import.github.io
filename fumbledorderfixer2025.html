@@ -4,18 +4,28 @@
 <meta charset="utf-8">
 <title>Fumbled order fixer 2025 XL edition</title>
 <style>
- body{font-family:system-ui,sans-serif;margin:2rem;max-width:42rem;}
+ body{font-family:Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;margin:0;background:#fff;color:#333;}
+ header{background:#68437B;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:16px;}
+ header h1{font-size:18px;font-weight:600;margin:0;}
+ header img{height:36px;margin-left:auto;}
+ .content{padding:2rem;max-width:42rem;}
  input[type=file]{margin:1rem 0;}
- #log{color:crimson;white-space:pre-wrap;}
+ button{padding:8px 16px;border:0;border-radius:4px;background:#ca427e;color:#fff;cursor:pointer;}
+ button:hover{background:#b33a6f;}
+ #log{color:#e74c3c;white-space:pre-wrap;}
 </style>
 </head>
 <body>
 
-<h1>Fumbled order fixer 2025 XL edition</h1>
-
+<header>
+  <h1>Fumbled order fixer 2025 XL edition</h1>
+  <img src="logo.png" alt="Phoenix Import">
+</header>
+<div class="content">
 <input type="file" id="file" accept=".txt">
 <button id="go">Convert</button>
 <p id="log"></p>
+</div>
 
 <script>
 const log = m => document.getElementById('log').textContent = m;
