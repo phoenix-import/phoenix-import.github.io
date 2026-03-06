@@ -2,41 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phoenix Import | Custom Solutions</title>
   <style>
-    /* Phoenix Import Tools – lightweight style */
-
-    :root {
-      --bg: #fafafa;
-      --fg: #222;
-      --link: #0066cc;
-      --link-hover: #004999;
-      --accent: #e0e0e0;
-      --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--fg);
+      font-family: Calibri, sans-serif;
+      background: #fff;
+      color: #333;
       margin: 0;
-      padding: 2rem;
       line-height: 1.6;
     }
 
-    h1, h2, h3 {
+    header {
+      background: #68437B;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 20px;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin: 0;
     }
 
-    a {
-      color: var(--link);
-      text-decoration: none;
+    header img {
+      height: 36px;
+      margin-left: auto;
     }
 
-    a:hover {
-      color: var(--link-hover);
-      text-decoration: underline;
+    .content {
+      padding: 24px;
+      max-width: 800px;
+    }
+
+    h3 {
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: #68437B;
     }
 
     ul {
@@ -46,7 +53,7 @@
 
     li {
       background: #fff;
-      border: 1px solid var(--accent);
+      border: 1px solid #e0e0e0;
       border-radius: 6px;
       padding: 1rem;
       margin: 0.5rem 0;
@@ -56,42 +63,58 @@
     li:hover {
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
+
+    a {
+      color: #ca427e;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover {
+      color: #b33a6f;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <h1>Phoenix Import | Custom Solutions</h1>
+  <header>
+    <h1>Phoenix Import | Custom Solutions</h1>
+    <img src="logo.png" alt="Phoenix Import">
+  </header>
 
-  <h3>Supplier information</h3>
-  <ul>
-    <li><a href="geojson.html">GeoJSON supplier suite</a></li>
-    <li><a href="geojsonchecker.html">GeoJSON checker</a></li>
-  </ul>
-  
-  <h3>Redirect management</h3>
-  <ul>
-    <li><a href="redirectcleaner.html">Redirect cleaner &amp; categorizer</a></li>
-  </ul>
+  <div class="content">
+    <h3>Supplier information</h3>
+    <ul>
+      <li><a href="geojson.html">GeoJSON supplier suite</a></li>
+      <li><a href="geojsonchecker.html">GeoJSON checker</a></li>
+    </ul>
 
-  <h3>PLGGR to Shopify migration</h3>
-  <ul>
-    <li><a href="shopifyexportparser.html">Shopify export parse &amp; prep</a></li>
-    <li><a href="handlemapper.html">Shopify URL handle – PLGGR SKU mapper</a></li>
-    <li><a href="idjoiner.html">SKU – Shopify ID joiner</a></li>
-    <li><a href="importfiller.html">Shopify import filler</a></li>
-    <li><a href="urlgen.html">Localized URL handle generator</a></li>
-  </ul>
+    <h3>Redirect management</h3>
+    <ul>
+      <li><a href="redirectcleaner.html">Redirect cleaner &amp; categorizer</a></li>
+    </ul>
 
-  <h3>Copy &amp; content</h3>
-  <ul>
-    <li><a href="shopify-copy-parser.html">Shopify copy parser</a></li>
-    <li><a href="shopify-copy-parser-extended.html">Shopify copy parser (Extended — interactive resolution)</a></li>
-    <li><a href="collection-link-block-generator.html">Collection link block generator</a></li>
-  </ul>
+    <h3>PLGGR to Shopify migration</h3>
+    <ul>
+      <li><a href="shopifyexportparser.html">Shopify export parse &amp; prep</a></li>
+      <li><a href="handlemapper.html">Shopify URL handle – PLGGR SKU mapper</a></li>
+      <li><a href="idjoiner.html">SKU – Shopify ID joiner</a></li>
+      <li><a href="importfiller.html">Shopify import filler</a></li>
+      <li><a href="urlgen.html">Localized URL handle generator</a></li>
+    </ul>
 
-  <h3>Customer Service</h3>
-  <ul>
-    <li><a href="orderfixer.html">Jumbled order fixer</a></li>
-        <li><a href="fumbledorderfixer2025.html">Fumbled order fixer XL 2025 Edition</a></li>
-  </ul>
+    <h3>Copy &amp; content</h3>
+    <ul>
+      <li><a href="shopify-copy-parser.html">Shopify copy parser</a></li>
+      <li><a href="shopify-copy-parser-extended.html">Shopify copy parser (Extended — interactive resolution)</a></li>
+      <li><a href="collection-link-block-generator.html">Collection link block generator</a></li>
+    </ul>
+
+    <h3>Customer Service</h3>
+    <ul>
+      <li><a href="orderfixer.html">Jumbled order fixer</a></li>
+      <li><a href="fumbledorderfixer2025.html">Fumbled order fixer XL 2025 Edition</a></li>
+    </ul>
+  </div>
 </body>
 </html>

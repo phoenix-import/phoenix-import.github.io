@@ -6,16 +6,17 @@
 <title>Phoenix Import – Shopify Copy Parser</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f5; color: #1a1a2e; min-height: 100vh; display: flex; flex-direction: column; }
-  header { background: #1a1a2e; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  body { font-family: Calibri, sans-serif; background: #f4f4f5; color: #1a1a2e; min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: #68437B; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  header img.logo { height: 36px; margin-left: auto; }
   header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
   header span { font-size: 13px; opacity: 0.6; }
   .controls { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .controls label { font-size: 13px; font-weight: 500; color: #374151; }
   select { padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: #fff; cursor: pointer; }
-  select:focus { outline: 2px solid #4f46e5; outline-offset: 1px; }
-  button#parseBtn { background: #4f46e5; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-  button#parseBtn:hover { background: #4338ca; }
+  select:focus { outline: 2px solid #ca427e; outline-offset: 1px; }
+  button#parseBtn { background: #ca427e; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  button#parseBtn:hover { background: #b33a6f; }
   button#copyBtn { background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; transition: all 0.15s; }
   button#copyBtn:hover { background: #f9fafb; border-color: #9ca3af; }
   button#copyBtn.copied { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
@@ -41,6 +42,7 @@
 <header>
   <h1>Phoenix Import — Shopify Copy Parser</h1>
   <span>Converts old-site HTML to Shopify-ready copy</span>
+  <img class="logo" src="logo.png" alt="Phoenix Import">
 </header>
 
 <div class="controls">

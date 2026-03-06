@@ -5,18 +5,26 @@
   <title>Shopify Import Filler (filtered)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { font-family: system-ui, sans-serif; background:#0f1115; color:#e6e6e6; margin:0; padding:20px; }
-    h1 { margin:0 0 8px; }
+    body { font-family: Calibri, sans-serif; background:#fff; color:#333; margin:0; padding:0; }
+    header { background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:18px; font-weight:600; margin:0; }
+    header img { height:36px; margin-left:auto; }
+    .content { padding:20px; }
     label { display:block; margin-top:12px; }
     input[type="file"], input[type="text"] { width:100%; max-width:640px; }
-    button { margin-top:16px; padding:10px 14px; border:0; border-radius:8px; background:#2b6cb0; color:#fff; cursor:pointer; }
+    button { margin-top:16px; padding:10px 14px; border:0; border-radius:8px; background:#ca427e; color:#fff; cursor:pointer; }
+    button:hover { background:#b33a6f; }
     button:disabled { opacity:.6; cursor:not-allowed; }
-    pre { background:#171a21; border:1px solid #2a2f3a; border-radius:8px; padding:12px; white-space:pre-wrap; margin-top:14px; color:#cfd2d6; }
+    pre { background:#f4f4f5; border:1px solid #d1d5db; border-radius:8px; padding:12px; white-space:pre-wrap; margin-top:14px; color:#333; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h1>Shopify Import Filler</h1>
+  <header>
+    <h1>Shopify Import Filler</h1>
+    <img src="logo.png" alt="Phoenix Import">
+  </header>
+  <div class="content">
   <p>
     Inputs:<br>
     A) Shopify skeleton (3-row format)<br>
@@ -41,6 +49,7 @@
 
   <button id="process" disabled>Generate Filled XLSX</button>
   <pre id="report"></pre>
+  </div>
 
 <script>
 const $ = id => document.getElementById(id);

@@ -4,18 +4,28 @@
 <meta charset="utf-8">
 <title>Dump → CSV</title>
 <style>
- body {font-family: system-ui, sans-serif; margin: 2rem; max-width: 40rem;}
+ body {font-family: Calibri, sans-serif; margin: 0; background: #fff; color: #333;}
+ header {background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px;}
+ header h1 {font-size:18px; font-weight:600; margin:0;}
+ header img {height:36px; margin-left:auto;}
+ .content {padding: 2rem; max-width: 40rem;}
  input[type=file] {margin: 1rem 0;}
- #log {color: crimson;}
+ button {padding:8px 16px; border:0; border-radius:4px; background:#ca427e; color:#fff; cursor:pointer;}
+ button:hover {background:#b33a6f;}
+ #log {color: #e74c3c;}
 </style>
 </head>
 <body>
 
-<h1>JSON dump → CSV converter</h1>
-
+<header>
+  <h1>JSON dump → CSV converter</h1>
+  <img src="logo.png" alt="Phoenix Import">
+</header>
+<div class="content">
 <input type="file" id="file" accept=".txt,.json">
 <button id="go">Convert</button>
 <p id="log"></p>
+</div>
 
 <script>
 const log = msg => document.getElementById('log').textContent = msg;
