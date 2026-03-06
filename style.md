@@ -1,15 +1,18 @@
 # Phoenix Import Style Guide
 
-## Brand Colours
+## Colours
 
-| Name       | Hex       | Usage                          |
-|------------|-----------|--------------------------------|
-| Purple     | `#68437B` | Headers, primary backgrounds   |
-| Pink       | `#ca427e` | Buttons, accents, CTAs         |
-| Pink hover | `#b33a6f` | Button hover states            |
-| White      | `#ffffff` | Text on dark backgrounds, cards|
+Standard page styling uses the usual **black/grey text on white backgrounds**.
 
-These colours are always paired with **white** for text and backgrounds.
+When adding coloured elements (headers, buttons, accents, etc.), use the brand colours:
+
+| Name       | Hex       | Usage                              |
+|------------|-----------|------------------------------------|
+| Purple     | `#68437B` | Headers, coloured backgrounds      |
+| Pink       | `#ca427e` | Buttons, accents, CTAs             |
+| Pink hover | `#b33a6f` | Button hover states                |
+
+Use **white text** on these coloured backgrounds for contrast.
 
 ## Typography
 
