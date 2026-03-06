@@ -16,8 +16,9 @@ Use **white text** on these coloured backgrounds for contrast.
 
 ## Typography
 
-- **Font family:** Calibri (fallback: sans-serif)
-- Use Calibri for all body text, headings, and UI elements.
+- **Font family:** `Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+- Calibri is the primary brand font; the system font stack provides clean fallbacks on platforms where Calibri is unavailable.
+- Use this font stack for all body text, headings, and UI elements.
 
 ## Logo
 
