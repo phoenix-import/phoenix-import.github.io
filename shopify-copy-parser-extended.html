@@ -375,11 +375,11 @@ function detectRelatedBlock(body) {
 
 function extractWeightedWords(body, lang) {
   const stops = STOP_WORDS[lang] || new Set();
-  const wordCounts = {};
+  const weights = {};
   function addWords(text, weight) {
     for (const w of slugify(text)) {
       if (w.length < 3 || stops.has(w)) continue;
-      wordCounts[w] = (wordCounts[w] || 0) + weight;
+      weights[w] = Math.max(weights[w] || 0, weight); // keep highest weight per word
     }
   }
   // Headers get 3x weight
@@ -396,13 +396,54 @@ function extractWeightedWords(body, lang) {
   if (firstP) addWords(firstP.textContent, 2);
   // Rest of body gets 1x
   addWords(body.textContent, 1);
-  // Convert to repeated word array so scoreMatch sees frequent/heavy words more often
-  const words = [];
-  for (const [w, count] of Object.entries(wordCounts)) {
-    const repeats = Math.min(Math.round(count / 2), 5); // cap repetition
-    for (let i = 0; i < repeats; i++) words.push(w);
+  return weights;
+}
+
+// Like scoreMatch but uses word weights as multipliers and skips the unmatched-words
+// penalty (which is designed for short link labels, not full-body keyword extraction).
+function scoreRelated(wordWeights, handle, lang) {
+  const hw = handle.split("-").filter(w => w.length > 1);
+  const stops = STOP_WORDS[lang] || new Set();
+  let score = 0;
+  const hwMatched = new Set();
+  const hwMatchedWell = new Set();
+
+  for (const [lw, weight] of Object.entries(wordWeights)) {
+    if (stops.has(lw)) continue;
+    const lwStem = stem(lw, lang);
+    let bestPts = 0, bestHwIdx = -1;
+
+    for (let i = 0; i < hw.length; i++) {
+      const h = hw[i];
+      if (h.length < 3) continue;
+      let pts = 0;
+      if (h === lw)                                    pts = 3;
+      else if (h.startsWith(lw) || lw.startsWith(h))  pts = 2;
+      else if (h.includes(lw)   || lw.includes(h))    pts = 1;
+      if (!pts) {
+        const hStem = stem(h, lang);
+        if (hStem.length >= 3 && lwStem.length >= 3) {
+          if (hStem === lwStem)                                      pts = 2;
+          else if (hStem.startsWith(lwStem) || lwStem.startsWith(hStem)) pts = 1;
+        }
+      }
+      if (pts > bestPts) { bestPts = pts; bestHwIdx = i; }
+    }
+
+    if (bestPts > 0) {
+      score += bestPts * weight;
+      hwMatched.add(bestHwIdx);
+      if (bestPts >= 2) hwMatchedWell.add(bestHwIdx);
+    }
   }
-  return words;
+
+  // Bonus: all meaningful handle words covered
+  const hwContent = hw.filter(w => w.length >= 3 && !stops.has(w));
+  if (hwContent.length > 0 && hwMatchedWell.size >= hwContent.length) {
+    score += 2;
+  }
+
+  return score;
 }
 
 function handleToMainCategory(handle, lang) {
@@ -425,10 +466,10 @@ function generateRelatedBlock(body, lang, useWholesale) {
   const broadRe = /^alle-|^all-|^tous-|^todas-|^tutti-|^tutte-|^toutes-/;
   const eligible = handles.filter(h => h && !broadRe.test(h));
 
-  const weightedWords = extractWeightedWords(body, lang);
+  const wordWeights = extractWeightedWords(body, lang);
   const scored = eligible
-    .map(h => ({ handle: h, score: scoreMatch(weightedWords, h, lang), cat: handleToMainCategory(h, lang) }))
-    .filter(x => x.score >= 2)
+    .map(h => ({ handle: h, score: scoreRelated(wordWeights, h, lang), cat: handleToMainCategory(h, lang) }))
+    .filter(x => x.score >= 3)
     .sort((a, b) => b.score - a.score);
 
   // Category-aware picking: max 2 per main category, aim for 8-10 links
