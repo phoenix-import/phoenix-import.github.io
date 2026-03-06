@@ -464,7 +464,26 @@ function generateRelatedBlock(body, lang, useWholesale) {
   if (!handles.length) return null;
 
   const broadRe = /^alle-|^all-|^tous-|^todas-|^tutti-|^tutte-|^toutes-/;
-  const eligible = handles.filter(h => h && !broadRe.test(h));
+
+  // Derive the page's own handle from the h1 title so we can skip self-links
+  const h1 = body.querySelector("h1");
+  const titleWords = h1 ? slugify(h1.textContent) : [];
+  function isSelfHandle(handle) {
+    if (!titleWords.length) return false;
+    const stops = STOP_WORDS[lang] || new Set();
+    const hw = handle.split("-").filter(w => w.length >= 3 && !stops.has(w));
+    const tw = titleWords.filter(w => w.length >= 3 && !stops.has(w));
+    if (!hw.length || !tw.length) return false;
+    // Check if handle word matches any title word (exact or prefix overlap)
+    function fuzzyMatch(a, b) {
+      return a === b || a.startsWith(b) || b.startsWith(a);
+    }
+    const hwMatched = hw.filter(h => tw.some(t => fuzzyMatch(h, t))).length;
+    // Self-link if all handle words match title words (or all title words match)
+    return hwMatched >= hw.length || hwMatched >= tw.length;
+  }
+
+  const eligible = handles.filter(h => h && !broadRe.test(h) && !isSelfHandle(h));
 
   const wordWeights = extractWeightedWords(body, lang);
   const scored = eligible
