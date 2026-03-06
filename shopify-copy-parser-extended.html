@@ -373,29 +373,90 @@ function detectRelatedBlock(body) {
   return null;
 }
 
+function extractWeightedWords(body, lang) {
+  const stops = STOP_WORDS[lang] || new Set();
+  const wordCounts = {};
+  function addWords(text, weight) {
+    for (const w of slugify(text)) {
+      if (w.length < 3 || stops.has(w)) continue;
+      wordCounts[w] = (wordCounts[w] || 0) + weight;
+    }
+  }
+  // Headers get 3x weight
+  for (const tag of body.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+    addWords(tag.textContent, 3);
+  }
+  // Bold/strong text gets 2x weight
+  for (const tag of body.querySelectorAll("strong, b")) {
+    if (tag.closest("h1, h2, h3, h4, h5, h6")) continue; // already counted
+    addWords(tag.textContent, 2);
+  }
+  // First paragraph gets 2x weight
+  const firstP = body.querySelector("p");
+  if (firstP) addWords(firstP.textContent, 2);
+  // Rest of body gets 1x
+  addWords(body.textContent, 1);
+  // Convert to repeated word array so scoreMatch sees frequent/heavy words more often
+  const words = [];
+  for (const [w, count] of Object.entries(wordCounts)) {
+    const repeats = Math.min(Math.round(count / 2), 5); // cap repetition
+    for (let i = 0; i < repeats; i++) words.push(w);
+  }
+  return words;
+}
+
+function handleToMainCategory(handle, lang) {
+  const handles = COLLECTIONS[lang] || [];
+  const mainSet = MAIN_CATEGORIES[lang] || new Set();
+  const idx = handles.indexOf(handle);
+  if (idx < 0) return null;
+  // Walk backwards from the handle's index to find the nearest main category before it
+  // (collections are ordered: main category followed by its subcategories)
+  for (let i = idx; i >= 0; i--) {
+    if (mainSet.has(handles[i])) return handles[i];
+  }
+  return null;
+}
+
 function generateRelatedBlock(body, lang, useWholesale) {
   const handles = COLLECTIONS[lang] || [];
   if (!handles.length) return null;
-  const bodyWords = slugify(body.textContent);
-  const scored = handles
-    .map(h => ({ handle: h, score: scoreMatch(bodyWords, h, lang) }))
+
+  const broadRe = /^alle-|^all-|^tous-|^todas-|^tutti-|^tutte-|^toutes-/;
+  const eligible = handles.filter(h => h && !broadRe.test(h));
+
+  const weightedWords = extractWeightedWords(body, lang);
+  const scored = eligible
+    .map(h => ({ handle: h, score: scoreMatch(weightedWords, h, lang), cat: handleToMainCategory(h, lang) }))
     .filter(x => x.score >= 2)
     .sort((a, b) => b.score - a.score);
 
+  // Category-aware picking: max 2 per main category, aim for 8-10 links
   const picked = [];
   const seen = new Set();
+  const catCount = {};
+  const MAX_PER_CAT = 2;
+
   for (const item of scored) {
     if (picked.length >= 10) break;
-    if (!seen.has(item.handle)) { picked.push(item.handle); seen.add(item.handle); }
+    if (seen.has(item.handle)) continue;
+    const cat = item.cat || "__uncategorized__";
+    if ((catCount[cat] || 0) >= MAX_PER_CAT) continue;
+    picked.push(item.handle);
+    seen.add(item.handle);
+    catCount[cat] = (catCount[cat] || 0) + 1;
   }
-  // Pad with random handles if fewer than 6
+
+  // If we still have room, do a second pass allowing more from popular categories
   if (picked.length < 6) {
-    const shuffled = handles.filter(h => !seen.has(h)).sort(() => Math.random() - 0.5);
-    for (const h of shuffled) {
+    for (const item of scored) {
       if (picked.length >= 8) break;
-      picked.push(h); seen.add(h);
+      if (seen.has(item.handle)) continue;
+      picked.push(item.handle);
+      seen.add(item.handle);
     }
   }
+
   if (!picked.length) return null;
 
   const labelFn = useWholesale ? (h) => wholesaleLabel(h, lang) : handleToLabel;
