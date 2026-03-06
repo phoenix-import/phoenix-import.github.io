@@ -3,82 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phoenix Import – Shopify Copy Parser</title>
+<title>Phoenix Import – Text to Links Generator</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f4f5; color: #1a1a2e; min-height: 100vh; display: flex; flex-direction: column; }
   header { background: #68437B; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
-  header img.logo { height: 36px; margin-left: auto; }
   header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
-  header span { font-size: 13px; opacity: 0.6; }
-  .controls { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .controls label { font-size: 13px; font-weight: 500; color: #374151; }
+  header img { height: 36px; margin-left: auto; }
+  .content { padding: 32px; max-width: 860px; margin: 0 auto; width: 100%; }
+  p.sub { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  label { font-size: 13px; font-weight: 500; color: #374151; }
   select { padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: #fff; cursor: pointer; }
-  select:focus { outline: 2px solid #ca427e; outline-offset: 1px; }
-  button#parseBtn { background: #ca427e; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-  button#parseBtn:hover { background: #b33a6f; }
+  select:focus { outline: 2px solid #4f46e5; outline-offset: 1px; }
+  button#genBtn { background: #ca427e; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  button#genBtn:hover { background: #b33a6f; }
   button#copyBtn { background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; transition: all 0.15s; }
   button#copyBtn:hover { background: #f9fafb; border-color: #9ca3af; }
   button#copyBtn.copied { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
-  .status-badge { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: #f3f4f6; color: #6b7280; }
-  .status-badge.ok { background: #d1fae5; color: #065f46; }
-  .status-badge.warn { background: #fef3c7; color: #92400e; }
-  .workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 0; flex: 1; height: calc(100vh - 110px); }
-  .pane { display: flex; flex-direction: column; border-right: 1px solid #e5e7eb; }
-  .pane:last-child { border-right: none; }
-  .pane-header { padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
-  .pane-header h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; }
-  textarea { flex: 1; border: none; outline: none; resize: none; font-family: "Menlo", "Consolas", monospace; font-size: 12.5px; line-height: 1.6; padding: 16px; background: #fff; color: #1a1a2e; }
-  textarea#output { background: #f9fafb; }
-  .log { font-size: 11px; background: #1e1e2e; color: #cdd6f4; padding: 8px 16px; max-height: 120px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
-  .log .ok { color: #a6e3a1; }
-  .log .warn { color: #f9e2af; }
-  .log .err { color: #f38ba8; }
-  .log .info { color: #89dceb; }
+  .input-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 6px; display: block; }
+  textarea#inputText { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; font-family: inherit; font-size: 14px; line-height: 1.6; min-height: 100px; resize: vertical; background: #fff; color: #1a1a2e; outline: none; margin-bottom: 16px; }
+  textarea#inputText:focus { border-color: #4f46e5; outline: 2px solid rgba(79,70,229,0.15); }
+  .output-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; min-height: 80px; }
+  #preview { font-size: 14px; line-height: 1.9; color: #1a1a2e; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #f0f0f0; }
+  #preview a { color: #ca427e; text-decoration: none; font-weight: 600; }
+  #preview a:hover { text-decoration: underline; }
+  #preview.empty { color: #9ca3af; font-style: italic; }
+  textarea#code { width: 100%; border: none; outline: none; resize: vertical; font-family: "Menlo", "Consolas", monospace; font-size: 12px; line-height: 1.6; min-height: 56px; color: #374151; background: transparent; }
+  .hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .count-badge { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: #f3f4f6; color: #6b7280; }
+  .count-badge.ok { background: #d1fae5; color: #065f46; }
+  .count-badge.warn { background: #fef3c7; color: #92400e; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Phoenix Import — Shopify Copy Parser</h1>
-  <span>Converts old-site HTML to Shopify-ready copy</span>
-  <img class="logo" src="logo.png" alt="Phoenix Import">
+  <h1>Phoenix Import — Text to Links Generator</h1>
+  <img src="logo.png" alt="Phoenix Import">
 </header>
 
-<div class="controls">
-  <label for="langSelect">Language:</label>
-  <select id="langSelect">
-    <option value="NL">🇳🇱 Nederlands (NL)</option>
-    <option value="EN">🇬🇧 English (EN)</option>
-    <option value="DE">🇩🇪 Deutsch (DE)</option>
-    <option value="FR">🇫🇷 Français (FR)</option>
-    <option value="ES">🇪🇸 Español (ES)</option>
-    <option value="IT">🇮🇹 Italiano (IT)</option>
-  </select>
-  <button id="parseBtn">▶ Parse &amp; Convert</button>
-  <button id="copyBtn">Copy Output</button>
-  <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;font-size:13px;font-weight:500;color:#374151;">
-    <input type="checkbox" id="wholesaleChk" checked> Wholesale phrasing
-  </label>
-  <span id="statusBadge" class="status-badge">Idle</span>
-</div>
+<div class="content">
+  <p class="sub">Paste a product title or page text — the tool picks the most relevant collection links automatically.</p>
 
-<div class="workspace">
-  <div class="pane">
-    <div class="pane-header">
-      <h2>Input — Raw HTML</h2>
-      <button onclick="document.getElementById('input').value=''" style="font-size:11px;background:none;border:1px solid #e5e7eb;border-radius:4px;padding:2px 8px;cursor:pointer;color:#6b7280;">Clear</button>
-    </div>
-    <textarea id="input" placeholder="Paste the full page HTML source here…" spellcheck="false"></textarea>
+  <span class="input-label">Input — title or text</span>
+  <textarea id="inputText" placeholder="e.g. Bio-Tee Großhandel&#10;&#10;Or paste a full product description here…" spellcheck="false"></textarea>
+
+  <div class="row">
+    <label for="langSelect">Language:</label>
+    <select id="langSelect">
+      <option value="NL">🇳🇱 Nederlands (NL)</option>
+      <option value="DE">🇩🇪 Deutsch (DE)</option>
+      <option value="EN">🇬🇧 English (EN)</option>
+      <option value="ES">🇪🇸 Español (ES)</option>
+      <option value="FR">🇫🇷 Français (FR)</option>
+      <option value="IT">🇮🇹 Italiano (IT)</option>
+    </select>
+    <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="wholesaleChk" checked> Wholesale phrasing
+    </label>
+    <button id="genBtn">▶ Generate Links</button>
+    <button id="copyBtn">Copy HTML</button>
+    <span id="countBadge" class="count-badge"></span>
   </div>
-  <div class="pane">
-    <div class="pane-header">
-      <h2>Output — Shopify-ready HTML</h2>
-    </div>
-    <textarea id="output" readonly placeholder="Converted HTML will appear here after parsing…" spellcheck="false"></textarea>
+
+  <div class="output-wrap">
+    <div id="preview" class="empty">Links will appear here…</div>
+    <textarea id="code" readonly placeholder="HTML output will appear here…"></textarea>
   </div>
-</div>
-<div id="log" class="log"><span class="info">Ready. Paste HTML on the left and click Parse &amp; Convert.</span>
+  <p class="hint">The first line is treated as the page title and weighted more heavily. Works with just a title too.</p>
 </div>
 
 <script>
@@ -87,6 +80,7 @@ const HOMEPAGE = "https://www.phoeniximport.com";
 
 // Main (top-level) category handles — NL as source of truth
 const MAIN_NL = ["alle-beelden","biologische-producten","geurproducten","gezonde-leefstijl","home-living","kaarsen-en-sfeerlichten","klankschalen-en-meer","lichaamsverzorging","meditatie","mineralen-en-edelstenen","sieraden","spiritualiteit","stationery-en-verpakkingen","textiel","wierook-witte-salie-en-houtskool","yoga"];
+// Build per-language sets using parallel array indices
 const MAIN_INDICES = new Set(MAIN_NL.map(h => COLLECTIONS.NL.indexOf(h)).filter(i => i >= 0));
 const MAIN_CATEGORIES = {};
 for (const lang of Object.keys(COLLECTIONS)) {
@@ -148,15 +142,16 @@ function stem(word, lang) {
 function scoreMatch(linkTextWords, handle, lang) {
   const hw = handle.split("-").filter(w => w.length > 1);
   const stops = STOP_WORDS[lang] || new Set();
-  let score = 0, matched = 0;
-  const hwMatched = new Set();
-  const hwMatchedWell = new Set();  // only exact/prefix (pts>=2)
+  let score = 0, contentWords = 0, matched = 0;
+  const hwMatched = new Set();      // track which handle words got matched (any quality)
+  const hwMatchedWell = new Set();  // track which handle words got matched well (exact/prefix, pts>=2)
   let lastHwIdx = -1, orderBonus = 0;
 
   for (const lw of linkTextWords) {
     if (lw.length < 3 || stops.has(lw)) continue;
+    contentWords++;
     const lwStem = stem(lw, lang);
-    let bestPts = 0, bestHwIdx = -1;
+    let hit = false, bestHwIdx = -1, bestPts = 0;
 
     for (let i = 0; i < hw.length; i++) {
       const h = hw[i];
@@ -173,17 +168,23 @@ function scoreMatch(linkTextWords, handle, lang) {
           else if (hStem.startsWith(lwStem) || lwStem.startsWith(hStem)) pts = 1;
         }
       }
-      if (pts > bestPts) { bestPts = pts; bestHwIdx = i; }
+      if (pts > bestPts) { bestPts = pts; bestHwIdx = i; hit = true; }
     }
 
-    if (bestPts > 0) {
+    if (hit) {
       score += bestPts;
       matched++;
       hwMatched.add(bestHwIdx);
-      if (bestPts >= 2) hwMatchedWell.add(bestHwIdx);
+      if (bestPts >= 2) hwMatchedWell.add(bestHwIdx);  // only exact/prefix count for coverage
+      // Word order bonus: if this handle word comes after the previous matched one
       if (bestHwIdx > lastHwIdx) orderBonus++;
       lastHwIdx = bestHwIdx;
     }
+  }
+
+  // Penalize if many content words went unmatched (wrong collection)
+  if (contentWords > 1 && matched < contentWords) {
+    score -= (contentWords - matched);
   }
 
   // Bonus: all meaningful handle words covered by good matches (exact/prefix only)
@@ -201,6 +202,11 @@ function scoreMatch(linkTextWords, handle, lang) {
 }
 
 function findHandle(linkText, lang) {
+  const result = findTopHandles(linkText, lang);
+  return result.confident ? result.top[0].handle : null;
+}
+
+function findTopHandles(linkText, lang) {
   const handles = COLLECTIONS[lang] || [];
   const words = slugify(linkText);
   const scored = [];
@@ -209,21 +215,35 @@ function findHandle(linkText, lang) {
     if (s >= 1) scored.push({ handle: h, score: s });
   }
   scored.sort((a, b) => b.score - a.score);
-  if (scored.length === 0 || scored[0].score < 2) return null;
+  const top = scored.slice(0, 5);   // keep extra candidates for fallback logic
 
-  // Clear winner
-  if (scored.length < 2 || scored[0].score >= scored[1].score * 1.4) return scored[0].handle;
+  // Confident = top score >= 3 AND at least 40% lead over #2 (or no #2)
+  const confident = top.length > 0 && top[0].score >= 3 &&
+    (top.length < 2 || top[0].score >= top[1].score * 1.4);
 
-  // Fallback: prefer main category or broad "alle-*" collection when tied
+  if (confident) return { top: top.slice(0, 3), confident: true };
+
+  // Fallback: when not confident among subcategories, prefer the main (broadest) category.
+  // Rationale: generic link text like "Kaarsen" or "Wierook" should point to the main
+  // category, not a random subcategory. Only use a subcategory when it wins clearly.
   const mainSet = MAIN_CATEGORIES[lang] || new Set();
   const broadRe = /^alle-|^all-|^tous-|^todas-|^tutti-|^tutte-|^toutes-/;
-  const minScore = scored[0].score * 0.5;
-  const mainHit = scored.find(t => t.score >= minScore && mainSet.has(t.handle));
-  if (mainHit) return mainHit.handle;
-  const broadHit = scored.find(t => t.score >= minScore && broadRe.test(t.handle));
-  if (broadHit) return broadHit.handle;
 
-  return scored[0].handle;  // no main category found, use best guess
+  if (top.length > 0) {
+    const minScore = top[0].score * 0.5;  // candidate must score at least 50% of the top
+    // First try: main category match
+    const mainHit = top.find(t => t.score >= minScore && mainSet.has(t.handle));
+    if (mainHit) {
+      return { top: [mainHit, ...top.filter(t => t !== mainHit)].slice(0, 3), confident: true };
+    }
+    // Second try: broad "alle-*" / "all-*" collection
+    const broadHit = top.find(t => t.score >= minScore && broadRe.test(t.handle));
+    if (broadHit) {
+      return { top: [broadHit, ...top.filter(t => t !== broadHit)].slice(0, 3), confident: true };
+    }
+  }
+
+  return { top: top.slice(0, 3), confident: false };
 }
 
 function handleToLabel(handle) {
@@ -276,7 +296,8 @@ function processHTML(rawHTML, lang, useWholesale) {
   // 4. Replace phoeniximport links (all TLDs)
   const PI_DOMAIN = /phoeniximport\.(com|de|nl|fr|es|it)/i;
   const HOMEPAGE_RE = /^https?:\/\/(www\.)?phoeniximport\.(com|de|nl|fr|es|it)\/?(\?[^#]*)?(#.*)?$/i;
-  let linksTotal = 0, linksMatched = 0, linksFallback = 0;
+  let linksTotal = 0, linksMatched = 0, linksFallback = 0, linksUncertain = 0;
+  const uncertainLinks = [];
   doc.body.querySelectorAll("a[href]").forEach(a => {
     const href = a.getAttribute("href") || "";
     if (!PI_DOMAIN.test(href)) return;
@@ -293,16 +314,24 @@ function processHTML(rawHTML, lang, useWholesale) {
       return;
     }
 
-    const handle = findHandle(linkText, lang);
-    if (handle) {
-      a.setAttribute("href", "/collections/" + handle);
-      if (useWholesale) a.textContent = wholesaleLabel(handle, lang);
+    const result = findTopHandles(linkText, lang);
+    if (result.confident) {
+      a.setAttribute("href", "/collections/" + result.top[0].handle);
+      if (useWholesale) a.textContent = wholesaleLabel(result.top[0].handle, lang);
       linksMatched++;
-      logs.push({ type:"ok",   msg: '\u2713 "' + linkText + '" \u2192 /collections/' + handle });
+      logs.push({ type:"ok",   msg: '\u2713 "' + linkText + '" \u2192 /collections/' + result.top[0].handle });
+    } else if (result.top.length > 0) {
+      // Uncertain — mark with placeholder, collect for resolution
+      const placeholderId = "resolve-" + uncertainLinks.length;
+      a.setAttribute("href", HOMEPAGE);
+      a.setAttribute("data-resolve-id", placeholderId);
+      uncertainLinks.push({ id: placeholderId, linkText, candidates: result.top, element: a });
+      linksUncertain++;
+      logs.push({ type:"warn", msg: '? "' + linkText + '" \u2192 NEEDS RESOLUTION (top: ' + result.top.map(c => c.handle + ":" + c.score).join(", ") + ')' });
     } else {
       a.setAttribute("href", HOMEPAGE);
       linksFallback++;
-      logs.push({ type:"warn", msg: '? "' + linkText + '" \u2192 fallback homepage' });
+      logs.push({ type:"warn", msg: '? "' + linkText + '" \u2192 fallback homepage (no candidates)' });
     }
   });
 
@@ -325,21 +354,106 @@ function processHTML(rawHTML, lang, useWholesale) {
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 
-  return { output, logs, linksTotal, linksMatched, linksFallback };
+  return { output, logs, linksTotal, linksMatched, linksFallback, linksUncertain, uncertainLinks, doc };
 }
 
 function detectRelatedBlock(body) {
   for (const el of body.querySelectorAll("p, div")) {
     const anchors = el.querySelectorAll("a");
     if (anchors.length < 4) continue;
+    // Only match if "|" appears as a direct text node separator (not just anywhere in descendants)
     const directText = Array.from(el.childNodes)
       .concat(Array.from(el.querySelectorAll("strong, b")).flatMap(s => Array.from(s.childNodes)))
       .filter(n => n.nodeType === 3)
       .map(n => n.textContent)
       .join("");
-    if (directText.includes("|")) {
-      return el;
+    if (directText.includes("|")) return el;
+  }
+  return null;
+}
+
+function extractWeightedWords(body, lang) {
+  const stops = STOP_WORDS[lang] || new Set();
+  const weights = {};
+  function addWords(text, weight) {
+    for (const w of slugify(text)) {
+      if (w.length < 3 || stops.has(w)) continue;
+      weights[w] = Math.max(weights[w] || 0, weight); // keep highest weight per word
     }
+  }
+  // Headers get 3x weight
+  for (const tag of body.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+    addWords(tag.textContent, 3);
+  }
+  // Bold/strong text gets 2x weight
+  for (const tag of body.querySelectorAll("strong, b")) {
+    if (tag.closest("h1, h2, h3, h4, h5, h6")) continue; // already counted
+    addWords(tag.textContent, 2);
+  }
+  // First paragraph gets 2x weight
+  const firstP = body.querySelector("p");
+  if (firstP) addWords(firstP.textContent, 2);
+  // Rest of body gets 1x
+  addWords(body.textContent, 1);
+  return weights;
+}
+
+// Like scoreMatch but uses word weights as multipliers and skips the unmatched-words
+// penalty (which is designed for short link labels, not full-body keyword extraction).
+function scoreRelated(wordWeights, handle, lang) {
+  const hw = handle.split("-").filter(w => w.length > 1);
+  const stops = STOP_WORDS[lang] || new Set();
+  let score = 0;
+  const hwMatched = new Set();
+  const hwMatchedWell = new Set();
+
+  for (const [lw, weight] of Object.entries(wordWeights)) {
+    if (stops.has(lw)) continue;
+    const lwStem = stem(lw, lang);
+    let bestPts = 0, bestHwIdx = -1;
+
+    for (let i = 0; i < hw.length; i++) {
+      const h = hw[i];
+      if (h.length < 3) continue;
+      let pts = 0;
+      if (h === lw)                                    pts = 3;
+      else if (h.startsWith(lw) || lw.startsWith(h))  pts = 2;
+      else if (h.includes(lw)   || lw.includes(h))    pts = 1;
+      if (!pts) {
+        const hStem = stem(h, lang);
+        if (hStem.length >= 3 && lwStem.length >= 3) {
+          if (hStem === lwStem)                                      pts = 2;
+          else if (hStem.startsWith(lwStem) || lwStem.startsWith(hStem)) pts = 1;
+        }
+      }
+      if (pts > bestPts) { bestPts = pts; bestHwIdx = i; }
+    }
+
+    if (bestPts > 0) {
+      score += bestPts * weight;
+      hwMatched.add(bestHwIdx);
+      if (bestPts >= 2) hwMatchedWell.add(bestHwIdx);
+    }
+  }
+
+  // Bonus: all meaningful handle words covered
+  const hwContent = hw.filter(w => w.length >= 3 && !stops.has(w));
+  if (hwContent.length > 0 && hwMatchedWell.size >= hwContent.length) {
+    score += 2;
+  }
+
+  return score;
+}
+
+function handleToMainCategory(handle, lang) {
+  const handles = COLLECTIONS[lang] || [];
+  const mainSet = MAIN_CATEGORIES[lang] || new Set();
+  const idx = handles.indexOf(handle);
+  if (idx < 0) return null;
+  // Walk backwards from the handle's index to find the nearest main category before it
+  // (collections are ordered: main category followed by its subcategories)
+  for (let i = idx; i >= 0; i--) {
+    if (mainSet.has(handles[i])) return handles[i];
   }
   return null;
 }
@@ -347,26 +461,61 @@ function detectRelatedBlock(body) {
 function generateRelatedBlock(body, lang, useWholesale) {
   const handles = COLLECTIONS[lang] || [];
   if (!handles.length) return null;
-  const bodyWords = slugify(body.textContent);
-  const scored = handles
-    .map(h => ({ handle: h, score: scoreMatch(bodyWords, h, lang) }))
-    .filter(x => x.score >= 2)
+
+  const broadRe = /^alle-|^all-|^tous-|^todas-|^tutti-|^tutte-|^toutes-/;
+
+  // Derive the page's own handle from the h1 title so we can skip self-links
+  const h1 = body.querySelector("h1");
+  const titleWords = h1 ? slugify(h1.textContent) : [];
+  function isSelfHandle(handle) {
+    if (!titleWords.length) return false;
+    const stops = STOP_WORDS[lang] || new Set();
+    const hw = handle.split("-").filter(w => w.length >= 3 && !stops.has(w));
+    const tw = titleWords.filter(w => w.length >= 3 && !stops.has(w));
+    if (!hw.length || !tw.length) return false;
+    // Check if handle word matches any title word (exact or prefix overlap)
+    function fuzzyMatch(a, b) {
+      return a === b || a.startsWith(b) || b.startsWith(a);
+    }
+    const hwMatched = hw.filter(h => tw.some(t => fuzzyMatch(h, t))).length;
+    // Self-link only if ALL handle words match title words (handle is subset of title)
+    return hwMatched >= hw.length;
+  }
+
+  const eligible = handles.filter(h => h && !broadRe.test(h) && !isSelfHandle(h));
+
+  const wordWeights = extractWeightedWords(body, lang);
+  const scored = eligible
+    .map(h => ({ handle: h, score: scoreRelated(wordWeights, h, lang), cat: handleToMainCategory(h, lang) }))
+    .filter(x => x.score >= 3)
     .sort((a, b) => b.score - a.score);
 
+  // Category-aware picking: max 2 per main category, aim for 8-10 links
   const picked = [];
   const seen = new Set();
+  const catCount = {};
+  const MAX_PER_CAT = 2;
+
   for (const item of scored) {
     if (picked.length >= 10) break;
-    if (!seen.has(item.handle)) { picked.push(item.handle); seen.add(item.handle); }
+    if (seen.has(item.handle)) continue;
+    const cat = item.cat || "__uncategorized__";
+    if ((catCount[cat] || 0) >= MAX_PER_CAT) continue;
+    picked.push(item.handle);
+    seen.add(item.handle);
+    catCount[cat] = (catCount[cat] || 0) + 1;
   }
-  // Pad with random handles if fewer than 6
+
+  // If we still have room, do a second pass allowing more from popular categories
   if (picked.length < 6) {
-    const shuffled = handles.filter(h => !seen.has(h)).sort(() => Math.random() - 0.5);
-    for (const h of shuffled) {
+    for (const item of scored) {
       if (picked.length >= 8) break;
-      picked.push(h); seen.add(h);
+      if (seen.has(item.handle)) continue;
+      picked.push(item.handle);
+      seen.add(item.handle);
     }
   }
+
   if (!picked.length) return null;
 
   const labelFn = useWholesale ? (h) => wholesaleLabel(h, lang) : handleToLabel;
@@ -383,67 +532,156 @@ function generateRelatedBlock(body, lang, useWholesale) {
   return p;
 }
 
-// ─── UI ────────────────────────────────────────────────────────────────────────────
 
-const logEl = document.getElementById("log");
-function appendLog(type, msg) {
-  const span = document.createElement("span");
-  span.className = type;
-  span.textContent = msg + "\n";
-  logEl.appendChild(span);
-  logEl.scrollTop = logEl.scrollHeight;
+// ─── Text-specific helpers ────────────────────────────────────────────────────
+
+function extractWeightedWordsFromText(text, lang) {
+  const stops = STOP_WORDS[lang] || new Set();
+  const weights = {};
+  function addWords(t, weight) {
+    for (const w of slugify(t)) {
+      if (w.length < 3 || stops.has(w)) continue;
+      weights[w] = Math.max(weights[w] || 0, weight);
+    }
+  }
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return weights;
+  // First line = title → 3× weight (same as h1 in the HTML parser)
+  addWords(lines[0], 3);
+  // Remaining lines → 1× weight
+  if (lines.length > 1) addWords(lines.slice(1).join(" "), 1);
+  return weights;
 }
-function clearLog() { logEl.innerHTML = ""; }
 
-document.getElementById("parseBtn").addEventListener("click", () => {
-  const raw = document.getElementById("input").value.trim();
+function isSelfHandleText(handle, titleLine, lang) {
+  if (!titleLine) return false;
+  const stops = STOP_WORDS[lang] || new Set();
+  const hw = handle.split("-").filter(w => w.length >= 3 && !stops.has(w));
+  const tw = slugify(titleLine).filter(w => w.length >= 3 && !stops.has(w));
+  if (!hw.length || !tw.length) return false;
+  function fuzzyMatch(a, b) { return a === b || a.startsWith(b) || b.startsWith(a); }
+  const hwMatched = hw.filter(h => tw.some(t => fuzzyMatch(h, t))).length;
+  return hwMatched >= hw.length;
+}
+
+function generateFromText(text, lang, useWholesale) {
+  const handles = COLLECTIONS[lang] || [];
+  if (!handles.length || !text.trim()) return null;
+
+  const broadRe = /^alle-|^all-|^tous-|^todas-|^tutti-|^tutte-|^toutes-/;
+  const titleLine = text.split("\n")[0].trim();
+
+  const eligible = handles.filter(h => h && !broadRe.test(h) && !isSelfHandleText(h, titleLine, lang));
+
+  const wordWeights = extractWeightedWordsFromText(text, lang);
+  if (!Object.keys(wordWeights).length) return null;
+
+  const scored = eligible
+    .map(h => ({ handle: h, score: scoreRelated(wordWeights, h, lang), cat: handleToMainCategory(h, lang) }))
+    .filter(x => x.score >= 3)
+    .sort((a, b) => b.score - a.score);
+
+  // Category-aware picking: max 2 per main category, aim for 8–10 links
+  const picked = [];
+  const seen = new Set();
+  const catCount = {};
+  const MAX_PER_CAT = 2;
+
+  for (const item of scored) {
+    if (picked.length >= 10) break;
+    if (seen.has(item.handle)) continue;
+    const cat = item.cat || "__uncategorized__";
+    if ((catCount[cat] || 0) >= MAX_PER_CAT) continue;
+    picked.push(item.handle);
+    seen.add(item.handle);
+    catCount[cat] = (catCount[cat] || 0) + 1;
+  }
+
+  // Second pass: fill up to 8 if still sparse
+  if (picked.length < 6) {
+    for (const item of scored) {
+      if (picked.length >= 8) break;
+      if (seen.has(item.handle)) continue;
+      picked.push(item.handle);
+      seen.add(item.handle);
+    }
+  }
+
+  if (!picked.length) return null;
+  return picked;
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+
+function generate() {
+  const text = document.getElementById("inputText").value;
   const lang = document.getElementById("langSelect").value;
-  const badge = document.getElementById("statusBadge");
-  const outputEl = document.getElementById("output");
+  const useWholesale = document.getElementById("wholesaleChk").checked;
+  const preview = document.getElementById("preview");
+  const codeEl = document.getElementById("code");
+  const badge = document.getElementById("countBadge");
 
-  if (!raw) {
-    badge.textContent = "No input";
-    badge.className = "status-badge warn";
+  if (!text.trim()) {
+    preview.className = "empty";
+    preview.textContent = "Links will appear here…";
+    codeEl.value = "";
+    badge.textContent = "";
+    badge.className = "count-badge";
     return;
   }
 
-  clearLog();
-  badge.textContent = "Processing\u2026";
-  badge.className = "status-badge";
+  const picked = generateFromText(text, lang, useWholesale);
 
-  try {
-    const useWholesale = document.getElementById("wholesaleChk").checked;
-    const { output, logs, linksTotal, linksMatched, linksFallback } = processHTML(raw, lang, useWholesale);
-    outputEl.value = output;
-    logs.forEach(l => appendLog(l.type, l.msg));
-    appendLog("info", "\u2014 " + linksTotal + " link(s) found: " + linksMatched + " matched, " + linksFallback + " \u2192 homepage");
-    if (linksFallback === 0 && linksTotal > 0) {
-      badge.textContent = "All " + linksMatched + " links matched";
-      badge.className = "status-badge ok";
-    } else if (linksMatched > 0) {
-      badge.textContent = linksMatched + "/" + linksTotal + " matched";
-      badge.className = "status-badge warn";
-    } else {
-      badge.textContent = linksTotal === 0 ? "Done (no links)" : "No matches";
-      badge.className = "status-badge warn";
-    }
-  } catch(e) {
-    appendLog("err", "Error: " + e.message + " (" + e.stack + ")");
-    badge.textContent = "Error";
-    badge.className = "status-badge warn";
+  if (!picked) {
+    preview.className = "empty";
+    preview.textContent = "No matching collections found — try adding more descriptive text.";
+    codeEl.value = "";
+    badge.textContent = "0 links";
+    badge.className = "count-badge warn";
+    return;
   }
-});
+
+  const labelFn = useWholesale ? (h) => wholesaleLabel(h, lang) : handleToLabel;
+
+  // Build HTML output
+  const parts = picked.map(h => `<a href="/collections/${h}">${labelFn(h)}</a>`);
+  const html = `<p><strong>${parts.join(" | ")}</strong></p>`;
+  codeEl.value = html;
+
+  // Live preview
+  preview.className = "";
+  preview.innerHTML = "";
+  const strong = document.createElement("strong");
+  picked.forEach((h, i) => {
+    const a = document.createElement("a");
+    a.href = "/collections/" + h;
+    a.textContent = labelFn(h);
+    a.target = "_blank";
+    strong.appendChild(a);
+    if (i < picked.length - 1) strong.appendChild(document.createTextNode(" | "));
+  });
+  preview.appendChild(strong);
+
+  badge.textContent = picked.length + " link" + (picked.length !== 1 ? "s" : "");
+  badge.className = "count-badge ok";
+}
+
+document.getElementById("genBtn").addEventListener("click", generate);
 
 document.getElementById("copyBtn").addEventListener("click", () => {
-  const val = document.getElementById("output").value;
+  const val = document.getElementById("code").value;
   if (!val) return;
   navigator.clipboard.writeText(val).then(() => {
     const btn = document.getElementById("copyBtn");
-    btn.textContent = "\u2713 Copied!";
+    btn.textContent = "✓ Copied!";
     btn.classList.add("copied");
-    setTimeout(() => { btn.textContent = "Copy Output"; btn.classList.remove("copied"); }, 2000);
+    setTimeout(() => { btn.textContent = "Copy HTML"; btn.classList.remove("copied"); }, 2000);
   });
 });
+
+// Auto-generate when language or wholesale changes
+document.getElementById("langSelect").addEventListener("change", generate);
+document.getElementById("wholesaleChk").addEventListener("change", generate);
 </script>
 </body>
 </html>

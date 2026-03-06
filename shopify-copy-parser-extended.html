@@ -35,6 +35,12 @@
   .log .err { color: #f38ba8; }
   .log .info { color: #89dceb; }
 
+  /* Output preview (uncertain link highlight) */
+  #previewLabel { display:none; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#92400e; background:#fffbeb; padding:6px 16px 4px; border-bottom:1px solid #fde68a; }
+  #outputPreview { display:none; overflow-y:auto; max-height:200px; padding:12px 16px; background:#fffdf4; border-bottom:2px solid #f59e0b; font-size:13px; line-height:1.7; color:#1a1a2e; }
+  #outputPreview a { color:#1d4ed8; text-decoration:none; pointer-events:none; }
+  #outputPreview a[data-resolve-id] { background:#fde68a; border-bottom:2px solid #f59e0b; border-radius:3px; padding:1px 4px; font-weight:700; color:#92400e; }
+
   /* Resolution panel */
   #resolvePanel { display:none; background:#fffbeb; border:2px solid #f59e0b; border-radius:8px; margin:8px 24px; padding:16px; max-height:300px; overflow-y:auto; }
   #resolvePanel h3 { font-size:14px; font-weight:700; color:#92400e; margin-bottom:12px; }
@@ -85,6 +91,8 @@
     <div class="pane-header">
       <h2>Output — Shopify-ready HTML</h2>
     </div>
+    <div id="previewLabel">⚠ Uncertain links highlighted</div>
+    <div id="outputPreview"></div>
     <textarea id="output" readonly placeholder="Converted HTML will appear here after parsing…" spellcheck="false"></textarea>
   </div>
 </div>
@@ -298,7 +306,24 @@ function processHTML(rawHTML, lang, useWholesale) {
     parent.removeChild(span);
   });
 
-  // 3. Replace phoeniximport links (all TLDs)
+  // 3. Unwrap redundant wrapper <div>s — a div whose only meaningful child is another div
+  //    Repeat until stable (handles chains like div>div>div>content)
+  let divsChanged = true;
+  while (divsChanged) {
+    divsChanged = false;
+    Array.from(doc.body.querySelectorAll("div")).forEach(div => {
+      if (!div.parentNode) return;
+      const kids = Array.from(div.childNodes).filter(n => !(n.nodeType === 3 && n.textContent.trim() === ""));
+      if (kids.length === 1 && kids[0].nodeName === "DIV") {
+        const parent = div.parentNode;
+        while (div.firstChild) parent.insertBefore(div.firstChild, div);
+        parent.removeChild(div);
+        divsChanged = true;
+      }
+    });
+  }
+
+  // 4. Replace phoeniximport links (all TLDs)
   const PI_DOMAIN = /phoeniximport\.(com|de|nl|fr|es|it)/i;
   const HOMEPAGE_RE = /^https?:\/\/(www\.)?phoeniximport\.(com|de|nl|fr|es|it)\/?(\?[^#]*)?(#.*)?$/i;
   let linksTotal = 0, linksMatched = 0, linksFallback = 0, linksUncertain = 0;
@@ -340,7 +365,7 @@ function processHTML(rawHTML, lang, useWholesale) {
     }
   });
 
-  // 4. Handle the related-links block
+  // 5. Handle the related-links block
   const relatedBlock = detectRelatedBlock(doc.body);
   if (relatedBlock) {
     logs.push({ type:"info", msg: "\u2139 Related links block detected \u2014 links updated above." });
@@ -353,7 +378,7 @@ function processHTML(rawHTML, lang, useWholesale) {
     }
   }
 
-  // 5. Serialise
+  // 6. Serialise
   const output = doc.body.innerHTML
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
@@ -365,10 +390,14 @@ function processHTML(rawHTML, lang, useWholesale) {
 function detectRelatedBlock(body) {
   for (const el of body.querySelectorAll("p, div")) {
     const anchors = el.querySelectorAll("a");
-    const text = el.textContent;
-    if (anchors.length >= 4 && (text.includes("|") || /groothandel|wholesale|gros|all'ingrosso|Gro\u00dfhandel|al por mayor/i.test(text))) {
-      return el;
-    }
+    if (anchors.length < 4) continue;
+    // Only match if "|" appears as a direct text node separator (not just anywhere in descendants)
+    const directText = Array.from(el.childNodes)
+      .concat(Array.from(el.querySelectorAll("strong, b")).flatMap(s => Array.from(s.childNodes)))
+      .filter(n => n.nodeType === 3)
+      .map(n => n.textContent)
+      .join("");
+    if (directText.includes("|")) return el;
   }
   return null;
 }
@@ -578,6 +607,18 @@ document.getElementById("parseBtn").addEventListener("click", () => {
     const panel = document.getElementById("resolvePanel");
     const list = document.getElementById("resolveList");
     list.innerHTML = "";
+    // Show preview with uncertain links highlighted
+    const previewEl = document.getElementById("outputPreview");
+    const previewLabel = document.getElementById("previewLabel");
+    if (uncertainLinks.length > 0) {
+      previewEl.innerHTML = output;
+      previewEl.style.display = "block";
+      previewLabel.style.display = "block";
+    } else {
+      previewEl.style.display = "none";
+      previewLabel.style.display = "none";
+    }
+
     if (uncertainLinks.length > 0) {
       uncertainLinks.forEach((item, idx) => {
         const div = document.createElement("div");
@@ -687,7 +728,9 @@ document.getElementById("resolveApplyBtn").addEventListener("click", () => {
   const output = doc.body.innerHTML.replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim();
   document.getElementById("output").value = output;
 
-  // Hide panel, update badge
+  // Hide panel and preview, update badge
+  document.getElementById("outputPreview").style.display = "none";
+  document.getElementById("previewLabel").style.display = "none";
   document.getElementById("resolvePanel").style.display = "none";
   window._lastUncertain = [];
   const badge = document.getElementById("statusBadge");
