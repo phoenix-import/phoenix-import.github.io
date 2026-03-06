@@ -314,8 +314,13 @@ function processHTML(rawHTML, lang, useWholesale) {
 function detectRelatedBlock(body) {
   for (const el of body.querySelectorAll("p, div")) {
     const anchors = el.querySelectorAll("a");
-    const text = el.textContent;
-    if (anchors.length >= 4 && (text.includes("|") || /groothandel|wholesale|gros|all'ingrosso|Gro\u00dfhandel|al por mayor/i.test(text))) {
+    if (anchors.length < 4) continue;
+    const directText = Array.from(el.childNodes)
+      .concat(Array.from(el.querySelectorAll("strong, b")).flatMap(s => Array.from(s.childNodes)))
+      .filter(n => n.nodeType === 3)
+      .map(n => n.textContent)
+      .join("");
+    if (directText.includes("|")) {
       return el;
     }
   }
