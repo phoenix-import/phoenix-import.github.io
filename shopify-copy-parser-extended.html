@@ -298,7 +298,24 @@ function processHTML(rawHTML, lang, useWholesale) {
     parent.removeChild(span);
   });
 
-  // 3. Replace phoeniximport links (all TLDs)
+  // 3. Unwrap redundant wrapper <div>s — a div whose only meaningful child is another div
+  //    Repeat until stable (handles chains like div>div>div>content)
+  let divsChanged = true;
+  while (divsChanged) {
+    divsChanged = false;
+    Array.from(doc.body.querySelectorAll("div")).forEach(div => {
+      if (!div.parentNode) return;
+      const kids = Array.from(div.childNodes).filter(n => !(n.nodeType === 3 && n.textContent.trim() === ""));
+      if (kids.length === 1 && kids[0].nodeName === "DIV") {
+        const parent = div.parentNode;
+        while (div.firstChild) parent.insertBefore(div.firstChild, div);
+        parent.removeChild(div);
+        divsChanged = true;
+      }
+    });
+  }
+
+  // 4. Replace phoeniximport links (all TLDs)
   const PI_DOMAIN = /phoeniximport\.(com|de|nl|fr|es|it)/i;
   const HOMEPAGE_RE = /^https?:\/\/(www\.)?phoeniximport\.(com|de|nl|fr|es|it)\/?(\?[^#]*)?(#.*)?$/i;
   let linksTotal = 0, linksMatched = 0, linksFallback = 0, linksUncertain = 0;
@@ -340,7 +357,7 @@ function processHTML(rawHTML, lang, useWholesale) {
     }
   });
 
-  // 4. Handle the related-links block
+  // 5. Handle the related-links block
   const relatedBlock = detectRelatedBlock(doc.body);
   if (relatedBlock) {
     logs.push({ type:"info", msg: "\u2139 Related links block detected \u2014 links updated above." });
@@ -353,7 +370,7 @@ function processHTML(rawHTML, lang, useWholesale) {
     }
   }
 
-  // 5. Serialise
+  // 6. Serialise
   const output = doc.body.innerHTML
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
