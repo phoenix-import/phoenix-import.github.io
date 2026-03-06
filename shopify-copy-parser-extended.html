@@ -479,8 +479,8 @@ function generateRelatedBlock(body, lang, useWholesale) {
       return a === b || a.startsWith(b) || b.startsWith(a);
     }
     const hwMatched = hw.filter(h => tw.some(t => fuzzyMatch(h, t))).length;
-    // Self-link if all handle words match title words (or all title words match)
-    return hwMatched >= hw.length || hwMatched >= tw.length;
+    // Self-link only if ALL handle words match title words (handle is subset of title)
+    return hwMatched >= hw.length;
   }
 
   const eligible = handles.filter(h => h && !broadRe.test(h) && !isSelfHandle(h));
