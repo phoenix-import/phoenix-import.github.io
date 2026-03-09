@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Product Copy Generator • Template</title>
+  <style>
+    body{font-family:Segoe,sans-serif; margin:0; line-height:1.35; background:#fafafa; color:#222}
+    header{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; padding:14px 16px; background:#68437B; color:#fff; margin-bottom:12px}
+    header label{font-size:12px; display:block; margin-bottom:4px; color:rgba(255,255,255,.8)}
+    select{padding:8px 10px; font-size:14px}
+    button{padding:8px 14px; font-size:14px; cursor:pointer; background:#ca427e; color:#fff; border:none; border-radius:6px; transition:background .15s}
+    button:hover{background:#b33a6f}
+    .content{padding:0 16px 16px}
+    .card{border:1px solid #ddd; border-radius:10px; padding:12px; margin-top:12px; background:#fff}
+    .meta{font-size:13px; color:#333}
+    .tabs{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 10px}
+    .tab{border:1px solid #ccc; background:#f7f7f7; padding:6px 10px; border-radius:999px; color:#333}
+    .tab:hover{background:#e8e8e8}
+    .tab[aria-selected="true"]{background:#68437B; color:#fff; border-color:#68437B}
+    .tab[aria-selected="true"]:hover{background:#573466}
+    textarea{width:100%; min-height:340px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; padding:10px; border-radius:10px; border:1px solid #ddd}
+    .grid{display:grid; grid-template-columns:1fr; gap:12px}
+    @media (min-width: 980px){ .grid{grid-template-columns: 1fr 1fr;} }
+    .muted{color:#666; font-size:12px}
+  </style>
+</head>
+
+<body>
+  <header>
+    <div>
+      <label for="sku">Product number</label>
+      <select id="sku"></select>
+    </div>
+
+    <div>
+      <label for="lang">Preview language</label>
+      <select id="lang"></select>
+    </div>
+
+    <div>
+      <label>&nbsp;</label>
+      <button id="copyBtn" type="button">Copy HTML (current language)</button>
+    </div>
+
+    <div>
+      <label>&nbsp;</label>
+      <button id="copyAllBtn" type="button">Copy ALL languages (JSON bundle)</button>
+    </div>
+  </header>
+
+  <div class="content">
+  <div class="card">
+    <div class="meta" id="meta"></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Languages"></div>
+
+    <div class="grid">
+      <div>
+        <div class="muted">Generated HTML (copy into PIM)</div>
+        <textarea id="out" spellcheck="false"></textarea>
+      </div>
+      <div>
+        <div class="muted">Rendered preview (sanity-check only)</div>
+        <div class="card" id="preview"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+<script>
+const DATA = {"lineName": "Product Line Name", "languages": [{"code": "NL", "label": "NL"}, {"code": "EN", "label": "EN"}, {"code": "DE", "label": "DE"}, {"code": "IT", "label": "IT"}, {"code": "FR", "label": "FR"}, {"code": "ES", "label": "ES"}], "products": [{"sku": "0001", "title": {"NL": "Productnaam Variant A -- ±00g", "EN": "Product Name Variant A -- ±00g", "DE": "Produktname Variante A -- ±00g", "IT": "Nome prodotto Variante A -- ±00g", "FR": "Nom du produit Variante A -- ±00g", "ES": "Nombre del producto Variante A -- ±00g"}, "html": {"NL": "<p>\n  Korte productomschrijving hier.\n  <br>\n  Verpakking: X stuks.\n  <br>\n  Samenstelling: ingrediënt A, ingrediënt B, ingrediënt C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Waarschuwingen\n  </strong>\n  <br>\n  Waarschuwingstekst hier.\n</p>\n<p>\n  <strong>\n    Merknaam\n  </strong>\n  <br>\n  Merkomschrijving hier. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "EN": "<p>\n  Short product description here.\n  <br>\n  Pack: X pieces.\n  <br>\n  Composition: ingredient A, ingredient B, ingredient C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Warnings\n  </strong>\n  <br>\n  Warning text here.\n</p>\n<p>\n  <strong>\n    Brand name\n  </strong>\n  <br>\n  Brand description here. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "DE": "<p>\n  Kurze Produktbeschreibung hier.\n  <br>\n  Packung: X Stück.\n  <br>\n  Zusammensetzung: Zutat A, Zutat B, Zutat C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Warnhinweise\n  </strong>\n  <br>\n  Warnhinweistext hier.\n</p>\n<p>\n  <strong>\n    Markenname\n  </strong>\n  <br>\n  Markenbeschreibung hier. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "IT": "<p>\n  Breve descrizione del prodotto qui.\n  <br>\n  Confezione: X pezzi.\n  <br>\n  Composizione: ingrediente A, ingrediente B, ingrediente C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Avvertenze\n  </strong>\n  <br>\n  Testo avvertenze qui.\n</p>\n<p>\n  <strong>\n    Nome del marchio\n  </strong>\n  <br>\n  Descrizione del marchio qui. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "FR": "<p>\n  Description courte du produit ici.\n  <br>\n  Conditionnement : X pièces.\n  <br>\n  Composition : ingrédient A, ingrédient B, ingrédient C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Avertissements\n  </strong>\n  <br>\n  Texte d'avertissement ici.\n</p>\n<p>\n  <strong>\n    Nom de marque\n  </strong>\n  <br>\n  Description de la marque ici. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "ES": "<p>\n  Descripción breve del producto aquí.\n  <br>\n  Envase: X unidades.\n  <br>\n  Composición: ingrediente A, ingrediente B, ingrediente C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Advertencias\n  </strong>\n  <br>\n  Texto de advertencia aquí.\n</p>\n<p>\n  <strong>\n    Nombre de marca\n  </strong>\n  <br>\n  Descripción de la marca aquí. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>"}}, {"sku": "0002", "title": {"NL": "Productnaam Variant B -- ±00g", "EN": "Product Name Variant B -- ±00g", "DE": "Produktname Variante B -- ±00g", "IT": "Nome prodotto Variante B -- ±00g", "FR": "Nom du produit Variante B -- ±00g", "ES": "Nombre del producto Variante B -- ±00g"}, "html": {"NL": "<p>\n  Korte productomschrijving hier.\n  <br>\n  Verpakking: X stuks.\n  <br>\n  Samenstelling: ingrediënt A, ingrediënt B, ingrediënt C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Waarschuwingen\n  </strong>\n  <br>\n  Waarschuwingstekst hier.\n</p>\n<p>\n  <strong>\n    Merknaam\n  </strong>\n  <br>\n  Merkomschrijving hier. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "EN": "<p>\n  Short product description here.\n  <br>\n  Pack: X pieces.\n  <br>\n  Composition: ingredient A, ingredient B, ingredient C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Warnings\n  </strong>\n  <br>\n  Warning text here.\n</p>\n<p>\n  <strong>\n    Brand name\n  </strong>\n  <br>\n  Brand description here. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "DE": "<p>\n  Kurze Produktbeschreibung hier.\n  <br>\n  Packung: X Stück.\n  <br>\n  Zusammensetzung: Zutat A, Zutat B, Zutat C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Warnhinweise\n  </strong>\n  <br>\n  Warnhinweistext hier.\n</p>\n<p>\n  <strong>\n    Markenname\n  </strong>\n  <br>\n  Markenbeschreibung hier. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "IT": "<p>\n  Breve descrizione del prodotto qui.\n  <br>\n  Confezione: X pezzi.\n  <br>\n  Composizione: ingrediente A, ingrediente B, ingrediente C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Avvertenze\n  </strong>\n  <br>\n  Testo avvertenze qui.\n</p>\n<p>\n  <strong>\n    Nome del marchio\n  </strong>\n  <br>\n  Descrizione del marchio qui. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "FR": "<p>\n  Description courte du produit ici.\n  <br>\n  Conditionnement : X pièces.\n  <br>\n  Composition : ingrédient A, ingrédient B, ingrédient C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Avertissements\n  </strong>\n  <br>\n  Texte d'avertissement ici.\n</p>\n<p>\n  <strong>\n    Nom de marque\n  </strong>\n  <br>\n  Description de la marque ici. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "ES": "<p>\n  Descripción breve del producto aquí.\n  <br>\n  Envase: X unidades.\n  <br>\n  Composición: ingrediente A, ingrediente B, ingrediente C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Advertencias\n  </strong>\n  <br>\n  Texto de advertencia aquí.\n</p>\n<p>\n  <strong>\n    Nombre de marca\n  </strong>\n  <br>\n  Descripción de la marca aquí. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>"}}, {"sku": "0003", "title": {"NL": "Productnaam Variant C -- ±00g", "EN": "Product Name Variant C -- ±00g", "DE": "Produktname Variante C -- ±00g", "IT": "Nome prodotto Variante C -- ±00g", "FR": "Nom du produit Variante C -- ±00g", "ES": "Nombre del producto Variante C -- ±00g"}, "html": {"NL": "<p>\n  Korte productomschrijving hier.\n  <br>\n  Verpakking: X stuks.\n  <br>\n  Samenstelling: ingrediënt A, ingrediënt B, ingrediënt C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Waarschuwingen\n  </strong>\n  <br>\n  Waarschuwingstekst hier.\n</p>\n<p>\n  <strong>\n    Merknaam\n  </strong>\n  <br>\n  Merkomschrijving hier. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "EN": "<p>\n  Short product description here.\n  <br>\n  Pack: X pieces.\n  <br>\n  Composition: ingredient A, ingredient B, ingredient C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Warnings\n  </strong>\n  <br>\n  Warning text here.\n</p>\n<p>\n  <strong>\n    Brand name\n  </strong>\n  <br>\n  Brand description here. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "DE": "<p>\n  Kurze Produktbeschreibung hier.\n  <br>\n  Packung: X Stück.\n  <br>\n  Zusammensetzung: Zutat A, Zutat B, Zutat C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Warnhinweise\n  </strong>\n  <br>\n  Warnhinweistext hier.\n</p>\n<p>\n  <strong>\n    Markenname\n  </strong>\n  <br>\n  Markenbeschreibung hier. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "IT": "<p>\n  Breve descrizione del prodotto qui.\n  <br>\n  Confezione: X pezzi.\n  <br>\n  Composizione: ingrediente A, ingrediente B, ingrediente C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Avvertenze\n  </strong>\n  <br>\n  Testo avvertenze qui.\n</p>\n<p>\n  <strong>\n    Nome del marchio\n  </strong>\n  <br>\n  Descrizione del marchio qui. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "FR": "<p>\n  Description courte du produit ici.\n  <br>\n  Conditionnement : X pièces.\n  <br>\n  Composition : ingrédient A, ingrédient B, ingrédient C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Avertissements\n  </strong>\n  <br>\n  Texte d'avertissement ici.\n</p>\n<p>\n  <strong>\n    Nom de marque\n  </strong>\n  <br>\n  Description de la marque ici. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>", "ES": "<p>\n  Descripción breve del producto aquí.\n  <br>\n  Envase: X unidades.\n  <br>\n  Composición: ingrediente A, ingrediente B, ingrediente C.\n  <br>\n  <br>\n  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n</p>\n<p>\n  <strong>\n    Advertencias\n  </strong>\n  <br>\n  Texto de advertencia aquí.\n</p>\n<p>\n  <strong>\n    Nombre de marca\n  </strong>\n  <br>\n  Descripción de la marca aquí. Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n</p>"}}]};
+
+const skuSel = document.getElementById("sku");
+const langSel = document.getElementById("lang");
+const out = document.getElementById("out");
+const meta = document.getElementById("meta");
+const tabs = document.getElementById("tabs");
+const preview = document.getElementById("preview");
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (c)=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function buildOptions(){
+  DATA.products.forEach(p=>{
+    const opt=document.createElement("option");
+    opt.value=p.sku;
+    opt.textContent=p.sku;
+    skuSel.appendChild(opt);
+  });
+  DATA.languages.forEach(l=>{
+    const opt=document.createElement("option");
+    opt.value=l.code;
+    opt.textContent=l.label;
+    langSel.appendChild(opt);
+  });
+}
+
+function setTab(lang){
+  [...tabs.querySelectorAll("button")].forEach(b=>b.setAttribute("aria-selected", b.dataset.lang===lang ? "true":"false"));
+  langSel.value = lang;
+  render();
+}
+
+function buildTabs(){
+  tabs.innerHTML="";
+  DATA.languages.forEach(l=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.className="tab";
+    b.dataset.lang=l.code;
+    b.setAttribute("aria-selected","false");
+    b.textContent=l.label;
+    b.addEventListener("click", ()=>setTab(l.code));
+    tabs.appendChild(b);
+  });
+}
+
+function currentProduct(){
+  const sku = skuSel.value;
+  return DATA.products.find(p=>p.sku===sku);
+}
+
+function render(){
+  const p=currentProduct();
+  const lang=langSel.value;
+  const title = p.title[lang] || "";
+  meta.innerHTML = `<div><strong>${escapeHtml(title)}</strong></div>`;
+  const htmlText = p.html[lang] || "";
+  out.value = htmlText;
+  preview.innerHTML = htmlText;
+  [...tabs.querySelectorAll("button")].forEach(b=>b.setAttribute("aria-selected", b.dataset.lang===lang ? "true":"false"));
+}
+
+async function copyText(text){
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch(e) {
+    const tmp = document.createElement("textarea");
+    tmp.value = text;
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand("copy");
+    document.body.removeChild(tmp);
+  }
+}
+
+document.getElementById("copyBtn").addEventListener("click", async ()=>{
+  await copyText(out.value);
+});
+
+document.getElementById("copyAllBtn").addEventListener("click", async ()=>{
+  const p = currentProduct();
+  const bundle = {
+    sku: p.sku,
+    line: DATA.lineName,
+    html: {}
+  };
+  DATA.languages.forEach(l=>{
+    bundle.html[l.code] = p.html[l.code] || "";
+  });
+  await copyText(JSON.stringify(bundle, null, 2));
+});
+
+skuSel.addEventListener("change", render);
+langSel.addEventListener("change", render);
+
+buildOptions();
+buildTabs();
+skuSel.value = DATA.products[0].sku;
+langSel.value = DATA.languages[0].code;
+render();
+</script>
+</body>
+</html>
