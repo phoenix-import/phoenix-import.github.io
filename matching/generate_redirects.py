@@ -23,8 +23,8 @@ Once the Shopify product Identification is found we look up the localized handle
 for every language from the corresponding CSV.
 
 Output files (written next to this script):
-  redirects_de.csv, redirects_en.csv, redirects_es.csv,
-  redirects_fr.csv, redirects_it.csv, redirects_nl.csv
+  product_redirects_de.csv, product_redirects_en.csv, product_redirects_es.csv,
+  product_redirects_fr.csv, product_redirects_it.csv, product_redirects_nl.csv
 
 Each CSV has two columns:
   old_url  – full old URL, e.g. https://www.phoeniximport.com/nl/4/8105/...aspx
@@ -221,7 +221,7 @@ def generate_redirects() -> None:
     # Open one output file per language
     out_writers: dict[str, tuple] = {}
     for lang in LANGUAGES:
-        out_path = SCRIPT_DIR / f"redirects_{lang}.csv"
+        out_path = SCRIPT_DIR / f"product_redirects_{lang}.csv"
         fh = open(out_path, "w", newline="", encoding="utf-8")
         w  = csv.writer(fh)
         w.writerow(["Redirect from", "Redirect to"])
@@ -275,9 +275,9 @@ def generate_redirects() -> None:
 
     print("\n=== Output files ===")
     for lang in LANGUAGES:
-        p    = SCRIPT_DIR / f"redirects_{lang}.csv"
+        p    = SCRIPT_DIR / f"product_redirects_{lang}.csv"
         rows = sum(1 for _ in open(p)) - 1  # subtract header
-        print(f"  redirects_{lang}.csv  — {rows:,} redirects")
+        print(f"  product_redirects_{lang}.csv  — {rows:,} redirects")
     p = unmatched_path
     rows = sum(1 for _ in open(p)) - 1
     print(f"  unmatched_products.csv  — {rows:,} products")
