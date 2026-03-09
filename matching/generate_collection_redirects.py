@@ -180,7 +180,7 @@ def generate_collection_redirects() -> None:
         out_path = SCRIPT_DIR / f"collection_redirects_{lang}.csv"
         fh = open(out_path, "w", newline="", encoding="utf-8")
         w  = csv.writer(fh)
-        w.writerow(["old_url", "new_url"])
+        w.writerow(["Redirect from", "Redirect to"])
         out_writers[lang] = (fh, w)
 
     unmatched_path = SCRIPT_DIR / "unmatched_collections.csv"
@@ -196,8 +196,9 @@ def generate_collection_redirects() -> None:
             handle = match_handle(last_slug, lang_handles.get(lang, []))
 
             if handle:
-                new_url = f"/collections/{handle}"
-                out_writers[lang][1].writerow([old_url, new_url])
+                from_path = old_url.split("phoeniximport.com", 1)[-1]
+                new_url   = f"/collections/{handle}"
+                out_writers[lang][1].writerow([from_path, new_url])
                 matched += 1
             else:
                 uw.writerow([lang, old_url, last_slug])

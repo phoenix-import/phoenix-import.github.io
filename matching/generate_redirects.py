@@ -224,7 +224,7 @@ def generate_redirects() -> None:
         out_path = SCRIPT_DIR / f"redirects_{lang}.csv"
         fh = open(out_path, "w", newline="", encoding="utf-8")
         w  = csv.writer(fh)
-        w.writerow(["old_url", "new_url"])
+        w.writerow(["Redirect from", "Redirect to"])
         out_writers[lang] = (fh, w)
 
     unmatched_path = SCRIPT_DIR / "unmatched_products.csv"
@@ -258,8 +258,9 @@ def generate_redirects() -> None:
                 old_url = lang_urls.get(lang)
                 handle  = handles.get(lang)
                 if old_url and handle:
-                    new_url = f"/products/{handle}"
-                    out_writers[lang][1].writerow([old_url, new_url])
+                    from_path = old_url.split("phoeniximport.com", 1)[-1]
+                    new_url   = f"/products/{handle}"
+                    out_writers[lang][1].writerow([from_path, new_url])
                 elif old_url and not handle:
                     stats["no_handle"] += 1
 
