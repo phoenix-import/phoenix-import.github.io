@@ -22,6 +22,16 @@ Use **white text** on these coloured backgrounds for contrast.
 
 ## Logo
 
-- The Phoenix Import logo is located at `images/phoenix-logo.png`.
+- The logo file is `logo.png` (in the root directory), referenced as `src="logo.png"`.
 - It should appear in the header, aligned to the right.
-- On dark backgrounds, use the white version of the logo.
+- Wrap it in an anchor linking back to `index.html` so users can always return to the index:
+
+```html
+<a href="index.html" style="margin-left:auto;line-height:0;">
+  <img src="logo.png" alt="Phoenix Import">
+</a>
+```
+
+- `margin-left:auto` on the **anchor** (not the img) pushes it to the right in the flex header.
+- `line-height:0` removes the small gap that appears below inline images inside anchors.
+- If the img has an inline `height` style, keep it on the img; keep `margin-left:auto` on the anchor.
