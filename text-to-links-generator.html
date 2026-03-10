@@ -34,6 +34,9 @@
   .count-badge { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: #f3f4f6; color: #6b7280; }
   .count-badge.ok { background: #d1fae5; color: #065f46; }
   .count-badge.warn { background: #fef3c7; color: #92400e; }
+  .slider-control { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:#374151; }
+  .slider-control input[type=range] { width:80px; accent-color:#ca427e; cursor:pointer; }
+  .slider-control .slider-val { min-width:18px; text-align:center; font-weight:700; color:#ca427e; }
 </style>
 </head>
 <body>
@@ -64,6 +67,10 @@
     </label>
     <button id="genBtn">▶ Generate Links</button>
     <button id="copyBtn">Copy HTML</button>
+    <label class="slider-control">
+      Links: <span class="slider-val" id="collectionsVal">8</span>
+      <input type="range" id="collectionsSlider" min="0" max="16" step="1" value="8">
+    </label>
     <span id="countBadge" class="count-badge"></span>
   </div>
 
@@ -564,7 +571,7 @@ function isSelfHandleText(handle, titleLine, lang) {
   return hwMatched >= hw.length;
 }
 
-function generateFromText(text, lang, useWholesale) {
+function generateFromText(text, lang, useWholesale, maxLinks = 8) {
   const handles = COLLECTIONS[lang] || [];
   if (!handles.length || !text.trim()) return null;
 
@@ -581,14 +588,14 @@ function generateFromText(text, lang, useWholesale) {
     .filter(x => x.score >= 3)
     .sort((a, b) => b.score - a.score);
 
-  // Category-aware picking: max 2 per main category, aim for 8–10 links
+  // Category-aware picking: max 2 per main category, up to maxLinks
   const picked = [];
   const seen = new Set();
   const catCount = {};
   const MAX_PER_CAT = 2;
 
   for (const item of scored) {
-    if (picked.length >= 10) break;
+    if (picked.length >= maxLinks) break;
     if (seen.has(item.handle)) continue;
     const cat = item.cat || "__uncategorized__";
     if ((catCount[cat] || 0) >= MAX_PER_CAT) continue;
@@ -597,10 +604,10 @@ function generateFromText(text, lang, useWholesale) {
     catCount[cat] = (catCount[cat] || 0) + 1;
   }
 
-  // Second pass: fill up to 8 if still sparse
-  if (picked.length < 6) {
+  // Second pass: fill remaining slots if still sparse
+  if (picked.length < Math.min(6, maxLinks)) {
     for (const item of scored) {
-      if (picked.length >= 8) break;
+      if (picked.length >= maxLinks) break;
       if (seen.has(item.handle)) continue;
       picked.push(item.handle);
       seen.add(item.handle);
@@ -613,10 +620,15 @@ function generateFromText(text, lang, useWholesale) {
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
 
+document.getElementById("collectionsSlider").addEventListener("input", function() {
+  document.getElementById("collectionsVal").textContent = this.value;
+});
+
 function generate() {
   const text = document.getElementById("inputText").value;
   const lang = document.getElementById("langSelect").value;
   const useWholesale = document.getElementById("wholesaleChk").checked;
+  const maxLinks = parseInt(document.getElementById("collectionsSlider").value, 10);
   const preview = document.getElementById("preview");
   const codeEl = document.getElementById("code");
   const badge = document.getElementById("countBadge");
@@ -630,7 +642,7 @@ function generate() {
     return;
   }
 
-  const picked = generateFromText(text, lang, useWholesale);
+  const picked = maxLinks === 0 ? null : generateFromText(text, lang, useWholesale, maxLinks);
 
   if (!picked) {
     preview.className = "empty";
