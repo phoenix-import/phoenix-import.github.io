@@ -51,6 +51,9 @@
   .resolve-item .score-hint { font-size:11px; color:#9ca3af; white-space:nowrap; }
   #resolveApplyBtn { margin-top:10px; background:#f59e0b; color:#fff; border:none; border-radius:6px; padding:8px 20px; font-size:14px; font-weight:600; cursor:pointer; }
   #resolveApplyBtn:hover { background:#d97706; }
+  .slider-control { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:#374151; }
+  .slider-control input[type=range] { width:80px; accent-color:#ca427e; cursor:pointer; }
+  .slider-control .slider-val { min-width:18px; text-align:center; font-weight:700; color:#ca427e; }
 </style>
 </head>
 <body>
@@ -75,6 +78,10 @@
   <button id="copyBtn">Copy Output</button>
   <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;font-size:13px;font-weight:500;color:#374151;">
     <input type="checkbox" id="wholesaleChk" checked> Wholesale phrasing
+  </label>
+  <label class="slider-control">
+    Related links: <span class="slider-val" id="collectionsVal">8</span>
+    <input type="range" id="collectionsSlider" min="0" max="16" step="1" value="8">
   </label>
   <span id="statusBadge" class="status-badge">Idle</span>
 </div>
@@ -286,7 +293,7 @@ function handleToLabel(handle) {
 
 // ─── HTML Processing ─────────────────────────────────────────────────────────────
 
-function processHTML(rawHTML, lang, useWholesale) {
+function processHTML(rawHTML, lang, useWholesale, collectionsCount = 8) {
   const logs = [];
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHTML, "text/html");
@@ -370,11 +377,15 @@ function processHTML(rawHTML, lang, useWholesale) {
   if (relatedBlock) {
     logs.push({ type:"info", msg: "\u2139 Related links block detected \u2014 links updated above." });
   } else {
-    logs.push({ type:"info", msg: "\u2139 No related links block found \u2014 generating one." });
-    const generated = generateRelatedBlock(doc.body, lang, useWholesale);
-    if (generated) {
-      doc.body.appendChild(generated);
-      logs.push({ type:"ok", msg: "\u2713 Generated related links block with " + generated.querySelectorAll("a").length + " collections." });
+    if (collectionsCount === 0) {
+      logs.push({ type:"info", msg: "\u2139 Related links: slider set to 0 — block skipped." });
+    } else {
+      logs.push({ type:"info", msg: "\u2139 No related links block found \u2014 generating one." });
+      const generated = generateRelatedBlock(doc.body, lang, useWholesale, collectionsCount);
+      if (generated) {
+        doc.body.appendChild(generated);
+        logs.push({ type:"ok", msg: "\u2713 Generated related links block with " + generated.querySelectorAll("a").length + " collections." });
+      }
     }
   }
 
@@ -488,7 +499,7 @@ function handleToMainCategory(handle, lang) {
   return null;
 }
 
-function generateRelatedBlock(body, lang, useWholesale) {
+function generateRelatedBlock(body, lang, useWholesale, maxLinks = 8) {
   const handles = COLLECTIONS[lang] || [];
   if (!handles.length) return null;
 
@@ -520,14 +531,14 @@ function generateRelatedBlock(body, lang, useWholesale) {
     .filter(x => x.score >= 3)
     .sort((a, b) => b.score - a.score);
 
-  // Category-aware picking: max 2 per main category, aim for 8-10 links
+  // Category-aware picking: max 2 per main category, up to maxLinks
   const picked = [];
   const seen = new Set();
   const catCount = {};
   const MAX_PER_CAT = 2;
 
   for (const item of scored) {
-    if (picked.length >= 10) break;
+    if (picked.length >= maxLinks) break;
     if (seen.has(item.handle)) continue;
     const cat = item.cat || "__uncategorized__";
     if ((catCount[cat] || 0) >= MAX_PER_CAT) continue;
@@ -537,9 +548,9 @@ function generateRelatedBlock(body, lang, useWholesale) {
   }
 
   // If we still have room, do a second pass allowing more from popular categories
-  if (picked.length < 6) {
+  if (picked.length < Math.min(6, maxLinks)) {
     for (const item of scored) {
-      if (picked.length >= 8) break;
+      if (picked.length >= maxLinks) break;
       if (seen.has(item.handle)) continue;
       picked.push(item.handle);
       seen.add(item.handle);
@@ -574,6 +585,10 @@ function appendLog(type, msg) {
 }
 function clearLog() { logEl.innerHTML = ""; }
 
+document.getElementById("collectionsSlider").addEventListener("input", function() {
+  document.getElementById("collectionsVal").textContent = this.value;
+});
+
 document.getElementById("parseBtn").addEventListener("click", () => {
   const raw = document.getElementById("input").value.trim();
   const lang = document.getElementById("langSelect").value;
@@ -592,7 +607,8 @@ document.getElementById("parseBtn").addEventListener("click", () => {
 
   try {
     const useWholesale = document.getElementById("wholesaleChk").checked;
-    const result = processHTML(raw, lang, useWholesale);
+    const collectionsCount = parseInt(document.getElementById("collectionsSlider").value, 10);
+    const result = processHTML(raw, lang, useWholesale, collectionsCount);
     const { output, logs, linksTotal, linksMatched, linksFallback, linksUncertain, uncertainLinks, doc } = result;
     outputEl.value = output;
     logs.forEach(l => appendLog(l.type, l.msg));
