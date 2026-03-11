@@ -298,9 +298,12 @@ function processHTML(rawHTML, lang, useWholesale, collectionsCount = 8) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHTML, "text/html");
 
-  // 1. Strip junk attributes from every element
+  // 1. Strip junk attributes from every element: style, class, id, and all data-* attributes
   doc.body.querySelectorAll("*").forEach(el => {
-    ["style","class","id","data-mce-style","data-mce-href"].forEach(a => el.removeAttribute(a));
+    ["style","class","id"].forEach(a => el.removeAttribute(a));
+    Array.from(el.attributes)
+      .filter(a => a.name.startsWith("data-"))
+      .forEach(a => el.removeAttribute(a.name));
   });
 
   // 2. Unwrap bare <span> tags (no remaining attributes)
