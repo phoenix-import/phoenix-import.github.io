@@ -312,6 +312,16 @@ def generate_utilize_redirects() -> None:
                 if len(path_parts) >= 4:
                     parent_slug = path_parts[3]
                     handle      = match_handle(parent_slug, main_handles.get(lang, []))
+                    # Short slugs like "yoga" score poorly in fuzzy matching against
+                    # translated handles like "articulos-de-yoga". Fall back to a
+                    # word-boundary substring check (parent_slug appears as a whole
+                    # dash-delimited word inside a main handle).
+                    if not handle:
+                        handle = next(
+                            (h for h in main_handles.get(lang, [])
+                             if parent_slug in h.split("-")),
+                            None,
+                        )
                     if handle:
                         shopify_url = f"/collections/{handle}"
                         match_pass  = "parent"
