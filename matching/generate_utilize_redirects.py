@@ -297,20 +297,27 @@ def generate_utilize_redirects() -> None:
                 if shopify_url:
                     match_pass = "exact"
 
-            # Step 3: slug fuzzy match on tgt_slug against all handles
+            # Step 3: slug fuzzy match on tgt_slug against all handles.
+            # Skip for root-category URLs (/lang/3/category.aspx, 4 path parts):
+            # a bare slug like "yoga" would incorrectly prefix-match subcategory
+            # handles (e.g. yoga-kissen) rather than the main yoga category.
+            # Those URLs are better handled by step 4's parent fallback.
             if shopify_url is None:
-                tgt_slug = re.sub(r"\.aspx$", "", tgt_rel.split("/")[-1])
-                handle   = match_handle(tgt_slug, lang_handles.get(lang, []))
-                if handle:
-                    shopify_url = f"/collections/{handle}"
-                    match_pass  = "fuzzy"
+                tgt_slug       = re.sub(r"\.aspx$", "", tgt_rel.split("/")[-1])
+                tgt_path_parts = tgt_rel.split("/")
+                is_root_cat    = len(tgt_path_parts) == 4  # /lang/3/category.aspx
+                if not is_root_cat:
+                    handle = match_handle(tgt_slug, lang_handles.get(lang, []))
+                    if handle:
+                        shopify_url = f"/collections/{handle}"
+                        match_pass  = "fuzzy"
 
             # Step 4: parent segment → main category fallback
             if shopify_url is None:
                 # Path: /lang/3/parent/child.aspx → parts[3] is the parent
                 path_parts  = tgt_rel.split("/")
                 if len(path_parts) >= 4:
-                    parent_slug = path_parts[3]
+                    parent_slug = re.sub(r"\.aspx$", "", path_parts[3])
                     handle      = match_handle(parent_slug, main_handles.get(lang, []))
                     # Short slugs like "yoga" score poorly in fuzzy matching against
                     # translated handles like "articulos-de-yoga". Fall back to a
