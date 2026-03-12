@@ -40,7 +40,11 @@ SCRIPT_DIR      = Path(__file__).parent
 HTML_PATH       = SCRIPT_DIR.parent / "shopify-copy-parser-extended.html"
 XLSX_PATH       = SCRIPT_DIR / "utilize_redirects_cleaned.xlsx"
 LANGUAGES       = ["de", "en", "es", "fr", "it", "nl"]
-FUZZY_THRESHOLD = 0.80
+FUZZY_THRESHOLD    = 0.80
+# Minimum similarity between src slug and the chosen Shopify handle to be
+# considered "high confidence".  Rows below this threshold are written to
+# review_utilize.csv for manual checking.
+REVIEW_SIM_THRESHOLD = 0.52
 
 COLLECTIONS_RE = re.compile(r"const COLLECTIONS = (\{.*?\});", re.DOTALL)
 MAIN_NL_RE     = re.compile(r"const MAIN_NL = (\[.*?\]);")
@@ -166,6 +170,27 @@ def match_handle(slug: str, handles: list[str]) -> str | None:
     return best_handle if best_ratio >= FUZZY_THRESHOLD else None
 
 
+def match_handle_direct(slug: str, handles: list[str]) -> str | None:
+    """
+    Non-fuzzy matching only (Passes 1–3): exact, reversed-word, prefix.
+    Used for src_slug matching so we only take unambiguous direct hits.
+    """
+    handles_set = set(handles)
+
+    if slug in handles_set:
+        return slug
+
+    rev = "-".join(slug.split("-")[::-1])
+    if rev in handles_set:
+        return rev
+
+    prefix_matches = [h for h in handles if h.startswith(slug + "-")]
+    if prefix_matches:
+        return min(prefix_matches, key=len)
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 4.  Main processing
 # ---------------------------------------------------------------------------
@@ -198,16 +223,22 @@ def generate_utilize_redirects() -> None:
 
     unmatched_path  = SCRIPT_DIR / "unmatched_utilize.csv"
     duplicates_path = SCRIPT_DIR / "skipped_duplicates.csv"
+    review_path     = SCRIPT_DIR / "review_utilize.csv"
 
-    stats = {"exact": 0, "fuzzy": 0, "parent": 0, "unmatched": 0, "duplicate": 0, "skip": 0}
+    stats = {"src_direct": 0, "src_fuzzy": 0, "exact": 0, "fuzzy": 0, "parent": 0,
+             "unmatched": 0, "duplicate": 0, "skip": 0}
 
     with open(unmatched_path, "w", newline="", encoding="utf-8") as uf, \
-         open(duplicates_path, "w", newline="", encoding="utf-8") as df:
+         open(duplicates_path, "w", newline="", encoding="utf-8") as df, \
+         open(review_path, "w", newline="", encoding="utf-8") as rf:
 
         uw = csv.writer(uf)
         uw.writerow(["sheet", "lang", "src_url", "tgt_url", "reason"])
         dw = csv.writer(df)
         dw.writerow(["lang", "src_url", "existing_target"])
+        rw = csv.writer(rf)
+        rw.writerow(["lang", "src_url", "tgt_url", "shopify_url", "match_pass",
+                     "src_handle_similarity", "note"])
 
         for row in rows[1:]:
             src_raw = str(row[src_idx]).strip() if row[src_idx] is not None else ""
@@ -233,23 +264,41 @@ def generate_utilize_redirects() -> None:
                 stats["duplicate"] += 1
                 continue
 
+            src_slug = re.sub(r"\.aspx$", "", src_rel.split("/")[-1])
             shopify_url: str | None = None
             match_pass = "unmatched"
 
-            # Pass 1: exact lookup of tgt_rel in existing collection_redirects
-            shopify_url = collection_lookup[lang].get(tgt_rel)
-            if shopify_url:
-                match_pass = "exact"
+            # Step 1: try src_slug via non-fuzzy passes (exact / reversed / prefix).
+            # These are unambiguous: the old src URL slug is a valid Shopify handle.
+            handle = match_handle_direct(src_slug, lang_handles.get(lang, []))
+            if handle:
+                shopify_url = f"/collections/{handle}"
+                match_pass  = "src_direct"
 
-            # Pass 2–4: slug fuzzy match against all handles for this language
+            # Step 1b: try src_slug via fuzzy pass (threshold 0.80).
+            # Catches brand-prefixed handles like maison-du-laurier-aleppo →
+            # en-maison-du-laurier-aleppo (ratio 0.94) that pass 1-3 miss.
             if shopify_url is None:
-                last_slug = re.sub(r"\.aspx$", "", tgt_rel.split("/")[-1])
-                handle    = match_handle(last_slug, lang_handles.get(lang, []))
+                handle = match_handle(src_slug, lang_handles.get(lang, []))
+                if handle:
+                    shopify_url = f"/collections/{handle}"
+                    match_pass  = "src_fuzzy"
+
+            # Step 2: exact lookup of tgt_rel in existing collection_redirects
+            if shopify_url is None:
+                shopify_url = collection_lookup[lang].get(tgt_rel)
+                if shopify_url:
+                    match_pass = "exact"
+
+            # Step 3: slug fuzzy match on tgt_slug against all handles
+            if shopify_url is None:
+                tgt_slug = re.sub(r"\.aspx$", "", tgt_rel.split("/")[-1])
+                handle   = match_handle(tgt_slug, lang_handles.get(lang, []))
                 if handle:
                     shopify_url = f"/collections/{handle}"
                     match_pass  = "fuzzy"
 
-            # Pass 5: parent segment → main category fallback
+            # Step 4: parent segment → main category fallback
             if shopify_url is None:
                 # Path: /lang/3/parent/child.aspx → parts[3] is the parent
                 path_parts  = tgt_rel.split("/")
@@ -263,6 +312,16 @@ def generate_utilize_redirects() -> None:
             if shopify_url:
                 out_writers[lang][1].writerow([src_rel, shopify_url])
                 stats[match_pass] += 1
+
+                # Flag for review if the final handle is semantically distant from src slug
+                if match_pass not in ("src_direct", "src_fuzzy"):
+                    final_handle = shopify_url.replace("/collections/", "")
+                    sim = difflib.SequenceMatcher(
+                        None, src_slug, final_handle, autojunk=False
+                    ).ratio()
+                    if sim < REVIEW_SIM_THRESHOLD:
+                        rw.writerow([lang, src_rel, tgt_rel, shopify_url, match_pass,
+                                     f"{sim:.2f}", "src slug and chosen handle are dissimilar"])
             else:
                 uw.writerow(["type_3_category", lang, src_raw, tgt_raw, "no match"])
                 stats["unmatched"] += 1
@@ -270,8 +329,10 @@ def generate_utilize_redirects() -> None:
     for lang in LANGUAGES:
         out_writers[lang][0].close()
 
-    print(f"\n  Exact match:       {stats['exact']:,}")
-    print(f"  Fuzzy match:       {stats['fuzzy']:,}")
+    print(f"\n  Src direct match:  {stats['src_direct']:,}")
+    print(f"  Src fuzzy match:   {stats['src_fuzzy']:,}")
+    print(f"  Tgt exact match:   {stats['exact']:,}")
+    print(f"  Tgt fuzzy match:   {stats['fuzzy']:,}")
     print(f"  Parent fallback:   {stats['parent']:,}")
     print(f"  Unmatched:         {stats['unmatched']:,}")
     print(f"  Skipped (dedup):   {stats['duplicate']:,}")
@@ -284,8 +345,10 @@ def generate_utilize_redirects() -> None:
         print(f"  utilize_redirects_{lang}.csv  — {count:,} redirects")
     um_count = sum(1 for _ in open(unmatched_path)) - 1
     dp_count = sum(1 for _ in open(duplicates_path)) - 1
+    rv_count = sum(1 for _ in open(review_path)) - 1
     print(f"  unmatched_utilize.csv        — {um_count:,} rows")
     print(f"  skipped_duplicates.csv       — {dp_count:,} rows")
+    print(f"  review_utilize.csv           — {rv_count:,} rows (check these manually)")
 
 
 if __name__ == "__main__":
