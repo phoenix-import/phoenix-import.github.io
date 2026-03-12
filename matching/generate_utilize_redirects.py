@@ -40,7 +40,10 @@ SCRIPT_DIR      = Path(__file__).parent
 HTML_PATH       = SCRIPT_DIR.parent / "shopify-copy-parser-extended.html"
 XLSX_PATH       = SCRIPT_DIR / "utilize_redirects_cleaned.xlsx"
 LANGUAGES       = ["de", "en", "es", "fr", "it", "nl"]
-FUZZY_THRESHOLD    = 0.80
+FUZZY_THRESHOLD     = 0.80   # used for tgt-chain slug matching
+SRC_FUZZY_THRESHOLD = 0.90   # stricter threshold for src slug matching to avoid
+                              # false positives between similarly-named brands
+                              # (e.g. yoga-wear-surya ≠ yoga-wear-satya)
 # Minimum similarity between src slug and the chosen Shopify handle to be
 # considered "high confidence".  Rows below this threshold are written to
 # review_utilize.csv for manual checking.
@@ -139,12 +142,13 @@ def load_collection_lookups() -> dict[str, dict[str, str]]:
 # 3.  Slug → handle matching  (from generate_collection_redirects.py)
 # ---------------------------------------------------------------------------
 
-def match_handle(slug: str, handles: list[str]) -> str | None:
+def match_handle(slug: str, handles: list[str],
+                 threshold: float = FUZZY_THRESHOLD) -> str | None:
     """
     Pass 1: exact match.
     Pass 2: reversed-word match (bracelets-metal → metal-bracelets).
     Pass 3: slug is prefix of handle — returns shortest match.
-    Pass 4: fuzzy (SequenceMatcher ratio ≥ FUZZY_THRESHOLD).
+    Pass 4: fuzzy (SequenceMatcher ratio ≥ threshold).
     """
     handles_set = set(handles)
 
@@ -167,7 +171,7 @@ def match_handle(slug: str, handles: list[str]) -> str | None:
             best_ratio  = ratio
             best_handle = h
 
-    return best_handle if best_ratio >= FUZZY_THRESHOLD else None
+    return best_handle if best_ratio >= threshold else None
 
 
 def match_handle_direct(slug: str, handles: list[str]) -> str | None:
@@ -275,11 +279,14 @@ def generate_utilize_redirects() -> None:
                 shopify_url = f"/collections/{handle}"
                 match_pass  = "src_direct"
 
-            # Step 1b: try src_slug via fuzzy pass (threshold 0.80).
+            # Step 1b: try src_slug via fuzzy pass (stricter SRC_FUZZY_THRESHOLD).
             # Catches brand-prefixed handles like maison-du-laurier-aleppo →
             # en-maison-du-laurier-aleppo (ratio 0.94) that pass 1-3 miss.
+            # Stricter than tgt matching to avoid false positives between
+            # similarly-named brands (e.g. yoga-wear-surya ≠ yoga-wear-satya).
             if shopify_url is None:
-                handle = match_handle(src_slug, lang_handles.get(lang, []))
+                handle = match_handle(src_slug, lang_handles.get(lang, []),
+                                      threshold=SRC_FUZZY_THRESHOLD)
                 if handle:
                     shopify_url = f"/collections/{handle}"
                     match_pass  = "src_fuzzy"

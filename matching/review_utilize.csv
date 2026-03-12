@@ -2,6 +2,7 @@ lang,src_url,tgt_url,shopify_url,match_pass,src_handle_similarity,note
 es,/bolsa-agua-caliente-yuyu-rayas-naranja-ninosescato.html.aspx,/es/3/tejidos/bolsos.aspx,/collections/bolsas,fuzzy,0.20,src slug and chosen handle are dissimilar
 nl,/nl/3/biologische-producten/biologische-lippenbalsem.aspx,/nl/3/lichaamsverzorging/gezichtsverzorging.aspx,/collections/gezichtsverzorging,exact,0.24,src slug and chosen handle are dissimilar
 en,/en/3/meditation/meditation-support-cushions.aspx,/en/3/meditation/meditation-shawls-and-accessories.aspx,/collections/meditation-shawls-and-accessories,exact,0.50,src slug and chosen handle are dissimilar
+en,/en/3/yoga/yoga-wear-bali-spirit.aspx,/en/3/yoga/all-yoga-clothing.aspx,/collections/all-yoga-clothing,fuzzy,0.37,src slug and chosen handle are dissimilar
 it,/it/3/articoli-per-una-vita-sana/holy-lama-gocce-di-spezie.aspx,/it/3/articoli-per-una-vita-sana.aspx,/collections/articoli-per-una-vita-sana,exact,0.31,src slug and chosen handle are dissimilar
 fr,/fr/3/produits-pour-une-vie-saine/holy-lama-gouttes-dpice.aspx,/fr/3/produits-pour-une-vie-saine.aspx,/collections/produits-pour-une-vie-saine,exact,0.32,src slug and chosen handle are dissimilar
 es,/es/3/productos-para-una-vida-sana/holy-lama-gotas-de-especias.aspx,/es/3/productos-para-una-vida-sana.aspx,/collections/productos-para-una-vida-sana,exact,0.29,src slug and chosen handle are dissimilar
@@ -15,6 +16,7 @@ es,/es/3/textiles/camisetas-the-mountain.aspx,/es/3/textiles.aspx,/collections/t
 fr,/fr/3/textiles/mountain-t-shirts.aspx,/fr/3/textiles.aspx,/collections/tissus,exact,0.17,src slug and chosen handle are dissimilar
 it,/it/3/tessuti/mountain-t-shirts.aspx,/it/3/tessuti.aspx,/collections/tessuti,exact,0.25,src slug and chosen handle are dissimilar
 en,/en/3/fragrance-products/aromafume-essential-oils.aspx,/en/3/fragrance-products/aromafume-fragrance-products.aspx,/collections/aromafume-fragrance-products,exact,0.46,src slug and chosen handle are dissimilar
+fr,/fr/3/yoga/vtements-de-yoga-surya.aspx,/fr/3/yoga/yoga-vtements-femmes.aspx,/collections/yoga-vêtements-femmes,exact,0.51,src slug and chosen handle are dissimilar
 nl,/nl/3/klankschalen-en-meer/klankschaal-accessoires.aspx,/nl/3/klankschalen-en-meer/accessoires-metalen-klankschalen.aspx,/collections/accessoires-metalen-klankschalen,exact,0.40,src slug and chosen handle are dissimilar
 en,/en/3/singing-bowls-and-more/singing-bowl-accessories.aspx,/en/3/singing-bowls-and-more/accessories-metal-singing-bowls.aspx,/collections/accessories-metal-singing-bowls,exact,0.47,src slug and chosen handle are dissimilar
 es,/es/3/cuencos-tibetanos-y-ms/cuencos-cantores-y-accesorios.aspx,/es/3/cuencos-tibetanos-y-ms/accesorios-para-cuencos-de-metal.aspx,/collections/accesorios-para-cuencos-de-metal,exact,0.33,src slug and chosen handle are dissimilar
@@ -28,6 +30,7 @@ es,/es/3/productos-para-una-vida-sana/cd-y-dvd-para-relajarse.aspx,/es/3/product
 fr,/fr/3/produits-pour-une-vie-saine/cd-et-dvd-pour-la-relaxation.aspx,/fr/3/produits-pour-une-vie-saine.aspx,/collections/produits-pour-une-vie-saine,exact,0.36,src slug and chosen handle are dissimilar
 it,/it/3/articoli-per-una-vita-sana/cd-e-dvd-per-il-rilassamento.aspx,/it/3/articoli-per-una-vita-sana.aspx,/collections/articoli-per-una-vita-sana,exact,0.41,src slug and chosen handle are dissimilar
 es,/es/3/tejidos/camisetas-mountain.aspx,/es/3/textiles.aspx,/collections/tejidos,exact,0.16,src slug and chosen handle are dissimilar
+nl,/nl/3/mineralen-en-edelstenen/edelsteen-harten-en-meer.aspx,/nl/3/mineralen-en-edelstenen/zorgenstenen-en-knuffelstenen.aspx,/collections/zorgenstenen-en-knuffelstenen,exact,0.49,src slug and chosen handle are dissimilar
 de,/de/3/mineralien-und-edelsteine/mineralien-herzen-engel-und-mehr.aspx,/de/3/mineralien-und-edelsteine/sorgensteine.aspx,/collections/sorgensteine,exact,0.14,src slug and chosen handle are dissimilar
 es,/es/3/minerales-y-gemas/piedras-en-forma-de-corazn-ngeles-y-ms.aspx,/es/3/minerales-y-gemas/piedra-de-pulgar.aspx,/collections/piedra-de-pulgar,exact,0.41,src slug and chosen handle are dissimilar
 nl,/nl/3/gezonde-leefstijl/thee-english-tea-shop-biologisch.aspx,/nl/3/gezonde-leefstijl/thee-alle-producten.aspx,/collections/thee-alle-producten,exact,0.27,src slug and chosen handle are dissimilar
@@ -98,11 +101,14 @@ nl,/nl/3/spiritualiteit/thangkas.aspx,/nl/3/textiel/banners-wandkleden-en-strand
 de,/de/3/spiritualitt/thangkas.aspx,/de/3/textilien/tapisserien-und-stranddecke.aspx,/collections/tapisserien-und-stranddecke,exact,0.23,src slug and chosen handle are dissimilar
 en,/en/3/spirituality/thangkas.aspx,/en/3/textiles/banners-wall-hangings-beachtowels.aspx,/collections/banners-wall-hangings-beachtowels,exact,0.29,src slug and chosen handle are dissimilar
 it,/it/3/spiritualita/thangke.aspx,/it/3/tessuti/stendardi-arazzi-teli.aspx,/collections/stendardi-arazzi-teli,exact,0.21,src slug and chosen handle are dissimilar
+nl,/nl/3/gezonde-leefstijl/thee-numi-thee-biologisch.aspx,/nl/3/gezonde-leefstijl.aspx,/collections/gezonde-leefstijl,exact,0.19,src slug and chosen handle are dissimilar
 de,/de/3/gesunde-lebensweise/tee-numi-tee-biologisch.aspx,/de/3/gesunde-lebensweise.aspx,/collections/gesunde-lebensweise,exact,0.33,src slug and chosen handle are dissimilar
 es,/es/3/productos-para-una-vida-sana/t-numi-t-orgnico.aspx,/es/3/productos-para-una-vida-sana.aspx,/collections/productos-para-una-vida-sana,exact,0.27,src slug and chosen handle are dissimilar
 it,/it/3/articoli-per-una-vita-sana/t-numi-thee-biologico.aspx,/it/3/articoli-per-una-vita-sana.aspx,/collections/articoli-per-una-vita-sana,exact,0.17,src slug and chosen handle are dissimilar
 de,/de/3/gesunde-lebensweise/or-tea-tee.aspx,/de/3/gesunde-lebensweise/tee-alle-produkte.aspx,/collections/tee-alle-produkte,exact,0.22,src slug and chosen handle are dissimilar
 fr,/fr/3/produits-pour-une-vie-saine/th-or-tea.aspx,/fr/3/produits-pour-une-vie-saine/th-et-accessoires.aspx,/collections/the-et-accessoires,exact,0.44,src slug and chosen handle are dissimilar
+nl,/nl/3/gezonde-leefstijl/thee-solaris-biologisch.aspx,/nl/3/gezonde-leefstijl/thee-alle-producten.aspx,/collections/thee-alle-producten,exact,0.33,src slug and chosen handle are dissimilar
+de,/de/3/gesunde-lebensweise/biologischer-tee-solaris.aspx,/de/3/gesunde-lebensweise/tee-alle-produkte.aspx,/collections/tee-alle-produkte,exact,0.24,src slug and chosen handle are dissimilar
 en,/en/3/healthy-lifestyle/tea-solaris-organic.aspx,/en/3/healthy-lifestyle/tea-all-products.aspx,/collections/tea-all-products,exact,0.29,src slug and chosen handle are dissimilar
 fr,/fr/3/produits-pour-une-vie-saine/th-solaris-biologique.aspx,/fr/3/produits-pour-une-vie-saine/th-et-accessoires.aspx,/collections/the-et-accessoires,exact,0.36,src slug and chosen handle are dissimilar
 it,/it/3/articoli-per-una-vita-sana/t-solaris-organico.aspx,/it/3/articoli-per-una-vita-sana/t-e-articoli-correlati.aspx,/collections/te-e-articoli-correlati,exact,0.34,src slug and chosen handle are dissimilar
