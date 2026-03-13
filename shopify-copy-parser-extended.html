@@ -394,7 +394,7 @@ function processHTML(rawHTML, lang, useWholesale, collectionsCount = 8) {
 
   // 6. Serialise
   const output = doc.body.innerHTML
-    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;nbsp;/g, " ").replace(/&nbsp;/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
     .trim();

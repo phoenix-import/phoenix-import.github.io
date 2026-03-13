@@ -489,7 +489,7 @@ function generateLinkedHTML(sections, lang, maxLinksTotal, maxLinksPerUnit, minS
 
 function generate() {
   const text = document.getElementById("inputText").value
-    .replace(/&nbsp;/g, " ").replace(/\u00A0/g, " ");
+    .replace(/&amp;nbsp;/g, " ").replace(/&nbsp;/g, " ").replace(/\u00A0/g, " ");
   const lang = document.getElementById("langSelect").value;
   const maxLinks = Math.max(1, parseInt(document.getElementById("maxLinks").value) || 20);
   const minLinks = Math.max(0, parseInt(document.getElementById("minLinks").value) || 0);
