@@ -41,6 +41,13 @@
   #preview a { color: #ca427e; text-decoration: none; font-weight: 600; }
   #preview a:hover { text-decoration: underline; }
   #preview .tiles-marker { background: #f3e8ff; color: #68437B; border: 1px dashed #68437B; border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: 600; display: inline-block; margin: 8px 0; }
+  /* Link chip: wraps each link with a tooltip trigger and remove button */
+  .link-chip { display: inline; position: relative; }
+  .link-chip a { background: #fdf2f8; border-radius: 3px; padding: 0 2px; }
+  .link-chip a::after { content: attr(data-href); display: none; position: absolute; bottom: calc(100% + 4px); left: 0; background: #1a1a2e; color: #fff; font-size: 11px; font-weight: 400; white-space: nowrap; padding: 3px 7px; border-radius: 4px; z-index: 10; pointer-events: none; }
+  .link-chip:hover a::after { display: block; }
+  .link-remove { display: inline-block; width: 14px; height: 14px; line-height: 13px; text-align: center; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 50%; color: #6b7280; font-size: 10px; font-weight: 700; cursor: pointer; margin-left: 2px; vertical-align: middle; user-select: none; }
+  .link-remove:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
   #code { width: 100%; border: none; outline: none; resize: vertical; font-family: "Menlo", "Consolas", monospace; font-size: 11px; line-height: 1.5; min-height: 200px; padding: 12px; color: #374151; background: transparent; }
   .stats { font-size: 12px; color: #6b7280; margin-top: 8px; }
   .hint { font-size: 11px; color: #9ca3af; margin-top: 8px; }
@@ -499,22 +506,60 @@ function generate() {
     return;
   }
 
-  // Preview: replace <!-- TILES --> with a visual chip, render HTML
-  const previewHTML = result.html.replace(/<!-- TILES -->/g,
-    '<span class="tiles-marker">&#9726; TILES</span>');
-  preview.className = "";
-  preview.innerHTML = previewHTML;
+  renderOutput(result.html);
+}
 
-  // Light prettify: break between adjacent block tags
-  codeEl.value = result.html
+// ─── Source-of-truth HTML + render helpers ────────────────────────────────────
+
+let currentHTML = "";
+
+function escRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function prettify(html) {
+  return html
     .replace(/>(<(?!\/)[a-z])/g, ">\n$1")
     .replace(/(<\/(?:ul|ol|p|h[1-6])>)/g, "$1\n")
     .replace(/\n\n+/g, "\n");
+}
 
-  statsEl.textContent = result.linkCount
-    ? `${result.linkCount} link${result.linkCount === 1 ? "" : "s"} added`
+function renderOutput(html) {
+  currentHTML = html;
+  const preview = document.getElementById("preview");
+  const codeEl = document.getElementById("code");
+  const statsEl = document.getElementById("statsEl");
+
+  // Code textarea: clean HTML
+  codeEl.value = prettify(html);
+
+  // Preview: add link chips (tooltip + remove ×) and TILES visual marker
+  const previewHTML = html
+    .replace(/<!-- TILES -->/g, '<span class="tiles-marker">&#9726; TILES</span>')
+    .replace(/<a href="(\/collections\/[^"]+)">([\s\S]*?)<\/a>/g,
+      (_, href, text) =>
+        `<span class="link-chip"><a href="${href}" data-href="${href}">${text}</a><span class="link-remove" data-href="${href}" title="Remove link">&#xd7;</span></span>`
+    );
+  preview.className = "";
+  preview.innerHTML = previewHTML;
+
+  const linkCount = (html.match(/<a href="\/collections\//g) || []).length;
+  statsEl.textContent = linkCount
+    ? `${linkCount} link${linkCount === 1 ? "" : "s"} added`
     : "0 links added — try a lower Min links value";
 }
+
+// Remove a link by its collection href, leaving its text in place
+document.getElementById("preview").addEventListener("click", e => {
+  const btn = e.target.closest(".link-remove");
+  if (!btn) return;
+  const href = btn.getAttribute("data-href");
+  currentHTML = currentHTML.replace(
+    new RegExp(`<a href="${escRe(href)}">((?:[^<]|<(?!\\/a>))*?)<\\/a>`),
+    "$1"
+  );
+  renderOutput(currentHTML);
+});
 
 document.getElementById("genBtn").addEventListener("click", generate);
 
