@@ -32,7 +32,8 @@
   .output-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
   #preview { padding: 16px; min-height: 200px; font-size: 14px; line-height: 1.8; color: #1a1a2e; border-bottom: 1px solid #f0f0f0; }
   #preview.empty { color: #9ca3af; font-style: italic; }
-  #preview h1, #preview h2 { font-size: 16px; font-weight: 700; margin: 12px 0 6px; color: #68437B; }
+  #preview h1 { font-size: 18px; font-weight: 700; margin: 12px 0 6px; color: #68437B; }
+  #preview h2 { font-size: 16px; font-weight: 700; margin: 12px 0 6px; color: #68437B; }
   #preview h3 { font-size: 14px; font-weight: 700; margin: 10px 0 4px; color: #68437B; }
   #preview p { margin-bottom: 8px; }
   #preview ul { margin: 4px 0 8px 20px; }
@@ -67,11 +68,11 @@
       <option value="IT">&#127470;&#127481; Italiano (IT)</option>
     </select>
 
+    <label for="minLinks">Min links:</label>
+    <input type="number" id="minLinks" value="5" min="0" max="50">
+
     <label for="maxLinks">Max links:</label>
     <input type="number" id="maxLinks" value="20" min="1" max="50">
-
-    <label for="minScore">Min score:</label>
-    <input type="number" id="minScore" value="5" min="2" max="10">
 
     <button id="genBtn">&#9654; Generate</button>
     <button id="copyBtn">Copy HTML</button>
@@ -89,7 +90,7 @@
         <div id="preview" class="empty">HTML preview will appear here…</div>
         <textarea id="code" readonly placeholder="HTML output will appear here…"></textarea>
       </div>
-      <p class="hint">Links are embedded inline where product terms are found. TILES becomes a comment placeholder. Adjust Min score (2–10) to get more or fewer links.</p>
+      <p class="hint">Links are embedded inline where product terms are found. TILES becomes a comment placeholder. Use Min/Max links to control how many are inserted.</p>
     </div>
   </div>
 </div>
@@ -431,10 +432,6 @@ function generateLinkedHTML(sections, lang, maxLinksTotal, maxLinksPerUnit, minS
   let totalLinks = 0;
   let html = "";
 
-  // Determine heading nesting: first h1 gets h2 tag (Shopify RTE context),
-  // subsequent h2 sections get h3 if they come after a h1 section
-  let seenH1 = false;
-
   function linkifyText(text) {
     const linksLeft = maxLinksTotal - totalLinks;
     if (linksLeft <= 0) return escHtml(text);
@@ -446,11 +443,9 @@ function generateLinkedHTML(sections, lang, maxLinksTotal, maxLinksPerUnit, minS
 
   for (const sec of sections) {
     if (sec.type === "h1") {
-      seenH1 = true;
-      html += `<h2>${escHtml(sec.text)}</h2>\n`;
+      html += `<h1>${escHtml(sec.text)}</h1>\n`;
     } else if (sec.type === "h2") {
-      const tag = seenH1 ? "h3" : "h2";
-      html += `<${tag}>${escHtml(sec.text)}</${tag}>\n`;
+      html += `<h2>${escHtml(sec.text)}</h2>\n`;
     } else if (sec.type === "tiles") {
       html += `<!-- TILES -->\n`;
     } else if (sec.type === "p") {
@@ -473,7 +468,7 @@ function generate() {
   const text = document.getElementById("inputText").value;
   const lang = document.getElementById("langSelect").value;
   const maxLinks = Math.max(1, parseInt(document.getElementById("maxLinks").value) || 20);
-  const minScore = Math.max(2, parseInt(document.getElementById("minScore").value) || 4);
+  const minLinks = Math.max(0, parseInt(document.getElementById("minLinks").value) || 0);
   const preview = document.getElementById("preview");
   const codeEl = document.getElementById("code");
   const statsEl = document.getElementById("statsEl");
@@ -488,7 +483,13 @@ function generate() {
 
   const sections = parseStructuredText(text);
   const maxPerUnit = 3; // max links per paragraph/list
-  const result = generateLinkedHTML(sections, lang, maxLinks, maxPerUnit, minScore);
+
+  // Try with default score (5), then lower score (4, 3) if we're below minLinks
+  let result;
+  for (const score of [5, 4, 3]) {
+    result = generateLinkedHTML(sections, lang, maxLinks, maxPerUnit, score);
+    if (result.linkCount >= minLinks) break;
+  }
 
   if (!result.html) {
     preview.className = "empty";
@@ -504,7 +505,6 @@ function generate() {
   preview.className = "";
   preview.innerHTML = previewHTML;
 
-  // Code output: prettified (one tag per line for readability)
   // Light prettify: break between adjacent block tags
   codeEl.value = result.html
     .replace(/>(<(?!\/)[a-z])/g, ">\n$1")
@@ -513,7 +513,7 @@ function generate() {
 
   statsEl.textContent = result.linkCount
     ? `${result.linkCount} link${result.linkCount === 1 ? "" : "s"} added`
-    : "0 links added — try lowering Min score";
+    : "0 links added — try a lower Min links value";
 }
 
 document.getElementById("genBtn").addEventListener("click", generate);
