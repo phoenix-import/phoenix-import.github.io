@@ -19,16 +19,19 @@ data = {
     "Inspiration":  "1",
 
     # ── Ability scores ────────────────────────────────────────────────────────
-    "STR":      "10",
-    "STRmod":   "+0",
+    # STR 14 required: Paladin multiclass needs STR 13+ AND CHA 13+
+    # Standard array (15,14,13,12,10,8) + Goliath (+2 STR, +1 CON):
+    #   CHA 15→17(ASI), WIS 14, CON 13+1=14, STR 12+2=14, DEX 10, INT 8
+    "STR":      "14",
+    "STRmod":   "+2",
     "DEX":      "10",
     "DEXmod ":  "+0",   # note trailing space
     "CON":      "14",
     "CONmod":   "+2",
     "INT":      "8",
     "INTmod":   "-1",
-    "WIS":      "12",
-    "WISmod":   "+1",
+    "WIS":      "14",
+    "WISmod":   "+2",
     "CHA":      "17",
     "CHamod":   "+3",   # note lowercase 'a'
 
@@ -47,12 +50,12 @@ data = {
     "HDTotal":   "1d10 + 6d6",
 
     # ── Saving throws ─────────────────────────────────────────────────────────
-    "ST Strength":    "+0",
+    "ST Strength":    "+2",
     "ST Dexterity":   "+0",
     "ST Constitution":"+2",
     "ST Intelligence":"-1",
-    "ST Wisdom":      "+4",   # proficient (Paladin)
-    "ST Charisma":    "+6",   # proficient (Paladin)
+    "ST Wisdom":      "+5",   # proficient (Paladin): +2 mod + 3 prof
+    "ST Charisma":    "+6",   # proficient (Paladin): +3 mod + 3 prof
 
     # Saving throw proficiency checkboxes
     "Check Box 11": "/Off",   # STR save – was /Yes as Fighter, clear
@@ -64,24 +67,24 @@ data = {
 
     # ── Skills ────────────────────────────────────────────────────────────────
     "Acrobatics":       "+0",
-    "Animal":           "+4",   # Animal Handling – Folk Hero ✓
-    "Arcana":           "+2",   # Sorcerer multiclass ✓
-    "Athletics":        "+0",
+    "Animal":           "+5",   # Animal Handling – Folk Hero ✓: WIS +2 + prof +3
+    "Arcana":           "+2",   # Sorcerer multiclass ✓: INT -1 + prof +3
+    "Athletics":        "+2",   # STR +2, not proficient
     "Deception ":       "+3",   # trailing space
     "History ":         "-1",   # trailing space
-    "Insight":          "+1",
-    "Intimidation":     "+6",   # Paladin ✓
+    "Insight":          "+2",
+    "Intimidation":     "+6",   # Paladin ✓: CHA +3 + prof +3
     "Investigation ":   "-1",   # trailing space
-    "Medicine":         "+1",
+    "Medicine":         "+2",
     "Nature":           "-1",
-    "Perception ":      "+1",   # trailing space
+    "Perception ":      "+2",   # trailing space
     "Performance":      "+3",
-    "Persuasion":       "+6",   # Paladin ✓
+    "Persuasion":       "+6",   # Paladin ✓: CHA +3 + prof +3
     "Religion":         "-1",
     "SleightofHand":    "+0",
-    "Stealth ":         "+0",   # trailing space
-    "Survival":         "+4",   # Folk Hero ✓
-    "Passive":          "11",
+    "Stealth ":         "+0",   # trailing space (disadvantage in heavy armor)
+    "Survival":         "+5",   # Folk Hero ✓: WIS +2 + prof +3
+    "Passive":          "12",
 
     # Skill proficiency checkboxes
     "Check Box 23": "/Off",   # Acrobatics – clear
@@ -105,10 +108,10 @@ data = {
 
     # ── Weapons & attacks ─────────────────────────────────────────────────────
     "Wpn Name":       "Warhammer",
-    "Wpn1 AtkBonus":  "+3",
+    "Wpn1 AtkBonus":  "+5",   # STR +2 + prof +3
     "Wpn1 Damage":    "1d8/1d10 blu.",
     "Wpn Name 2":     "Dagger",
-    "Wpn2 AtkBonus ": "+3",
+    "Wpn2 AtkBonus ": "+5",   # STR +2 + prof +3
     "Wpn2 Damage ":   "1d4 piercing",
     "Wpn Name 3":     "Spell Attack",
     "Wpn3 AtkBonus  ":"  +6",
