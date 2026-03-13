@@ -436,6 +436,18 @@ function generateLinkedHTML(sections, lang, maxLinksTotal, maxLinksPerUnit, minS
   const eligible = handles.filter(h => !broadRe.test(h));
 
   const usedHandles = new Set();
+
+  // Pre-exclude the page's own category: the H1 title is typically
+  // "Category Name Groothandel" — linking that same collection inside
+  // the text would be a self-link. Detect it at a loose score (3) so
+  // "groothandel" / minor suffix differences don't prevent the match.
+  for (const sec of sections) {
+    if (sec.type === "h1") {
+      findInlineLinks(sec.text, lang, eligible, 99, 3, usedHandles)
+        .forEach(m => usedHandles.add(m.handle));
+    }
+  }
+
   let totalLinks = 0;
   let html = "";
 
