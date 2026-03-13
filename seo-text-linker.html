@@ -371,6 +371,7 @@ function parseStructuredText(input) {
   const lines = input.split("\n").map(l => l.trim());
   const sections = [];
   let i = 0;
+  let hasH1 = false;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -383,6 +384,7 @@ function parseStructuredText(input) {
       while (i < lines.length && !lines[i].trim()) i++;
       if (i < lines.length) {
         sections.push({ type: "h1", text: lines[i] });
+        hasH1 = true;
         i++;
       }
       continue;
@@ -410,9 +412,11 @@ function parseStructuredText(input) {
       continue;
     }
 
-    // Heading heuristic
+    // Heading heuristic — first heading becomes h1, rest h2
     if (isLikelyHeading(line)) {
-      sections.push({ type: "h2", text: line });
+      const type = hasH1 ? "h2" : "h1";
+      hasH1 = true;
+      sections.push({ type, text: line });
       i++;
       continue;
     }
