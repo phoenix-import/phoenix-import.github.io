@@ -172,10 +172,10 @@
 <div class="workspace">
   <div class="pane">
     <div class="pane-header">
-      <h2>Input — paste HTML here</h2>
-      <span class="hint">Raw copy from Word / translator</span>
+      <h2>Input — paste HTML or plain text here</h2>
+      <span class="hint">Raw copy from Word / translator — HTML or plain text</span>
     </div>
-    <textarea id="input" placeholder="Paste raw HTML or Word-exported copy here…"></textarea>
+    <textarea id="input" placeholder="Paste raw HTML or plain text here — plain text will be converted to HTML automatically…"></textarea>
   </div>
 
   <div class="pane">
@@ -210,50 +210,143 @@ function setBadge(text, type = '') {
   b.className = 'badge' + (type ? ' ' + type : '');
 }
 
+// ─── Plain-text detector ─────────────────────────────────────────────────────
+// Returns true if the input contains no meaningful HTML tags.
+
+function isPlainText(str) {
+  // Strip comments and CDATA, then check for any tag-like structure
+  const stripped = str.replace(/<!--[\s\S]*?-->/g, '').replace(/<!\[CDATA[\s\S]*?\]\]>/g, '');
+  return !/<[a-z][\s\S]*?>/i.test(stripped);
+}
+
+// ─── Plain-text → HTML converter ─────────────────────────────────────────────
+// Heuristics:
+//   - First non-empty line → <h1>
+//   - Lines that are short (≤ 60 chars), ALL-CAPS or Title Case, not ending in
+//     sentence punctuation, and preceded by a blank line → heading candidate
+//   - Indented lines or lines starting with - / * / • → <li> inside <ul>
+//   - Everything else → <p>
+// Heading depth: first heading after h1 → h2, subsequent same-depth → h2,
+// deeper indented headings → h3.
+
+function plainTextToHTML(text) {
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let h1Done = false;
+  let inList = false;
+  let lastHeadingDepth = 0; // 0 = none yet, 1 = h2, 2 = h3
+
+  function closeList() {
+    if (inList) { out.push('</ul>'); inList = false; }
+  }
+
+  function isHeadingCandidate(line, prevBlank) {
+    if (!prevBlank && h1Done) return false; // headings must follow a blank line
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.length > 72) return false;
+    // Must not end in sentence-ending punctuation
+    if (/[.!?,;]$/.test(trimmed)) return false;
+    // Either short all-caps, or Title Case (most words capitalised)
+    const isAllCaps = trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
+    const words = trimmed.split(/\s+/);
+    const titleCaseCount = words.filter(w => /^[A-Z\u00C0-\u017E]/.test(w)).length;
+    const isTitleCase = words.length >= 2 && titleCaseCount / words.length >= 0.6;
+    return isAllCaps || isTitleCase;
+  }
+
+  let prevBlank = true; // treat start-of-doc as preceded by blank
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+
+    if (trimmed === '') {
+      closeList();
+      prevBlank = true;
+      continue;
+    }
+
+    // List item?
+    if (/^[-*•]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      const content = trimmed.replace(/^[-*•]\s+/, '').replace(/^\d+\.\s+/, '');
+      out.push(`<li>${content}</li>`);
+      prevBlank = false;
+      continue;
+    }
+
+    closeList();
+
+    // First non-empty line always becomes h1
+    if (!h1Done) {
+      out.push(`<h1>${trimmed}</h1>`);
+      h1Done = true;
+      prevBlank = false;
+      continue;
+    }
+
+    if (isHeadingCandidate(trimmed, prevBlank)) {
+      // Determine depth based on indentation hint (leading spaces before trim)
+      const indent = raw.match(/^(\s*)/)[1].length;
+      let tag;
+      if (indent >= 4 || lastHeadingDepth >= 1) {
+        tag = 'h3';
+        lastHeadingDepth = 2;
+      } else {
+        tag = 'h2';
+        lastHeadingDepth = 1;
+      }
+      out.push(`<${tag}>${trimmed}</${tag}>`);
+      prevBlank = false;
+      continue;
+    }
+
+    out.push(`<p>${trimmed}</p>`);
+    prevBlank = false;
+  }
+
+  closeList();
+  return out.join('\n');
+}
+
 // ─── Core cleaner ────────────────────────────────────────────────────────────
 
 function cleanHTML(raw) {
-  // Parse into a live DOM so we can manipulate it properly
+  // 0. Strip &nbsp; entities (literal and encoded) before any DOM parsing
+  raw = raw.replace(/&nbsp;/gi, ' ')       // named entity
+           .replace(/&#160;/g, ' ')        // decimal entity
+           .replace(/&#xA0;/gi, ' ')       // hex entity
+           .replace(/\u00A0/g, ' ');       // bare non-breaking space character
+
   const parser = new DOMParser();
   const doc = parser.parseFromString('<div id="root">' + raw + '</div>', 'text/html');
   const root = doc.getElementById('root');
 
   let warnings = 0;
 
-  // 1. Strip all inline style attributes (colour, font, margin, etc.)
-  //    but keep <a href> links intact.
-  root.querySelectorAll('[style]').forEach(el => {
-    el.removeAttribute('style');
-  });
+  // 1. Strip all inline style attributes
+  root.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
 
-  // 2. Strip class attributes (Word loves dumping MsoNormal, etc.)
-  root.querySelectorAll('[class]').forEach(el => {
-    el.removeAttribute('class');
-  });
+  // 2. Strip class attributes (Word's MsoNormal etc.)
+  root.querySelectorAll('[class]').forEach(el => el.removeAttribute('class'));
 
-  // 3. Remove font / span wrappers that add zero semantic value
-  //    Unwrap: <span>, <font>, <u> (underline is not meaningful in body copy),
-  //            <em>/<strong> used purely for visual decoration (no text content change needed –
-  //            we keep them when they wrap real text, but strip empty ones).
+  // 3. Unwrap semantically empty wrappers
   function unwrapTag(tagName) {
     root.querySelectorAll(tagName).forEach(el => {
-      // Replace element with its children
       const parent = el.parentNode;
       while (el.firstChild) parent.insertBefore(el.firstChild, el);
       parent.removeChild(el);
     });
   }
-
   unwrapTag('span');
   unwrapTag('font');
 
-  // 4. Remove empty tags (including after unwrapping)
+  // 4. Remove empty tags
   function removeEmpties(parent) {
-    const inline = new Set(['a', 'strong', 'em', 'b', 'i']);
     Array.from(parent.children).forEach(child => {
       removeEmpties(child);
       const tag = child.tagName.toLowerCase();
-      if (tag === 'a') return; // never remove links
+      if (tag === 'a') return;
       if (child.innerHTML.trim() === '' && child.textContent.trim() === '') {
         child.remove();
       }
@@ -261,29 +354,21 @@ function cleanHTML(raw) {
   }
   removeEmpties(root);
 
-  // 5. Collapse consecutive <br> or <p></p> used as spacers (Florence's double breaks)
-  //    Two or more consecutive <br> → single <br>
+  // 5. Collapse consecutive <br> spacers
   let html = root.innerHTML;
-
-  // Collapse <br><br>+ sequences
   html = html.replace(/(<br\s*\/?>\s*){2,}/gi, '<br>');
 
-  // 6. Remove Word-generated boilerplate tags we don't want
-  //    (o:p, w:*, m:*, xml tags, comments, conditional comments)
+  // 6. Strip Word/Office boilerplate
   html = html.replace(/<\/?o:[^>]*>/gi, '');
   html = html.replace(/<\/?w:[^>]*>/gi, '');
   html = html.replace(/<\/?m:[^>]*>/gi, '');
   html = html.replace(/<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->/gi, '');
   html = html.replace(/<!--.*?-->/gs, '');
 
-  // 7. Normalise header hierarchy:
-  //    - Only one <h1> allowed (first one found wins; extras → <h2>)
-  //    - <h4>, <h5>, <h6> → <p> (we only want h1/h2/h3)
-  //    We do this in a second DOM pass on the cleaned string.
+  // 7. Normalise header hierarchy (second DOM pass)
   const doc2 = parser.parseFromString('<div id="root2">' + html + '</div>', 'text/html');
   const root2 = doc2.getElementById('root2');
 
-  // Demote excess h1s
   let h1Count = 0;
   root2.querySelectorAll('h1').forEach(el => {
     h1Count++;
@@ -296,7 +381,6 @@ function cleanHTML(raw) {
     }
   });
 
-  // Flatten deep headers to <p>
   ['h4','h5','h6'].forEach(tag => {
     root2.querySelectorAll(tag).forEach(el => {
       const p = doc2.createElement('p');
@@ -307,7 +391,7 @@ function cleanHTML(raw) {
     });
   });
 
-  // 8. Strip bgcolor / color / size / face attributes on any remaining elements
+  // 8. Strip presentational attributes
   root2.querySelectorAll('*').forEach(el => {
     ['bgcolor','color','size','face','align','valign','width','height',
      'border','cellspacing','cellpadding'].forEach(attr => {
@@ -317,30 +401,18 @@ function cleanHTML(raw) {
     });
   });
 
-  // 9. Final serialise
+  // 9. Serialise
   html = root2.innerHTML;
 
-  // 10. Tidy whitespace:
-  //     - Remove leading/trailing whitespace inside tags
-  //     - Collapse multiple blank lines
+  // 10. Tidy whitespace
   html = html
-    .replace(/\n{3,}/g, '\n\n')       // max one blank line between blocks
-    .replace(/[ \t]+\n/g, '\n')        // trailing spaces on lines
-    .replace(/\n[ \t]+</g, '\n<')      // leading spaces before tags
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+</g, '\n<')
     .trim();
 
-  // 11. Pretty-print: put block-level tags on their own lines
+  // 11. Pretty-print block tags onto their own lines
   const blocks = ['p','h1','h2','h3','ul','ol','li','table','tr','td','th','blockquote','div','br'];
-  blocks.forEach(tag => {
-    const open = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
-    const close = new RegExp(`</${tag}>`, 'gi');
-    html = html.replace(open, '\n<$&'.replace('\n<', '\n<')).replace(close, `</${tag}>\n`);
-  });
-
-  // Fix the double-replace artefact from the regex trick above
-  html = html.replace(/\n<(<)/g, '\n<');
-
-  // Re-apply block tag newlines cleanly
   const blockRe = new RegExp(`(<(?:${blocks.join('|')})[^>]*>|</(?:${blocks.join('|')})>)`, 'gi');
   html = html.replace(blockRe, '\n$1\n').replace(/\n{3,}/g, '\n\n').trim();
 
@@ -352,20 +424,29 @@ function cleanHTML(raw) {
 document.getElementById('cleanBtn').addEventListener('click', () => {
   clearLog();
   const raw = document.getElementById('input').value.trim();
-  if (!raw) { log('⚠ Nothing to clean – paste some HTML first.', 'warn'); return; }
-
-  log('Starting clean…', 'info');
+  if (!raw) { log('⚠ Nothing to clean – paste some content first.', 'warn'); return; }
 
   try {
-    const { html, warnings } = cleanHTML(raw);
-    document.getElementById('output').value = html;
+    let result;
 
-    if (warnings === 0) {
+    if (isPlainText(raw)) {
+      log('ℹ Plain text detected – converting to HTML…', 'info');
+      const converted = plainTextToHTML(raw);
+      result = cleanHTML(converted);
+      log('✓ Plain text converted and cleaned.', 'ok');
+    } else {
+      log('Starting clean…', 'info');
+      result = cleanHTML(raw);
+    }
+
+    document.getElementById('output').value = result.html;
+
+    if (result.warnings === 0) {
       log('✓ Done. No structural issues found.', 'ok');
       setBadge('clean', 'ok');
     } else {
-      log(`✓ Done with ${warnings} warning(s). Check output.`, 'warn');
-      setBadge(`${warnings} warning${warnings > 1 ? 's' : ''}`, 'warn');
+      log(`✓ Done with ${result.warnings} warning(s). Check output.`, 'warn');
+      setBadge(`${result.warnings} warning${result.warnings > 1 ? 's' : ''}`, 'warn');
     }
   } catch(e) {
     log('✗ Error: ' + e.message, 'warn');
