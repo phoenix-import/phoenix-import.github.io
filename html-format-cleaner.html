@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix Import – HTML Copy Cleaner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #68437B;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+    header span { font-size: 13px; opacity: 0.65; }
+
+    .controls {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .controls label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    button.primary {
+      background: #ca427e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button.primary:hover { background: #b33a6f; }
+
+    button.secondary {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    button.secondary:hover { background: #f9fafb; border-color: #9ca3af; }
+    button.secondary.copied { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      height: calc(100vh - 110px);
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #e5e7eb;
+    }
+
+    .pane:last-child { border-right: none; }
+
+    .pane-header {
+      padding: 10px 16px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pane-header h2 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      padding: 16px;
+      background: #fff;
+      color: #1a1a2e;
+    }
+
+    textarea#output {
+      background: #f9fafb;
+    }
+
+    .log {
+      font-size: 11px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 8px 16px;
+      max-height: 100px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+      border-top: 1px solid #333;
+    }
+
+    .log .ok   { color: #a6e3a1; }
+    .log .warn { color: #f9e2af; }
+    .log .info { color: #89dceb; }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: #f3f4f6;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .badge.ok   { background: #d1fae5; color: #065f46; }
+    .badge.warn { background: #fef3c7; color: #92400e; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Phoenix Import — HTML Copy Cleaner</h1>
+  <span>Strips rogue formatting from translated copy and outputs clean, Shopify-ready HTML</span>
+  <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import" style="height:36px;"></a>
+</header>
+
+<div class="controls">
+  <button class="primary" id="cleanBtn">▶ Clean</button>
+  <button class="secondary" id="copyBtn">Copy Output</button>
+  <span class="badge" id="badge">ready</span>
+</div>
+
+<div class="workspace">
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Input — paste HTML here</h2>
+      <span class="hint">Raw copy from Word / translator</span>
+    </div>
+    <textarea id="input" placeholder="Paste raw HTML or Word-exported copy here…"></textarea>
+  </div>
+
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Output — cleaned HTML</h2>
+      <span class="hint">Ready for Shopify</span>
+    </div>
+    <textarea id="output" readonly placeholder="Cleaned output will appear here…"></textarea>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<script>
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function log(msg, type = 'info') {
+  const el = document.getElementById('log');
+  const line = document.createElement('span');
+  line.className = type;
+  line.textContent = msg + '\n';
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log').innerHTML = '';
+}
+
+function setBadge(text, type = '') {
+  const b = document.getElementById('badge');
+  b.textContent = text;
+  b.className = 'badge' + (type ? ' ' + type : '');
+}
+
+// ─── Core cleaner ────────────────────────────────────────────────────────────
+
+function cleanHTML(raw) {
+  // Parse into a live DOM so we can manipulate it properly
+  const parser = new DOMParser();
+  const doc = parser.parseFromString('<div id="root">' + raw + '</div>', 'text/html');
+  const root = doc.getElementById('root');
+
+  let warnings = 0;
+
+  // 1. Strip all inline style attributes (colour, font, margin, etc.)
+  //    but keep <a href> links intact.
+  root.querySelectorAll('[style]').forEach(el => {
+    el.removeAttribute('style');
+  });
+
+  // 2. Strip class attributes (Word loves dumping MsoNormal, etc.)
+  root.querySelectorAll('[class]').forEach(el => {
+    el.removeAttribute('class');
+  });
+
+  // 3. Remove font / span wrappers that add zero semantic value
+  //    Unwrap: <span>, <font>, <u> (underline is not meaningful in body copy),
+  //            <em>/<strong> used purely for visual decoration (no text content change needed –
+  //            we keep them when they wrap real text, but strip empty ones).
+  function unwrapTag(tagName) {
+    root.querySelectorAll(tagName).forEach(el => {
+      // Replace element with its children
+      const parent = el.parentNode;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    });
+  }
+
+  unwrapTag('span');
+  unwrapTag('font');
+
+  // 4. Remove empty tags (including after unwrapping)
+  function removeEmpties(parent) {
+    const inline = new Set(['a', 'strong', 'em', 'b', 'i']);
+    Array.from(parent.children).forEach(child => {
+      removeEmpties(child);
+      const tag = child.tagName.toLowerCase();
+      if (tag === 'a') return; // never remove links
+      if (child.innerHTML.trim() === '' && child.textContent.trim() === '') {
+        child.remove();
+      }
+    });
+  }
+  removeEmpties(root);
+
+  // 5. Collapse consecutive <br> or <p></p> used as spacers (Florence's double breaks)
+  //    Two or more consecutive <br> → single <br>
+  let html = root.innerHTML;
+
+  // Collapse <br><br>+ sequences
+  html = html.replace(/(<br\s*\/?>\s*){2,}/gi, '<br>');
+
+  // 6. Remove Word-generated boilerplate tags we don't want
+  //    (o:p, w:*, m:*, xml tags, comments, conditional comments)
+  html = html.replace(/<\/?o:[^>]*>/gi, '');
+  html = html.replace(/<\/?w:[^>]*>/gi, '');
+  html = html.replace(/<\/?m:[^>]*>/gi, '');
+  html = html.replace(/<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->/gi, '');
+  html = html.replace(/<!--.*?-->/gs, '');
+
+  // 7. Normalise header hierarchy:
+  //    - Only one <h1> allowed (first one found wins; extras → <h2>)
+  //    - <h4>, <h5>, <h6> → <p> (we only want h1/h2/h3)
+  //    We do this in a second DOM pass on the cleaned string.
+  const doc2 = parser.parseFromString('<div id="root2">' + html + '</div>', 'text/html');
+  const root2 = doc2.getElementById('root2');
+
+  // Demote excess h1s
+  let h1Count = 0;
+  root2.querySelectorAll('h1').forEach(el => {
+    h1Count++;
+    if (h1Count > 1) {
+      const h2 = doc2.createElement('h2');
+      h2.innerHTML = el.innerHTML;
+      el.replaceWith(h2);
+      warnings++;
+      log(`⚠ Extra <h1> demoted to <h2>: "${el.textContent.trim().slice(0, 60)}"`, 'warn');
+    }
+  });
+
+  // Flatten deep headers to <p>
+  ['h4','h5','h6'].forEach(tag => {
+    root2.querySelectorAll(tag).forEach(el => {
+      const p = doc2.createElement('p');
+      p.innerHTML = el.innerHTML;
+      el.replaceWith(p);
+      warnings++;
+      log(`⚠ <${tag}> converted to <p>`, 'warn');
+    });
+  });
+
+  // 8. Strip bgcolor / color / size / face attributes on any remaining elements
+  root2.querySelectorAll('*').forEach(el => {
+    ['bgcolor','color','size','face','align','valign','width','height',
+     'border','cellspacing','cellpadding'].forEach(attr => {
+      if (el.hasAttribute(attr) && el.tagName.toLowerCase() !== 'img') {
+        el.removeAttribute(attr);
+      }
+    });
+  });
+
+  // 9. Final serialise
+  html = root2.innerHTML;
+
+  // 10. Tidy whitespace:
+  //     - Remove leading/trailing whitespace inside tags
+  //     - Collapse multiple blank lines
+  html = html
+    .replace(/\n{3,}/g, '\n\n')       // max one blank line between blocks
+    .replace(/[ \t]+\n/g, '\n')        // trailing spaces on lines
+    .replace(/\n[ \t]+</g, '\n<')      // leading spaces before tags
+    .trim();
+
+  // 11. Pretty-print: put block-level tags on their own lines
+  const blocks = ['p','h1','h2','h3','ul','ol','li','table','tr','td','th','blockquote','div','br'];
+  blocks.forEach(tag => {
+    const open = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
+    const close = new RegExp(`</${tag}>`, 'gi');
+    html = html.replace(open, '\n<$&'.replace('\n<', '\n<')).replace(close, `</${tag}>\n`);
+  });
+
+  // Fix the double-replace artefact from the regex trick above
+  html = html.replace(/\n<(<)/g, '\n<');
+
+  // Re-apply block tag newlines cleanly
+  const blockRe = new RegExp(`(<(?:${blocks.join('|')})[^>]*>|</(?:${blocks.join('|')})>)`, 'gi');
+  html = html.replace(blockRe, '\n$1\n').replace(/\n{3,}/g, '\n\n').trim();
+
+  return { html, warnings };
+}
+
+// ─── UI wiring ───────────────────────────────────────────────────────────────
+
+document.getElementById('cleanBtn').addEventListener('click', () => {
+  clearLog();
+  const raw = document.getElementById('input').value.trim();
+  if (!raw) { log('⚠ Nothing to clean – paste some HTML first.', 'warn'); return; }
+
+  log('Starting clean…', 'info');
+
+  try {
+    const { html, warnings } = cleanHTML(raw);
+    document.getElementById('output').value = html;
+
+    if (warnings === 0) {
+      log('✓ Done. No structural issues found.', 'ok');
+      setBadge('clean', 'ok');
+    } else {
+      log(`✓ Done with ${warnings} warning(s). Check output.`, 'warn');
+      setBadge(`${warnings} warning${warnings > 1 ? 's' : ''}`, 'warn');
+    }
+  } catch(e) {
+    log('✗ Error: ' + e.message, 'warn');
+    setBadge('error', 'warn');
+  }
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const out = document.getElementById('output').value;
+  if (!out) return;
+  navigator.clipboard.writeText(out).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy Output';
+      btn.classList.remove('copied');
+    }, 1800);
+  });
+});
+</script>
+</body>
+</html>
