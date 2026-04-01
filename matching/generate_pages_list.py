@@ -77,7 +77,7 @@ def slug_from_url(url):
 
 def build_sheet(ws, lang, pages):
     # Column headers
-    headers = ["Type", "URL", "Slug"]
+    headers = ["Type", "Lang URL (old)", "Slug", "Canonical LOC"]
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font = HEADER_FONT
@@ -91,17 +91,19 @@ def build_sheet(ws, lang, pages):
             continue
         t = p["type"]
         slug = slug_from_url(url)
+        loc = p["loc"]
         fill = FILL_1 if t == "1" else (FILL_2 if t == "2" else FILL_X)
 
-        for col, val in enumerate([t, url, slug], 1):
+        for col, val in enumerate([t, url, slug, loc], 1):
             cell = ws.cell(row=row, column=col, value=val)
             cell.fill = fill
         row += 1
 
     # Column widths
     ws.column_dimensions["A"].width = 8
-    ws.column_dimensions["B"].width = 80
-    ws.column_dimensions["C"].width = 50
+    ws.column_dimensions["B"].width = 75
+    ws.column_dimensions["C"].width = 45
+    ws.column_dimensions["D"].width = 75
 
 
 def main():
@@ -109,16 +111,6 @@ def main():
 
     # Keep only /1/, /2/, and "other" (exclude /3/ and /4/)
     filtered = [b for b in blocks if b["type"] not in ("3", "4")]
-
-    # Deduplicate by EN URL (the root homepage block and /1/home.aspx can both resolve to same URL)
-    seen = set()
-    deduped = []
-    for p in filtered:
-        key = p["alternates"].get("en") or p["loc"]
-        if key not in seen:
-            seen.add(key)
-            deduped.append(p)
-    filtered = deduped
 
     # Sort: type 1 first, then 2, then other; alpha within each
     def sort_key(p):
