@@ -14,88 +14,102 @@ LANGUAGES = ["en", "de", "fr", "es", "it", "nl"]
 # NL is the Shopify default language — no lang prefix in URLs
 NL_DEFAULT = True
 
-# Manually resolved matches where slug differs between old and new
-# Key: old slug, Value: new Shopify page slug
+# Per-language mappings: (lang, old_slug) -> new Shopify page slug
+# Avoids cross-language conflicts where the same slug means different things
 KNOWN_MAPPINGS = {
     # EN
-    "frequently-asked-questions-faq":  "faq",
-    "login":                           "account-login",
-    "general-terms-and-conditions":    "terms-and-conditions",
-    "discount":                        "discounts",
-    "stock-notification-and-web-api":  "stock-notification",
-    "report-on-delivery-form":         "report-on-delivery",
-    "about-us":                        "over-ons",            # Shopify EN uses Dutch slug
-    "en-spirituele-kaarsen":           "spirituele-kaarsen-groothandel",
-    "en-bedrijfsvideo":                "videos",
-    "new-age-wholesale":               "new-age-groothandel",
-    "yogi-yogini-groothandel":         "new-age-groothandel",
+    ("en", "frequently-asked-questions-faq"):  "faq",
+    ("en", "login"):                           "account-login",
+    ("en", "general-terms-and-conditions"):    "terms-and-conditions",
+    ("en", "discount"):                        "discounts",
+    ("en", "stock-notification-and-web-api"):  "stock-notification",
+    ("en", "report-on-delivery-form"):         "report-on-delivery",
+    ("en", "about-us"):                        "over-ons",
+    ("en", "en-spirituele-kaarsen"):           "spirituele-kaarsen-groothandel",
+    ("en", "en-bedrijfsvideo"):                "videos",
+    ("en", "new-age-wholesale"):               "new-age-groothandel",
+    ("en", "yogi-yogini-groothandel"):         "new-age-groothandel",
+    # DE
+    ("de", "allgemeine-geschftsbedingungen"):  "allgemeine-geschaftsbedingungen",
+    ("de", "datenschutz--und-cookieerklrung"): "datenschutzerklarung",
+    ("de", "reklamationsformular"):            "reklamation",
+    ("de", "versenden-und-lieferzeit"):        "versand-und-lieferung",
+    ("de", "newsletter"):                      "rundschreiben",
+    ("de", "hufig-gestellte-fragen-faq"):      "faq",
+    ("de", "einloggen"):                       "account-login",
+    ("de", "vorratsmeldung"):                  "lagerbestands-benachrichtigung",
+    ("de", "vorratinformation-und-web-api"):   "lagerbestands-benachrichtigung",
+    ("de", "nachhaltige-unternehmertum"):      "nachhaltiges-unternehmertum",
+    ("de", "%c3%bcber-uns"):                   "uber-uns",
+    ("de", "new-age-grohandel"):               "new-age-groothandel",
+    ("de", "yogi-yogini-groothandel"):         "new-age-groothandel",
+    ("de", "de-spirituele-kaarsen"):           "spirituele-kaarsen-groothandel",
+    ("de", "kerzengrohandel"):                 "spirituele-kaarsen-groothandel",
+    ("de", "lieferant-fr-kerzen"):             "spirituele-kaarsen-groothandel",
+    ("de", "de-witte-kaarsen-groothandel"):    "spirituele-kaarsen-groothandel",
+    ("de", "de-bedrijfsvideo"):                "videos",
     # FR
-    "termes-et-conditions-gnrales":              "termes-et-conditions",
-    "confidentialit-et-cookie":                  "confidentialite-et-cookie",
-    "rapport-sur-la-livraison":                  "rapport-de-livraison",
-    "confirmation--la-livraison":                "rapport-de-livraison",
-    "conditions-dexpedition-et-de-livraison":    "conditions-despedition-et-de-livraison",
-    "remises":                                   "remises",
-    "donate":                                    "donations",
-    "se-connecter":                              "account-login",
-    "foire-aux-questions-faq":                   "faq",
-    "newsletter":                                "bulletin",   # FR only — see per-lang override below
-    "service-client%c3%a8le":                    "service-clientele",
-    "qui-sommes-nous":                           "quis-sommes-nous",
-    "informations-sur-la-socit":                 "informations-sur-la-societe",
-    "notification-de-stock-et-web-api":          "avis-de-stocks",
-    "gadget-davis-de-rapprovisionnement":        "avis-de-stocks",
-    "grossiste-new-age":                         "new-age-groothandel",
-    "fr-spirituele-kaarsen":                     "spirituele-kaarsen-groothandel",
-    "fr-bedrijfsvideo":                          "videos",
+    ("fr", "termes-et-conditions-gnrales"):             "termes-et-conditions",
+    ("fr", "confidentialit-et-cookie"):                 "confidentialite-et-cookie",
+    ("fr", "rapport-sur-la-livraison"):                 "rapport-de-livraison",
+    ("fr", "confirmation--la-livraison"):               "rapport-de-livraison",
+    ("fr", "conditions-dexpedition-et-de-livraison"):   "conditions-despedition-et-de-livraison",
+    ("fr", "se-connecter"):                             "account-login",
+    ("fr", "foire-aux-questions-faq"):                  "faq",
+    ("fr", "newsletter"):                               "bulletin",
+    ("fr", "service-client%c3%a8le"):                   "service-clientele",
+    ("fr", "service-clientle"):                         "service-clientele",
+    ("fr", "qui-sommes-nous"):                          "quis-sommes-nous",
+    ("fr", "informations-sur-la-socit"):                "informations-sur-la-societe",
+    ("fr", "notification-de-stock-et-web-api"):         "avis-de-stocks",
+    ("fr", "gadget-davis-de-rapprovisionnement"):       "avis-de-stocks",
+    ("fr", "grossiste-new-age"):                        "new-age-groothandel",
+    ("fr", "yogi-yogini-groothandel"):                  "new-age-groothandel",
+    ("fr", "fr-spirituele-kaarsen"):                    "spirituele-kaarsen-groothandel",
+    ("fr", "fr-bedrijfsvideo"):                         "videos",
     # ES
-    "trminos-generales-y-condiciones":           "terminos-generales",
-    "politica-de-privacidad-y-cookies":          "privacidad-y-cookies",
-    "realizar-un-pedido":                        "realizar-un-pedido",
-    "formas-de-pago":                            "formas-de-pago",
-    "condiciones-de-entrega":                    "condiciones-de-entrega",
-    "descuentos":                                "descuentos",
-    "informe-sobre-la-entrega":                  "informe-sobre-la-entrega",
-    "inicia-sesin":                              "account-login",
-    "preguntas-frecuentes-faq":                  "faq",
-    "informacin-de-la-compaa":                   "informacion-de-la-compania",
-    "notificacin-de-stock-y-web-api":            "notificacion-de-stock",
-    "new-age-al-por-mayor":                      "new-age-groothandel",
-    "es-spirituele-kaarsen":                     "spirituele-kaarsen-groothandel",
-    "es-bedrijfsvideo":                          "videos",
+    ("es", "trminos-generales-y-condiciones"):          "terminos-generales",
+    ("es", "politica-de-privacidad-y-cookies"):         "privacidad-y-cookies",
+    ("es", "inicia-sesin"):                             "account-login",
+    ("es", "preguntas-frecuentes-faq"):                 "faq",
+    ("es", "informacin-de-la-compaa"):                  "informacion-de-la-compania",
+    ("es", "notificacin-de-stock-y-web-api"):           "notificacion-de-stock",
+    ("es", "new-age-al-por-mayor"):                     "new-age-groothandel",
+    ("es", "yogi-yogini-groothandel"):                  "new-age-groothandel",
+    ("es", "es-spirituele-kaarsen"):                    "spirituele-kaarsen-groothandel",
+    ("es", "es-bedrijfsvideo"):                         "videos",
+    ("es", "advertencia-para-reposicin"):               "notificacion-de-stock",
+    ("es", "boletn-informativo"):                       "boletin",
+    ("es", "boletn"):                                   "boletin",
+    ("es", "atencin-al-cliente"):                       "atencion-al-cliente",
     # IT
-    "termini-e-condizioni-generali":             "termine-e-condizioni",
-    "privacy-e-cookie":                          "privacy-e-cookie",
-    "effetuare-un-ordine":                       "effetuare-un-ordine",
-    "pagamenti":                                 "pagamenti",
-    "spedizione-e-consegna":                     "spedizione-e-consegna",
-    "sconti":                                    "sconti",
-    "modulo-reclami":                            "modulo-reclami",
-    "domande-frequenti-faq":                     "faq",
-    "informazioni-aziendaz":                     "informazioni-azienda",  # typo in old URL
-    "servizio-clienti":                          "assistenza-clienti",
-    "notifica-stock-e-web-api":                  "notifica-delle-scorte",
-    "reclami":                                   "modulo-reclami",
-    "new-age-allingrosso":                       "new-age-groothandel",
-    "it-spirituele-kaarsen":                     "spirituele-kaarsen-groothandel",
-    "it-bedrijfsvideo":                          "videos",
+    ("it", "termini-e-condizioni-generali"):            "termine-e-condizioni",
+    ("it", "domande-frequenti-faq"):                    "faq",
+    ("it", "informazioni-aziendaz"):                    "informazioni-azienda",
+    ("it", "servizio-clienti"):                         "assistenza-clienti",
+    ("it", "notifica-stock-e-web-api"):                 "notifica-delle-scorte",
+    ("it", "reclami"):                                  "modulo-reclami",
+    ("it", "newsletter"):                               "bollettino",
+    ("it", "new-age-allingrosso"):                       "new-age-groothandel",
+    ("it", "yogi-yogini-groothandel"):                  "new-age-groothandel",
+    ("it", "it-spirituele-kaarsen"):                    "spirituele-kaarsen-groothandel",
+    ("it", "it-bedrijfsvideo"):                         "videos",
+    ("it", "login"):                                    "account-login",
+    ("it", "avviso-riassortimento"):                    "notifica-delle-scorte",
     # NL
-    "algemene-leveringsvoorwaarden":             "algemene-leveringsvoorwaarden",
-    "privacy--en-cookieverklaring":              "privacy-en-cookieverklaring",
-    "bestellen":                                 "bestellen",
-    "betalen":                                   "betalen",
-    "verzenden-en-levertijd":                    "verzenden-en-levertijd",
-    "reclamatieformulier":                       "reclamatie",
-    "veelgestelde-vragen-faq":                   "faq",
-    "inloggen":                                  "account-login",
-    "voorraadnotificatie-en-web-api":            "voorraadnotificatie",
-    "duurzaam-ondernemen":                       "duurzaam-verpakken",
-    "bedrijfsvideo":                             "videos",
-    "spirituele-kaarsen":                        "spirituele-kaarsen-groothandel",
+    ("nl", "privacy--en-cookieverklaring"):             "privacy-en-cookieverklaring",
+    ("nl", "reclamatieformulier"):                      "reclamatie",
+    ("nl", "veelgestelde-vragen-faq"):                  "faq",
+    ("nl", "inloggen"):                                 "account-login",
+    ("nl", "voorraadnotificatie-en-web-api"):           "voorraadnotificatie",
+    ("nl", "duurzaam-ondernemen"):                      "duurzaam-verpakken",
+    ("nl", "bedrijfsvideo"):                            "videos",
+    ("nl", "spirituele-kaarsen"):                       "spirituele-kaarsen-groothandel",
+    ("nl", "yogi-yogini-groothandel"):                  "new-age-groothandel",
 }
 
 # Pages that redirect to the homepage (path only, no /pages/)
-HOMEPAGE_SLUGS = {"home", "inicio", "accueil"}
+HOMEPAGE_SLUGS = {"home", "inicio", "accueil", "home"}  # covers en/de/it/nl, es, fr
 
 # Shopify homepage paths per language
 HOMEPAGE_TARGET = {
@@ -228,19 +242,20 @@ def match_lang(lang, old_pages, shopify_slugs):
             matched.append((src, target, "homepage"))
             continue
 
+        slug_lc = slug.lower()
+
         # Exact match
         if slug in shopify_slugs:
             matched.append((src, new_path(lang, slug), "exact"))
             continue
 
-        # Known mapping
-        if slug in KNOWN_MAPPINGS:
-            mapped = KNOWN_MAPPINGS[slug]
+        # Known mapping (use lowercase slug for lookup to handle URL-encoding variants)
+        if (lang, slug_lc) in KNOWN_MAPPINGS:
+            mapped = KNOWN_MAPPINGS[(lang, slug_lc)]
             if mapped in shopify_slugs:
                 matched.append((src, new_path(lang, mapped), "mapped"))
                 continue
             else:
-                # Mapping defined but target not in Shopify pages
                 unmatched.append((src, slug, f"mapped→{mapped} (not in Shopify)"))
                 continue
 
