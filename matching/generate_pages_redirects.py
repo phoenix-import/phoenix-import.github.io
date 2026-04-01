@@ -128,19 +128,20 @@ KNOWN_MAPPINGS = {
 # Fixed-path redirects: (lang, old_slug) -> full path
 # Used for targets that are not /pages/ URLs (collections, homepage, etc.)
 FIXED_TARGETS = {
-    # Bestsellers / special offers → bestsellers collection
+    # Bestsellers → bestsellers collection
     ("en", "bestsellers"):           "/en/collections/bestsellers",
-    ("en", "special-offers"):        "/en/collections/bestsellers",
     ("de", "bestseller"):            "/de/collections/bestseller",
-    ("de", "sonderangebote"):        "/de/collections/bestseller",
     ("fr", "les-plus-vendus"):       "/fr/collections/meilleures-ventes",
-    ("fr", "offres-spciales"):       "/fr/collections/meilleures-ventes",
     ("es", "los-ms-vendidos"):       "/es/collections/mas-vendidos",
-    ("es", "ofertas-especiales"):    "/es/collections/mas-vendidos",
     ("it", "i-pi-venduti"):          "/it/collections/piu-venduti",
-    ("it", "offerte-speciali"):      "/it/collections/piu-venduti",
     ("nl", "bestsellers"):           "/collections/bestsellers",
-    ("nl", "speciale-aanbiedingen"): "/collections/bestsellers",
+    # Special offers → dedicated special offers collection
+    ("en", "special-offers"):        "/en/collections/special-offers",
+    ("de", "sonderangebote"):        "/de/collections/sonderangebote",
+    ("fr", "offres-spciales"):       "/fr/collections/offres-speciales",
+    ("es", "ofertas-especiales"):    "/es/collections/ofertas-especiales",
+    ("it", "offerte-speciali"):      "/it/collections/offerte-speciali",
+    ("nl", "speciale-aanbiedingen"): "/collections/speciale-aanbiedingen",
     # Monthly offers → dedicated monthly collection
     ("en", "offers-of-the-month"):   "/en/collections/monthly-deals",
     ("de", "angebote-des-monats"):   "/de/collections/monatsangebote",
@@ -148,6 +149,13 @@ FIXED_TARGETS = {
     ("es", "ofertas-del-mes"):       "/es/collections/ofertas-del-mes",
     ("it", "offerte-del-mese"):      "/it/collections/offerte-del-mese",
     ("nl", "maand-aanbieding"):      "/collections/maandaanbieding",
+    # Certificaten → customer service page
+    ("en", "en-certificaten"):   "/en/pages/customer-service",
+    ("de", "de-certificaten"):   "/de/pages/kundenservice",
+    ("fr", "fr-certificaten"):   "/fr/pages/service-clientele",
+    ("es", "es-certificaten"):   "/es/pages/atencion-al-cliente",
+    ("it", "it-certificaten"):   "/it/pages/assistenza-clienti",
+    ("nl", "certificaten"):      "/pages/klantenservice",
     # Product range / catalogue → homepage
     ("en", "product-range"):   "/en",
     ("de", "sortiment"):       "/de",

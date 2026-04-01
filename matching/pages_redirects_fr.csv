@@ -15,7 +15,7 @@ Redirect from,Redirect to
 /fr/2/service-client%C3%A8le.aspx,/fr/pages/service-clientele
 /fr/2/qui-sommes-nous.aspx,/fr/pages/quis-sommes-nous
 /fr/2/foire-aux-questions-faq.aspx,/fr/pages/faq
-/fr/2/offres-spciales.aspx,/fr/collections/meilleures-ventes
+/fr/2/offres-spciales.aspx,/fr/collections/offres-speciales
 /fr/2/les-plus-vendus.aspx,/fr/collections/meilleures-ventes
 /fr/2/offres-mensuelles.aspx,/fr/collections/offres-du-mois
 /fr/2/notification-de-stock-et-web-api.aspx,/fr/pages/avis-de-stocks
@@ -23,6 +23,7 @@ Redirect from,Redirect to
 /fr/2/yogi-yogini-groothandel.aspx,/fr/pages/new-age-groothandel
 /fr/2/grossiste-new-age.aspx,/fr/pages/new-age-groothandel
 /fr/2/fr-bedrijfsvideo.aspx,/fr/pages/videos
+/fr/2/fr-certificaten.aspx,/fr/pages/service-clientele
 /fr/2/vente-en-gros-de-bougies.aspx,/fr/pages/spirituele-kaarsen-groothandel
 /fr/2/fournisseur-grossiste-de-bougies-en-vrac.aspx,/fr/pages/spirituele-kaarsen-groothandel
 /fr/2/fr-witte-kaarsen-groothandel.aspx,/fr/pages/spirituele-kaarsen-groothandel
