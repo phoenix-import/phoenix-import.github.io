@@ -153,6 +153,13 @@ FIXED_TARGETS = {
     ("es", "ofertas-del-mes"):       "/es/collections/ofertas-del-mes",
     ("it", "offerte-del-mese"):      "/it/collections/offerte-del-mese",
     ("nl", "maand-aanbieding"):      "/collections/maandaanbieding",
+    # Vacatures → NL page (not localized)
+    ("en", "en-vacatures"):  "/pages/vacatures",
+    ("de", "de-vacatures"):  "/pages/vacatures",
+    ("fr", "fr-vacatures"):  "/pages/vacatures",
+    ("es", "es-vacatures"):  "/pages/vacatures",
+    ("it", "it-vacatures"):  "/pages/vacatures",
+    ("nl", "vacatures"):     "/pages/vacatures",
     # Certificaten → customer service page
     ("en", "en-certificaten"):   "/en/pages/customer-service",
     ("de", "de-certificaten"):   "/de/pages/kundenservice",
