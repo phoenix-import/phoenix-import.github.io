@@ -128,25 +128,26 @@ KNOWN_MAPPINGS = {
 # Fixed-path redirects: (lang, old_slug) -> full path
 # Used for targets that are not /pages/ URLs (collections, homepage, etc.)
 FIXED_TARGETS = {
-    # Bestsellers / special offers / offers of the month → collection
+    # Bestsellers / special offers → bestsellers collection
     ("en", "bestsellers"):           "/en/collections/bestsellers",
     ("en", "special-offers"):        "/en/collections/bestsellers",
-    ("en", "offers-of-the-month"):   "/en/collections/bestsellers",
     ("de", "bestseller"):            "/de/collections/bestseller",
     ("de", "sonderangebote"):        "/de/collections/bestseller",
-    ("de", "angebote-des-monats"):   "/de/collections/bestseller",
     ("fr", "les-plus-vendus"):       "/fr/collections/meilleures-ventes",
     ("fr", "offres-spciales"):       "/fr/collections/meilleures-ventes",
-    ("fr", "offres-mensuelles"):     "/fr/collections/meilleures-ventes",
     ("es", "los-ms-vendidos"):       "/es/collections/mas-vendidos",
     ("es", "ofertas-especiales"):    "/es/collections/mas-vendidos",
-    ("es", "ofertas-del-mes"):       "/es/collections/mas-vendidos",
     ("it", "i-pi-venduti"):          "/it/collections/piu-venduti",
     ("it", "offerte-speciali"):      "/it/collections/piu-venduti",
-    ("it", "offerte-del-mese"):      "/it/collections/piu-venduti",
     ("nl", "bestsellers"):           "/collections/bestsellers",
     ("nl", "speciale-aanbiedingen"): "/collections/bestsellers",
-    ("nl", "maand-aanbieding"):      "/collections/bestsellers",
+    # Monthly offers → dedicated monthly collection
+    ("en", "offers-of-the-month"):   "/en/collections/monthly-deals",
+    ("de", "angebote-des-monats"):   "/de/collections/monatsangebote",
+    ("fr", "offres-mensuelles"):     "/fr/collections/offres-du-mois",
+    ("es", "ofertas-del-mes"):       "/es/collections/ofertas-del-mes",
+    ("it", "offerte-del-mese"):      "/it/collections/offerte-del-mese",
+    ("nl", "maand-aanbieding"):      "/collections/maandaanbieding",
     # Product range / catalogue → homepage
     ("en", "product-range"):   "/en",
     ("de", "sortiment"):       "/de",
