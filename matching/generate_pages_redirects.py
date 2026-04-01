@@ -48,6 +48,10 @@ KNOWN_MAPPINGS = {
     ("de", "lieferant-fr-kerzen"):             "spirituele-kaarsen-groothandel",
     ("de", "de-witte-kaarsen-groothandel"):    "spirituele-kaarsen-groothandel",
     ("de", "de-bedrijfsvideo"):                "videos",
+    # FR candles landing pages
+    ("fr", "vente-en-gros-de-bougies"):              "spirituele-kaarsen-groothandel",
+    ("fr", "fournisseur-grossiste-de-bougies-en-vrac"): "spirituele-kaarsen-groothandel",
+    ("fr", "fr-witte-kaarsen-groothandel"):          "spirituele-kaarsen-groothandel",
     # FR
     ("fr", "termes-et-conditions-gnrales"):             "termes-et-conditions",
     ("fr", "confidentialit-et-cookie"):                 "confidentialite-et-cookie",
@@ -78,6 +82,9 @@ KNOWN_MAPPINGS = {
     ("es", "yogi-yogini-groothandel"):                  "new-age-groothandel",
     ("es", "es-spirituele-kaarsen"):                    "spirituele-kaarsen-groothandel",
     ("es", "es-bedrijfsvideo"):                         "videos",
+    ("es", "venta-al-por-mayor-de-velas"):              "spirituele-kaarsen-groothandel",
+    ("es", "proveedor-de-velas-al-por-mayor"):          "spirituele-kaarsen-groothandel",
+    ("es", "es-witte-kaarsen-groothandel"):             "spirituele-kaarsen-groothandel",
     ("es", "advertencia-para-reposicin"):               "notificacion-de-stock",
     ("es", "boletn-informativo"):                       "boletin",
     ("es", "boletn"):                                   "boletin",
@@ -94,6 +101,9 @@ KNOWN_MAPPINGS = {
     ("it", "yogi-yogini-groothandel"):                  "new-age-groothandel",
     ("it", "it-spirituele-kaarsen"):                    "spirituele-kaarsen-groothandel",
     ("it", "it-bedrijfsvideo"):                         "videos",
+    ("it", "commercio-allingrosso-di-candele"):         "spirituele-kaarsen-groothandel",
+    ("it", "fornitore-di-candele-allingrosso"):         "spirituele-kaarsen-groothandel",
+    ("it", "it-witte-kaarsen-groothandel"):             "spirituele-kaarsen-groothandel",
     ("it", "login"):                                    "account-login",
     ("it", "avviso-riassortimento"):                    "notifica-delle-scorte",
     # NL
@@ -106,9 +116,45 @@ KNOWN_MAPPINGS = {
     ("nl", "bedrijfsvideo"):                            "videos",
     ("nl", "spirituele-kaarsen"):                       "spirituele-kaarsen-groothandel",
     ("nl", "yogi-yogini-groothandel"):                  "new-age-groothandel",
+    ("nl", "kaarsen-groothandel"):                      "spirituele-kaarsen-groothandel",
+    ("nl", "kaarsen-leverancier-in-bulk"):              "spirituele-kaarsen-groothandel",
+    ("nl", "witte-kaarsen-groothandel"):                "spirituele-kaarsen-groothandel",
+    # EN candles landing pages
+    ("en", "candles-wholesaler"):                       "spirituele-kaarsen-groothandel",
+    ("en", "bulk-wholesale-candles-supplier"):          "spirituele-kaarsen-groothandel",
+    ("en", "en-witte-kaarsen-groothandel"):             "spirituele-kaarsen-groothandel",
 }
 
-# Pages that redirect to the homepage (path only, no /pages/)
+# Fixed-path redirects: (lang, old_slug) -> full path
+# Used for targets that are not /pages/ URLs (collections, homepage, etc.)
+FIXED_TARGETS = {
+    # Bestsellers / special offers / offers of the month → collection
+    ("en", "bestsellers"):           "/en/collections/bestsellers",
+    ("en", "special-offers"):        "/en/collections/bestsellers",
+    ("en", "offers-of-the-month"):   "/en/collections/bestsellers",
+    ("de", "bestseller"):            "/de/collections/bestseller",
+    ("de", "sonderangebote"):        "/de/collections/bestseller",
+    ("de", "angebote-des-monats"):   "/de/collections/bestseller",
+    ("fr", "les-plus-vendus"):       "/fr/collections/meilleures-ventes",
+    ("fr", "offres-spciales"):       "/fr/collections/meilleures-ventes",
+    ("fr", "offres-mensuelles"):     "/fr/collections/meilleures-ventes",
+    ("es", "los-ms-vendidos"):       "/es/collections/mas-vendidos",
+    ("es", "ofertas-especiales"):    "/es/collections/mas-vendidos",
+    ("es", "ofertas-del-mes"):       "/es/collections/mas-vendidos",
+    ("it", "i-pi-venduti"):          "/it/collections/piu-venduti",
+    ("it", "offerte-speciali"):      "/it/collections/piu-venduti",
+    ("it", "offerte-del-mese"):      "/it/collections/piu-venduti",
+    ("nl", "bestsellers"):           "/collections/bestsellers",
+    ("nl", "speciale-aanbiedingen"): "/collections/bestsellers",
+    ("nl", "maand-aanbieding"):      "/collections/bestsellers",
+    # Product range / catalogue → homepage
+    ("en", "product-range"):   "/en",
+    ("de", "sortiment"):       "/de",
+    ("fr", "nos-produits"):    "/fr",
+    ("es", "catlogo"):         "/es",
+    ("it", "prodotti"):        "/it",
+    ("nl", "assortiment"):     "/",
+}
 HOMEPAGE_SLUGS = {"home", "inicio", "accueil", "home"}  # covers en/de/it/nl, es, fr
 
 # Shopify homepage paths per language
@@ -243,6 +289,11 @@ def match_lang(lang, old_pages, shopify_slugs):
             continue
 
         slug_lc = slug.lower()
+
+        # Fixed-path target (collection, homepage, etc.)
+        if (lang, slug_lc) in FIXED_TARGETS:
+            matched.append((src, FIXED_TARGETS[(lang, slug_lc)], "fixed"))
+            continue
 
         # Exact match
         if slug in shopify_slugs:

@@ -15,6 +15,9 @@ Redirect from,Redirect to
 /de/2/kundenservice.aspx,/de/pages/kundenservice
 /de/2/%C3%BCber-uns.aspx,/de/pages/uber-uns
 /de/2/hufig-gestellte-fragen-faq.aspx,/de/pages/faq
+/de/2/sonderangebote.aspx,/de/collections/bestseller
+/de/2/bestseller.aspx,/de/collections/bestseller
+/de/2/angebote-des-monats.aspx,/de/collections/bestseller
 /de/2/proclaimer.aspx,/de/pages/proclaimer
 /de/2/vorratinformation-und-web-api.aspx,/de/pages/lagerbestands-benachrichtigung
 /de/2/nachhaltige-unternehmertum.aspx,/de/pages/nachhaltiges-unternehmertum
@@ -25,6 +28,7 @@ Redirect from,Redirect to
 /de/2/lieferant-fr-kerzen.aspx,/de/pages/spirituele-kaarsen-groothandel
 /de/2/de-witte-kaarsen-groothandel.aspx,/de/pages/spirituele-kaarsen-groothandel
 /de/2/de-spirituele-kaarsen.aspx,/de/pages/spirituele-kaarsen-groothandel
+/de/1/sortiment.aspx,/de
 /de/1/einloggen.aspx,/de/pages/account-login
 /de/1/kontakt.aspx,/de/pages/kontakt
 /de/1/newsletter.aspx,/de/pages/rundschreiben
