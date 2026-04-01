@@ -48,6 +48,8 @@ KNOWN_MAPPINGS = {
     ("de", "lieferant-fr-kerzen"):             "spirituele-kaarsen-groothandel",
     ("de", "de-witte-kaarsen-groothandel"):    "spirituele-kaarsen-groothandel",
     ("de", "de-bedrijfsvideo"):                "videos",
+    # ES reclamaciones → report on delivery
+    ("es", "reclamaciones"):  "informe-sobre-la-entrega",
     # Proclaimer equivalents
     ("fr", "annonce"):  "proclaimer",
     ("it", "avviso"):   "proclaimer",
@@ -175,7 +177,29 @@ FIXED_TARGETS = {
     ("it", "prodotti"):        "/it",
     ("nl", "assortiment"):     "/",
 }
-HOMEPAGE_SLUGS = {"home", "inicio", "accueil", "home"}  # covers en/de/it/nl, es, fr
+HOMEPAGE_SLUGS = {
+    # Homepage
+    "home", "inicio", "accueil",
+    # Welcome pages
+    "welcome-to-our-website", "willkommen-auf-unserer-webseite",
+    "bienvenue-sur-notre-site-internet", "bienvenidos-a-nuestro-sitio-web",
+    "benvenuti-sul-nostro-sito", "welkom-op-onze-website",
+    # Thank-you pages
+    "thank-you-for-registering", "vielen-dank-fr-ihre-registrierung",
+    "merci-pour-votre-inscription", "gracias-por-su-registro",
+    "grazie-per-aver-effettuato-la-registrazione", "bedankt-voor-uw-registratie",
+}
+
+# Slugs to silently skip (test pages, 404s, covid, junk)
+SKIP_SLUGS = {
+    "testpen", "testfr", "testes", "testit", "pagina-om-dingen-te-testen",
+    "404en", "404de", "404fr", "404es", "404it", "404",
+    "covid-19-service-updates-dpd", "covid-19-service-dpd-updates",
+    "covid-19-dpd-service-updates",
+    "mise--jour-dpd-service-mise--jour-corona-virus",
+    "dpd-actualizacin-del-servicio-debido-a-corona-virus",
+    "aggiornamento-dpd-aggiornamento-del-servizio-in-emergenza-corona-virus",
+}
 
 # Shopify homepage paths per language
 HOMEPAGE_TARGET = {
@@ -301,6 +325,10 @@ def match_lang(lang, old_pages, shopify_slugs):
     for p in lang_pages:
         slug = p["slug"]
         src = old_path(p["url"]) if p["lang"] != "root" else "/"
+
+        # Skip junk pages entirely
+        if slug in SKIP_SLUGS:
+            continue
 
         # Homepage redirects
         if slug in HOMEPAGE_SLUGS or p["lang"] == "root":
