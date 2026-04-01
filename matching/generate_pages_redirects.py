@@ -48,6 +48,10 @@ KNOWN_MAPPINGS = {
     ("de", "lieferant-fr-kerzen"):             "spirituele-kaarsen-groothandel",
     ("de", "de-witte-kaarsen-groothandel"):    "spirituele-kaarsen-groothandel",
     ("de", "de-bedrijfsvideo"):                "videos",
+    # Proclaimer equivalents
+    ("fr", "annonce"):  "proclaimer",
+    ("it", "avviso"):   "proclaimer",
+    ("es", "aviso"):    "proclaimer",
     # FR candles landing pages
     ("fr", "vente-en-gros-de-bougies"):              "spirituele-kaarsen-groothandel",
     ("fr", "fournisseur-grossiste-de-bougies-en-vrac"): "spirituele-kaarsen-groothandel",
