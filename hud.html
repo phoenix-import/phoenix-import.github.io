@@ -15,8 +15,8 @@
   --bg-hover:#221e1a;
   --bg-input:#0e0c0b;
   --text:#e3dbd2;
-  --text-muted:#6b5f54;
-  --text-dim:#4a3f36;
+  --text-muted:#a08878;
+  --text-dim:#6e5e50;
   --accent:#e07830;
   --accent-dim:#7a3f14;
   --accent-glow:rgba(224,120,48,0.15);
@@ -33,7 +33,7 @@
 html,body{height:100%;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:var(--font-mono);font-size:13px;line-height:1.5}
 canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35}
 #app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:16px;gap:12px}
-
+ 
 /* ── HEADER ── */
 #hud-header{
   display:grid;
@@ -53,7 +53,7 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.3
 .header-right{display:flex;align-items:center;gap:16px;flex-shrink:0}
 .streak-display{font-size:11px;color:var(--text-muted)}
 .streak-display span{color:var(--accent);font-weight:500}
-
+ 
 /* ── ZEF WIDGET ── */
 .zef-widget{position:relative;cursor:default}
 .zef-cat{font-size:14px;color:var(--text-muted);letter-spacing:-.02em;transition:color .3s}
@@ -65,7 +65,7 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.3
   pointer-events:none;opacity:0;transition:opacity .2s;z-index:100;
 }
 .zef-widget:hover .zef-tooltip{opacity:1}
-
+ 
 /* ── MAIN GRID ── */
 #hud-main{
   display:grid;
@@ -75,7 +75,7 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.3
   align-items:start;
 }
 .col-left,.col-center,.col-right{display:flex;flex-direction:column;gap:12px}
-
+ 
 /* ── PANELS ── */
 .panel{
   background:var(--bg-panel);
@@ -89,7 +89,7 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.3
   color:var(--text-muted);padding-bottom:8px;
   border-bottom:1px solid var(--border);
 }
-
+ 
 /* ── CHECK-IN ── */
 .checkin-field{display:flex;flex-direction:column;gap:4px;margin-bottom:4px}
 .checkin-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
@@ -120,7 +120,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
   cursor:pointer;border-bottom:1px solid var(--border-bright);
 }
 .checkin-done .redo-btn:hover{color:var(--text-muted)}
-
+ 
 /* ── CHARACTER SHEET ── */
 .stat-row{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
 .stat-header{display:flex;justify-content:space-between;align-items:center}
@@ -133,7 +133,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
 .stat-bar-fill.mid{background:var(--amber)}
 .stat-bar-fill.high{background:var(--green)}
 .stat-comment{font-size:10px;color:var(--text-dim);font-style:italic}
-
+ 
 /* ── QUESTS ── */
 .quest-card{
   border:1px solid var(--accent-dim);padding:12px;
@@ -173,7 +173,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
   cursor:pointer;transition:border-color .15s;font-size:11px;color:var(--text-muted);
 }
 .quest-pool-item:hover{border-color:var(--accent-dim);color:var(--text)}
-
+ 
 /* ── BODY MAP ── */
 .bodymap-container{display:flex;gap:16px;align-items:flex-start}
 .bodymap-svg-wrap{flex-shrink:0}
@@ -194,7 +194,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
 .zone-dot.active-1{background:var(--amber)}
 .zone-dot.active-2{background:var(--red)}
 .zone-dot.active-3{background:#a02020}
-
+ 
 /* ── WEATHER ── */
 .weather-main{text-align:center;padding:8px 0}
 .weather-temp{font-family:var(--font-head);font-size:36px;font-weight:700;color:var(--accent)}
@@ -208,7 +208,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
   font-size:11px;color:var(--text-dim);font-style:italic;
   padding:8px;background:var(--bg-input);border-left:2px solid var(--accent-dim);margin-top:4px;
 }
-
+ 
 /* ── NEWS ── */
 .news-list{display:flex;flex-direction:column;gap:1px}
 .news-item{
@@ -229,7 +229,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
 .news-source-btn.active{border-color:var(--accent-dim);color:var(--accent)}
 .news-source-btn:hover{border-color:var(--border-bright);color:var(--text-muted)}
 .news-error{font-size:11px;color:var(--text-dim);font-style:italic;padding:8px 0}
-
+ 
 /* ── COMPLETED QUEST TOAST ── */
 .toast{
   position:fixed;bottom:24px;right:24px;z-index:999;
@@ -239,13 +239,32 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
   transition:all .3s;pointer-events:none;
 }
 .toast.show{opacity:1;transform:translateY(0)}
-
+ 
+/* ── SERVICE STATUS ── */
+.status-service{margin-bottom:12px}
+.status-service:last-child{margin-bottom:0}
+.status-service-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.status-service-name{font-family:var(--font-head);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text)}
+.status-badge{font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;padding:2px 6px;border:1px solid}
+.status-badge.ok{color:var(--green);border-color:var(--green)}
+.status-badge.degraded{color:var(--amber);border-color:var(--amber)}
+.status-badge.outage{color:var(--red);border-color:var(--red)}
+.status-badge.unknown{color:var(--text-dim);border-color:var(--border-bright)}
+.status-components{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.status-component{display:flex;align-items:center;gap:4px}
+.status-comp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-comp-label{font-size:9px;color:var(--text-muted);letter-spacing:.03em}
+.status-timeline{display:flex;gap:2px;height:12px;margin-bottom:3px}
+.status-slot{flex:1;height:100%}
+.status-timeline-meta{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim)}
+.status-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+ 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border-bright)}
 ::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
-
+ 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
   #hud-main{grid-template-columns:1fr 1fr}
@@ -261,10 +280,10 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
 </style>
 </head>
 <body>
-
+ 
 <canvas id="particles"></canvas>
 <div class="toast" id="toast"></div>
-
+ 
 <div id="app">
   <header id="hud-header">
     <div class="header-left">
@@ -282,7 +301,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
       </div>
     </div>
   </header>
-
+ 
   <main id="hud-main">
     <div class="col-left">
       <section class="panel" id="panel-checkin">
@@ -294,7 +313,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
         <div id="stats-content"></div>
       </section>
     </div>
-
+ 
     <div class="col-center">
       <section class="panel" id="panel-quests">
         <h2 class="panel-title">Quest Log</h2>
@@ -305,7 +324,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
         <div id="bodymap-content"></div>
       </section>
     </div>
-
+ 
     <div class="col-right">
       <section class="panel" id="panel-weather">
         <h2 class="panel-title">Conditions</h2>
@@ -315,10 +334,14 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
         <h2 class="panel-title">Intel</h2>
         <div id="news-content"><span style="color:var(--text-dim);font-size:11px">Fetching news...</span></div>
       </section>
+      <section class="panel" id="panel-status">
+        <h2 class="panel-title">Service Status</h2>
+        <div id="status-content"><span style="color:var(--text-dim);font-size:11px">Checking services...</span></div>
+      </section>
     </div>
   </main>
 </div>
-
+ 
 <script>
 // ═══════════════════════════════════════════════════════
 // DATA BANKS — pre-generated, static assets
@@ -356,7 +379,7 @@ const DATA = {
     "Nothing about today is exceptional. This is underrated.",
     "The check-in is the opening ceremony. Everything else follows."
   ],
-
+ 
   refusalAcks: [
     "Logged. Gone. No record of this cowardice will be kept.",
     "Fair enough. The quest dissolves.",
@@ -369,7 +392,7 @@ const DATA = {
     "Your prerogative. The cat approves.",
     "Done. A new one awaits when you're ready."
   ],
-
+ 
   statCommentary: {
     endurance: {
       low: ["The longboard is not a metaphor. Get on it.", "Legs: present. Momentum: absent."],
@@ -412,7 +435,7 @@ const DATA = {
       high: ["Systems: sharp. The tooling is clean and the architecture is sound.", "High cognition. The work speaks for itself."]
     }
   },
-
+ 
   questPools: {
     physical: [
       { text: "Twenty push-ups. Not a workout — a deposit.", xp: { stat: "strength", amount: 15 }, difficulty: 1 },
@@ -472,7 +495,7 @@ const DATA = {
       { text: "Make something Indonesian-adjacent. The spice work alone is worth the XP.", xp: { stat: "exploration", amount: 20 }, difficulty: 2 }
     ]
   },
-
+ 
   weatherInterp: {
     clear: ["Clear. No meteorological excuse for anything today.", "Clear skies. Longboard conditions: ideal.", "Visibility: excellent. The commute has no weather objections."],
     cloudy: ["Overcast. The light is flat and honest.", "Grey skies. The day requires no theatrical weather to be difficult.", "Clouds. This is the Netherlands."],
@@ -483,7 +506,7 @@ const DATA = {
     thunderstorm: ["Thunderstorm. Stay indoors. This is not debatable.", "Electrical weather event. Do not longboard through this.", "Storm incoming. The day reorganises around weather."],
     wind_strong: ["Strong wind advisory. Longboarding into a headwind builds character you didn't ask for.", "Wind. The commute becomes a workout regardless of effort.", "Wind: significant. The board is a liability today."]
   },
-
+ 
   zefStates: [
     { cat: "=^.^=", verdict: "ZEF VERDICT: Acceptable conditions. Maintain." },
     { cat: "=^-.-^=", verdict: "ZEF VERDICT: Currently unavailable. Leave food and withdraw." },
@@ -492,7 +515,7 @@ const DATA = {
     { cat: "=^>.<^=", verdict: "ZEF VERDICT: Something is wrong and it may be you specifically." }
   ]
 };
-
+ 
 // ═══════════════════════════════════════════════════════
 // STATE MANAGEMENT
 // ═══════════════════════════════════════════════════════
@@ -504,7 +527,7 @@ const STORAGE_KEY = {
   streak: 'hud_streak',
   bodyMap: 'hud_bodymap'
 };
-
+ 
 const DEFAULT_STATS = {
   endurance:   { value: 40, lastActivity: null, label: "Endurance" },
   strength:    { value: 35, lastActivity: null, label: "Strength" },
@@ -515,11 +538,11 @@ const DEFAULT_STATS = {
   exploration: { value: 55, lastActivity: null, label: "Exploration" },
   cognition:   { value: 65, lastActivity: null, label: "Cognition" }
 };
-
+ 
 const DEFAULT_BODY_MAP = { jaw: 0, shoulders: 0, upper_back: 0, lower_back: 0, gut: 0, knees: 0 };
-
+ 
 const LEVEL_LABELS = ["Dormant","Active","Practiced","Skilled","Master"];
-
+ 
 function getLevel(v) {
   if (v <= 20) return 0;
   if (v <= 40) return 1;
@@ -527,29 +550,29 @@ function getLevel(v) {
   if (v <= 80) return 3;
   return 4;
 }
-
+ 
 function getBarClass(v) {
   if (v <= 30) return 'low';
   if (v <= 60) return 'mid';
   return 'high';
 }
-
+ 
 function load(key, def) {
   try {
     const v = localStorage.getItem(key);
     return v ? JSON.parse(v) : def;
   } catch { return def; }
 }
-
+ 
 function save(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
 }
-
+ 
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
+ 
 function applyStatDecay(stats) {
   const now = Date.now();
   const dayMs = 86400000;
@@ -563,7 +586,7 @@ function applyStatDecay(stats) {
   }
   return stats;
 }
-
+ 
 function addStatXP(statKey, amount) {
   const stats = load(STORAGE_KEY.stats, DEFAULT_STATS);
   if (!stats[statKey]) return;
@@ -571,16 +594,16 @@ function addStatXP(statKey, amount) {
   stats[statKey].lastActivity = Date.now();
   save(STORAGE_KEY.stats, stats);
 }
-
+ 
 function rand(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
-
+ 
 function getCheckinToday() {
   const checkins = load(STORAGE_KEY.checkins, {});
   return checkins[todayKey()] || null;
 }
-
+ 
 function saveCheckin(data) {
   const checkins = load(STORAGE_KEY.checkins, {});
   data.timestamp = Date.now();
@@ -588,7 +611,7 @@ function saveCheckin(data) {
   save(STORAGE_KEY.checkins, checkins);
   updateStreak();
 }
-
+ 
 function updateStreak() {
   const streak = load(STORAGE_KEY.streak, { count: 0, lastDate: null });
   const today = todayKey();
@@ -602,7 +625,7 @@ function updateStreak() {
   streak.lastDate = today;
   save(STORAGE_KEY.streak, streak);
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // PARTICLES
 // ═══════════════════════════════════════════════════════
@@ -610,12 +633,12 @@ function initParticles() {
   const canvas = document.getElementById('particles');
   const ctx = canvas.getContext('2d');
   let W, H, particles = [];
-
+ 
   function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
   }
-
+ 
   function makeParticle() {
     return {
       x: Math.random() * W,
@@ -626,11 +649,11 @@ function initParticles() {
       a: Math.random() * 0.4 + 0.1
     };
   }
-
+ 
   resize();
   window.addEventListener('resize', resize);
   for (let i = 0; i < 80; i++) particles.push(makeParticle());
-
+ 
   function draw() {
     ctx.clearRect(0, 0, W, H);
     for (const p of particles) {
@@ -649,7 +672,7 @@ function initParticles() {
   }
   draw();
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // HEADER
 // ═══════════════════════════════════════════════════════
@@ -659,25 +682,25 @@ function initHeader() {
   const now = new Date();
   document.getElementById('hud-date').textContent =
     `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-
+ 
   // Flavour — daily seed
   const dayNum = Math.floor(Date.now() / 86400000);
   const fl = DATA.flavourLines[dayNum % DATA.flavourLines.length];
   document.getElementById('flavour-line').textContent = fl;
-
+ 
   // Streak
   const streak = load(STORAGE_KEY.streak, { count: 0, lastDate: null });
   const el = document.getElementById('streak-display');
   el.innerHTML = streak.count > 0
     ? `streak <span>&#x1F525; ${streak.count}</span>`
     : `streak <span>—</span>`;
-
+ 
   // Zef
   const zefState = DATA.zefStates[dayNum % DATA.zefStates.length];
   document.getElementById('zef-cat').textContent = zefState.cat;
   document.getElementById('zef-tooltip').textContent = zefState.verdict;
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // CHECK-IN
 // ═══════════════════════════════════════════════════════
@@ -689,22 +712,22 @@ const CHECKIN_FIELDS = [
   { key: 'substances', label: 'Substance use',   max: 5 },
   { key: 'digestion',  label: 'Digestion',       max: 5 }
 ];
-
+ 
 function renderCheckin() {
   const container = document.getElementById('checkin-content');
   const existing = getCheckinToday();
-
+ 
   if (existing) {
     renderCheckinDone(container, existing);
   } else {
     renderCheckinForm(container);
   }
 }
-
+ 
 function renderCheckinForm(container) {
   const vals = {};
   CHECKIN_FIELDS.forEach(f => vals[f.key] = 3);
-
+ 
   let html = '';
   CHECKIN_FIELDS.forEach(f => {
     html += `
@@ -721,12 +744,12 @@ function renderCheckinForm(container) {
   html += `<button class="checkin-submit" onclick="submitCheckin()">▶ Submit Check-In</button>`;
   container.innerHTML = html;
 }
-
+ 
 function renderCheckinDone(container, data) {
   const fields = CHECKIN_FIELDS.map(f =>
     `${f.label}: <strong style="color:var(--accent)">${data[f.key] ?? '—'}</strong>`
   ).join(' · ');
-
+ 
   container.innerHTML = `
     <div class="checkin-done">
       <span class="done-label">✓ Check-in complete</span>
@@ -734,7 +757,7 @@ function renderCheckinDone(container, data) {
       <span class="redo-btn" onclick="redoCheckin()">redo today's check-in</span>
     </div>`;
 }
-
+ 
 function submitCheckin() {
   const data = {};
   CHECKIN_FIELDS.forEach(f => {
@@ -747,12 +770,12 @@ function submitCheckin() {
   renderQuests(); // energy affects quest filtering
   showToast("Check-in saved. The system knows your condition.");
 }
-
+ 
 function redoCheckin() {
   const container = document.getElementById('checkin-content');
   renderCheckinForm(container);
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // CHARACTER SHEET
 // ═══════════════════════════════════════════════════════
@@ -760,10 +783,10 @@ function renderStats() {
   let stats = load(STORAGE_KEY.stats, DEFAULT_STATS);
   stats = applyStatDecay(stats);
   save(STORAGE_KEY.stats, stats);
-
+ 
   const container = document.getElementById('stats-content');
   let html = '';
-
+ 
   for (const [key, s] of Object.entries(stats)) {
     const v = Math.round(s.value);
     const lvl = getLevel(v);
@@ -772,7 +795,7 @@ function renderStats() {
     const comment = bank
       ? (v <= 30 ? rand(bank.low) : v <= 65 ? rand(bank.mid) : rand(bank.high))
       : '';
-
+ 
     html += `
     <div class="stat-row">
       <div class="stat-header">
@@ -788,10 +811,10 @@ function renderStats() {
       <div class="stat-comment">${comment}</div>
     </div>`;
   }
-
+ 
   container.innerHTML = html;
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // QUEST SYSTEM
 // ═══════════════════════════════════════════════════════
@@ -799,7 +822,7 @@ let questState = {
   browsing: false,
   activeCategory: null
 };
-
+ 
 function getMaxDifficulty() {
   const checkin = getCheckinToday();
   if (!checkin) return 2;
@@ -808,7 +831,7 @@ function getMaxDifficulty() {
   if (energy <= 3) return 2;
   return 3;
 }
-
+ 
 function getAllQuests(maxDiff) {
   const all = [];
   for (const [cat, quests] of Object.entries(DATA.questPools)) {
@@ -820,14 +843,14 @@ function getAllQuests(maxDiff) {
   }
   return all;
 }
-
+ 
 function renderQuests() {
   const container = document.getElementById('quests-content');
   const active = load(STORAGE_KEY.activeQuest, null);
   const maxDiff = getMaxDifficulty();
-
+ 
   let html = '';
-
+ 
   if (active && !questState.browsing) {
     html += `
     <div class="quest-card">
@@ -844,16 +867,16 @@ function renderQuests() {
       html += `<button class="quest-roll-btn" onclick="rollRandomQuest()">⟳ Roll Random Quest</button>`;
     }
   }
-
+ 
   html += `
   <div class="quest-categories">
     <button class="quest-roll-btn" onclick="toggleBrowse()" style="margin-bottom:${questState.browsing?'8px':'0'}">${questState.browsing ? '← Back to Active Quest' : 'Browse by Category'}</button>
     ${questState.browsing ? renderCategoryBrowse(maxDiff) : ''}
   </div>`;
-
+ 
   container.innerHTML = html;
 }
-
+ 
 function renderCategoryBrowse(maxDiff) {
   const cats = Object.keys(DATA.questPools);
   let html = `<div class="quest-cat-grid">`;
@@ -862,7 +885,7 @@ function renderCategoryBrowse(maxDiff) {
     html += `<button class="quest-cat-btn ${active?'active':''}" onclick="selectCategory('${cat}')">${cat}</button>`;
   }
   html += `</div>`;
-
+ 
   if (questState.activeCategory) {
     const pool = DATA.questPools[questState.activeCategory].filter(q => q.difficulty <= maxDiff);
     html += `<div class="quest-pool-list">`;
@@ -878,10 +901,10 @@ function renderCategoryBrowse(maxDiff) {
     }
     html += `</div>`;
   }
-
+ 
   return html;
 }
-
+ 
 function rollRandomQuest() {
   const maxDiff = getMaxDifficulty();
   const all = getAllQuests(maxDiff);
@@ -891,18 +914,18 @@ function rollRandomQuest() {
   questState.browsing = false;
   renderQuests();
 }
-
+ 
 function toggleBrowse() {
   questState.browsing = !questState.browsing;
   if (!questState.browsing) questState.activeCategory = null;
   renderQuests();
 }
-
+ 
 function selectCategory(cat) {
   questState.activeCategory = questState.activeCategory === cat ? null : cat;
   renderQuests();
 }
-
+ 
 function selectQuest(cat, idx) {
   const maxDiff = getMaxDifficulty();
   const pool = DATA.questPools[cat].filter(q => q.difficulty <= maxDiff);
@@ -912,37 +935,37 @@ function selectQuest(cat, idx) {
   questState.activeCategory = null;
   renderQuests();
 }
-
+ 
 function completeQuest() {
   const q = load(STORAGE_KEY.activeQuest, null);
   if (!q) return;
-
+ 
   addStatXP(q.xp.stat, q.xp.amount);
-
+ 
   const log = load(STORAGE_KEY.quests, []);
   log.push({ ...q, completedAt: Date.now(), date: todayKey() });
   save(STORAGE_KEY.quests, log);
   save(STORAGE_KEY.activeQuest, null);
-
+ 
   renderStats();
   renderQuests();
   showToast(`Quest complete. +${q.xp.amount} XP → ${q.xp.stat}`);
 }
-
+ 
 function refuseQuest() {
   save(STORAGE_KEY.activeQuest, null);
   const msg = rand(DATA.refusalAcks);
   const container = document.getElementById('quests-content');
-
+ 
   let html = `<div class="quest-refusal-msg">${msg}</div>`;
   html += `<button class="quest-roll-btn" style="margin-top:8px" onclick="rollRandomQuest()">⟳ Roll Another</button>`;
   html += `<div class="quest-categories" style="margin-top:8px">
     <button class="quest-roll-btn" onclick="questState.browsing=true;renderQuests()">Browse by Category</button>
   </div>`;
-
+ 
   container.innerHTML = html;
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // BODY MAP
 // ═══════════════════════════════════════════════════════
@@ -954,16 +977,16 @@ const BODY_ZONES = [
   { key: 'gut',       label: 'Gut / Abdomen' },
   { key: 'knees',     label: 'Knees / Legs' }
 ];
-
+ 
 const ZONE_COLORS = ['var(--green)', 'var(--amber)', 'var(--accent)', 'var(--red)'];
 const ZONE_LABELS = ['Fine', 'Mild', 'Moderate', 'Significant'];
-
+ 
 function renderBodyMap() {
   const bm = load(STORAGE_KEY.bodyMap, DEFAULT_BODY_MAP);
   const container = document.getElementById('bodymap-content');
-
+ 
   const svg = buildBodySVG(bm);
-
+ 
   let zonesHtml = '';
   for (const zone of BODY_ZONES) {
     const val = bm[zone.key] ?? 0;
@@ -977,21 +1000,21 @@ function renderBodyMap() {
       <div class="zone-dot" onclick="cycleZone('${zone.key}')"></div>
       <div class="zone-dot" onclick="cycleZone('${zone.key}')"></div>
       <div class="zone-dot" onclick="cycleZone('${zone.key}')"></div>`;
-
+ 
     zonesHtml += `
     <div class="zone-item" onclick="cycleZone('${zone.key}')">
       <span class="zone-label">${zone.label}</span>
       <div class="zone-dots">${dotsHtml}</div>
     </div>`;
   }
-
+ 
   container.innerHTML = `
     <div class="bodymap-container">
       <div class="bodymap-svg-wrap">${svg}</div>
       <div class="bodymap-zones">${zonesHtml}</div>
     </div>`;
 }
-
+ 
 function buildBodySVG(bm) {
   const zoneColor = (key, opacity=0.7) => {
     const v = bm[key] ?? 0;
@@ -1000,7 +1023,7 @@ function buildBodySVG(bm) {
     if (v === 2) return `rgba(224,120,48,${opacity})`;
     return `rgba(192,80,64,${opacity})`;
   };
-
+ 
   return `<svg viewBox="0 0 60 170" width="60" height="170" xmlns="http://www.w3.org/2000/svg">
     <style>.bz{cursor:pointer;transition:opacity .2s;stroke:rgba(255,255,255,0.08);stroke-width:0.5}</style>
     <!-- Head/Jaw -->
@@ -1021,20 +1044,17 @@ function buildBodySVG(bm) {
     <rect x="32" y="103" width="11" height="55" rx="3" class="bz" fill="${zoneColor('knees')}" onclick="cycleZone('knees')"/>
   </svg>`;
 }
-
+ 
 function cycleZone(key) {
   const bm = load(STORAGE_KEY.bodyMap, DEFAULT_BODY_MAP);
   bm[key] = ((bm[key] ?? 0) + 1) % 4;
   save(STORAGE_KEY.bodyMap, bm);
   renderBodyMap();
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // WEATHER
 // ═══════════════════════════════════════════════════════
-// Dalfsen/Zwolle: 52.51°N, 6.27°E
-const LAT = 52.51, LON = 6.27;
-
 const WMO_CODES = {
   0: { label: 'Clear sky', cat: 'clear' },
   1: { label: 'Mainly clear', cat: 'clear' },
@@ -1060,23 +1080,29 @@ const WMO_CODES = {
   96: { label: 'Thunderstorm w/ hail', cat: 'thunderstorm' },
   99: { label: 'Thunderstorm w/ heavy hail', cat: 'thunderstorm' }
 };
-
+ 
 async function fetchWeather() {
   const container = document.getElementById('weather-content');
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m&timezone=Europe%2FAmsterdam`;
+    // IP geolocation — approximate, no key needed
+    const geo = await fetch('https://ipapi.co/json/').then(r => r.json());
+    const lat = geo.latitude;
+    const lon = geo.longitude;
+    const city = geo.city || geo.region || 'Unknown';
+    const tz = encodeURIComponent(geo.timezone || 'Europe/Amsterdam');
+ 
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m&timezone=${tz}`;
     const res = await fetch(url);
     const data = await res.json();
     const c = data.current;
     const code = WMO_CODES[c.weather_code] || { label: 'Unknown', cat: 'cloudy' };
     const windKph = Math.round(c.wind_speed_10m);
-
-    // Pick interpretation
+ 
     let interpCat = code.cat;
     if (windKph > 30) interpCat = 'wind_strong';
     const interps = DATA.weatherInterp[interpCat] || DATA.weatherInterp.cloudy;
     const interp = rand(interps);
-
+ 
     container.innerHTML = `
       <div class="weather-main">
         <div class="weather-temp">${Math.round(c.temperature_2m)}°C</div>
@@ -1098,81 +1124,207 @@ async function fetchWeather() {
         </div>
         <div class="weather-detail">
           <div class="label">Location</div>
-          <div class="value" style="font-size:10px">Dalfsen</div>
+          <div class="value" style="font-size:10px">~${city}</div>
         </div>
       </div>
       <div class="weather-interp">${interp}</div>`;
   } catch (e) {
-    container.innerHTML = `<div class="news-error">Weather unavailable. Consult the window.</div>`;
+    document.getElementById('weather-content').innerHTML = `<div class="news-error">Weather unavailable. Consult the window.</div>`;
   }
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // NEWS
 // ═══════════════════════════════════════════════════════
 const NEWS_SOURCES = [
-  { id: 'nos',     label: 'NOS',     url: 'https://feeds.nos.nl/nosnieuwsalgemeen' },
-  { id: 'bbc',     label: 'BBC',     url: 'http://feeds.bbci.co.uk/news/world/rss.xml' },
-  { id: 'ap',      label: 'AP',      url: 'https://apnews.com/rss' },
-  { id: 'reuters', label: 'Reuters', url: 'https://feeds.reuters.com/reuters/worldNews' }
+  { id: 'nos', label: 'NOS', url: 'https://feeds.nos.nl/nosnieuwsalgemeen' },
+  { id: 'bbc', label: 'BBC', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+  { id: 'dw',  label: 'DW',  url: 'https://rss.dw.com/xml/rss-en-all' },
+  { id: 'aj',  label: 'AJE', url: 'https://www.aljazeera.com/xml/rss/all.xml' }
 ];
-
+ 
 let activeNewsSource = 'nos';
-
+ 
 async function fetchNews(sourceId) {
   const container = document.getElementById('news-content');
   const source = NEWS_SOURCES.find(s => s.id === sourceId) || NEWS_SOURCES[0];
-
+ 
   const filterBtns = NEWS_SOURCES.map(s =>
     `<button class="news-source-btn ${s.id === sourceId ? 'active' : ''}"
       onclick="switchNewsSource('${s.id}')">${s.label}</button>`
   ).join('');
-
+ 
   container.innerHTML = `
     <div class="news-filter">${filterBtns}</div>
     <div id="news-list"><span style="color:var(--text-dim);font-size:11px">Fetching...</span></div>`;
-
+ 
   try {
-    const proxyUrl = `https://api.allorigins.win/get?disableCache=true&url=${encodeURIComponent(source.url)}`;
-    const res = await fetch(proxyUrl);
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}&count=8`;
+    const res = await fetch(apiUrl);
     const json = await res.json();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(json.contents, 'text/xml');
-    const items = doc.querySelectorAll('item');
-
-    if (!items.length) throw new Error('No items');
-
+ 
+    if (json.status !== 'ok' || !json.items?.length) throw new Error('No items');
+ 
     let html = '<div class="news-list">';
-    let count = 0;
-    for (const item of items) {
-      if (count >= 8) break;
-      const title = item.querySelector('title')?.textContent || '';
-      const link  = item.querySelector('link')?.textContent || '#';
-      const pubDate = item.querySelector('pubDate')?.textContent || '';
-      const date = pubDate ? new Date(pubDate).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
-
+    for (const item of json.items) {
+      const date = item.pubDate
+        ? new Date(item.pubDate).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+        : '';
       html += `
-      <a class="news-item" href="${link}" target="_blank" rel="noopener">
+      <a class="news-item" href="${item.link}" target="_blank" rel="noopener">
         <div class="news-source">${source.label}</div>
-        <div class="news-headline">${title}</div>
+        <div class="news-headline">${item.title}</div>
         ${date ? `<div class="news-meta">${date}</div>` : ''}
       </a>`;
-      count++;
     }
     html += '</div>';
-
+ 
     document.getElementById('news-list').outerHTML = html;
   } catch (e) {
     const listEl = document.getElementById('news-list');
     if (listEl) listEl.innerHTML = `<div class="news-error">Feed unavailable. Try another source or consult reality directly.</div>`;
   }
 }
-
+ 
 function switchNewsSource(id) {
   activeNewsSource = id;
   fetchNews(id);
 }
-
+ 
+// ═══════════════════════════════════════════════════════
+// SERVICE STATUS
+// ═══════════════════════════════════════════════════════
+const STATUS_SERVICES = [
+  {
+    id: 'anthropic',
+    label: 'Anthropic',
+    summaryUrl: 'https://status.anthropic.com/api/v2/summary.json',
+    incidentsUrl: 'https://status.anthropic.com/api/v2/incidents.json',
+    watch: ['claude.ai', 'Claude API', 'Claude Code', 'platform.claude.com']
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    summaryUrl: 'https://status.openai.com/api/v2/summary.json',
+    incidentsUrl: 'https://status.openai.com/api/v2/incidents.json',
+    watch: ['ChatGPT', 'API']
+  }
+];
+ 
+function statusIndicatorClass(ind) {
+  if (!ind || ind === 'none' || ind === 'operational') return 'ok';
+  if (['minor', 'degraded_performance', 'partial_outage'].includes(ind)) return 'degraded';
+  if (['major', 'critical', 'major_outage'].includes(ind)) return 'outage';
+  return 'unknown';
+}
+ 
+function statusIndicatorLabel(ind) {
+  const map = {
+    none:'Operational', operational:'Operational',
+    minor:'Degraded', degraded_performance:'Degraded', partial_outage:'Partial Outage',
+    major:'Outage', critical:'Outage', major_outage:'Major Outage',
+    under_maintenance:'Maintenance'
+  };
+  return map[ind] || 'Unknown';
+}
+ 
+function compDotColor(status) {
+  if (!status || status === 'operational') return 'var(--green)';
+  if (['degraded_performance','partial_outage'].includes(status)) return 'var(--amber)';
+  if (status === 'major_outage') return 'var(--red)';
+  if (status === 'under_maintenance') return 'var(--text-dim)';
+  return 'var(--text-dim)';
+}
+ 
+function buildStatusTimeline(incidents) {
+  const now = Date.now();
+  const hourMs = 3600000;
+  // 24 slots: index 0 = 24h ago, index 23 = current hour
+  const slots = Array(24).fill(0); // 0=ok, 1=degraded, 2=outage
+ 
+  for (const inc of incidents) {
+    const start = new Date(inc.created_at).getTime();
+    const end = inc.resolved_at ? new Date(inc.resolved_at).getTime() : now;
+    const sev = ['critical', 'major'].includes(inc.impact) ? 2 : 1;
+    for (let i = 0; i < 24; i++) {
+      const slotStart = now - (23 - i) * hourMs;
+      const slotEnd = slotStart + hourMs;
+      if (start < slotEnd && end > slotStart) {
+        slots[i] = Math.max(slots[i], sev);
+      }
+    }
+  }
+ 
+  return slots.map((s, i) => {
+    const hour = new Date(now - (23 - i) * hourMs);
+    const label = `${hour.getHours().toString().padStart(2,'0')}:00 — ${s===0?'OK':s===1?'Degraded':'Outage'}`;
+    const bg = s === 0 ? 'rgba(122,184,122,0.65)' : s === 1 ? 'rgba(212,168,64,0.75)' : 'rgba(192,80,64,0.8)';
+    return `<div class="status-slot" style="background:${bg}" title="${label}"></div>`;
+  }).join('');
+}
+ 
+function cleanCompName(name) {
+  return name
+    .replace(/\s*\(formerly[^)]*\)/gi, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
+}
+ 
+async function fetchStatus() {
+  const container = document.getElementById('status-content');
+  const results = await Promise.allSettled(
+    STATUS_SERVICES.map(async svc => {
+      const [sumRes, incRes] = await Promise.all([
+        fetch(svc.summaryUrl),
+        fetch(svc.incidentsUrl)
+      ]);
+      const summary = await sumRes.json();
+      const incData = await incRes.json();
+      return { svc, summary, incidents: incData.incidents || [] };
+    })
+  );
+ 
+  let html = '';
+  results.forEach((result, idx) => {
+    if (idx > 0) html += `<hr class="status-divider">`;
+    if (result.status === 'rejected') {
+      html += `<div class="news-error">Status unavailable.</div>`;
+      return;
+    }
+ 
+    const { svc, summary, incidents } = result.value;
+    const overall = summary.status?.indicator || 'unknown';
+    const badgeClass = statusIndicatorClass(overall);
+    const badgeLabel = statusIndicatorLabel(overall);
+ 
+    const components = (summary.components || []).filter(c =>
+      svc.watch.some(w => c.name.toLowerCase().includes(w.toLowerCase()))
+    );
+ 
+    const compDots = components.map(c =>
+      `<div class="status-component" title="${c.name}: ${c.status}">
+        <div class="status-comp-dot" style="background:${compDotColor(c.status)}"></div>
+        <span class="status-comp-label">${cleanCompName(c.name)}</span>
+      </div>`
+    ).join('');
+ 
+    const timeline = buildStatusTimeline(incidents);
+ 
+    html += `
+    <div class="status-service">
+      <div class="status-service-header">
+        <span class="status-service-name">${svc.label}</span>
+        <span class="status-badge ${badgeClass}">${badgeLabel}</span>
+      </div>
+      <div class="status-components">${compDots || '<span style="font-size:9px;color:var(--text-dim)">No component data</span>'}</div>
+      <div class="status-timeline">${timeline}</div>
+      <div class="status-timeline-meta"><span>24h ago</span><span>now</span></div>
+    </div>`;
+  });
+ 
+  container.innerHTML = html || '<div class="news-error">Status unavailable.</div>';
+}
+ 
 // ═══════════════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════════════
@@ -1184,7 +1336,7 @@ function showToast(msg) {
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
-
+ 
 // ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
@@ -1197,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBodyMap();
   fetchWeather();
   fetchNews(activeNewsSource);
+  fetchStatus();
 });
 </script>
 </body>
