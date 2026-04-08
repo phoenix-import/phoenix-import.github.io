@@ -1158,31 +1158,49 @@ async function fetchNews(sourceId) {
     <div class="news-filter">${filterBtns}</div>
     <div id="news-list"><span style="color:var(--text-dim);font-size:11px">Fetching...</span></div>`;
 
-  try {
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}&count=8`;
-    const res = await fetch(apiUrl);
-    const json = await res.json();
-
-    if (json.status !== 'ok' || !json.items?.length) throw new Error('No items');
-
+  function renderItems(items, label) {
     let html = '<div class="news-list">';
-    for (const item of json.items) {
-      const date = item.pubDate
-        ? new Date(item.pubDate).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
-        : '';
+    for (const { title, link, date } of items) {
       html += `
-      <a class="news-item" href="${item.link}" target="_blank" rel="noopener">
-        <div class="news-source">${source.label}</div>
-        <div class="news-headline">${item.title}</div>
+      <a class="news-item" href="${link}" target="_blank" rel="noopener">
+        <div class="news-source">${label}</div>
+        <div class="news-headline">${title}</div>
         ${date ? `<div class="news-meta">${date}</div>` : ''}
       </a>`;
     }
-    html += '</div>';
+    return html + '</div>';
+  }
 
-    document.getElementById('news-list').outerHTML = html;
-  } catch (e) {
-    const listEl = document.getElementById('news-list');
-    if (listEl) listEl.innerHTML = `<div class="news-error">Feed unavailable. Try another source or consult reality directly.</div>`;
+  function fmtDate(str) {
+    return str ? new Date(str).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+  }
+
+  // Attempt 1: rss2json
+  try {
+    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}&count=8`);
+    const json = await res.json();
+    if (json.status !== 'ok' || !json.items?.length) throw new Error('rss2json failed');
+    const items = json.items.map(i => ({ title: i.title, link: i.link, date: fmtDate(i.pubDate) }));
+    document.getElementById('news-list').outerHTML = renderItems(items, source.label);
+    return;
+  } catch {}
+
+  // Attempt 2: allorigins + XML parse
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?disableCache=true&url=${encodeURIComponent(source.url)}`);
+    const json = await res.json();
+    const doc = new DOMParser().parseFromString(json.contents, 'text/xml');
+    const nodes = [...doc.querySelectorAll('item')].slice(0, 8);
+    if (!nodes.length) throw new Error('No items');
+    const items = nodes.map(n => ({
+      title: n.querySelector('title')?.textContent || '',
+      link:  n.querySelector('link')?.textContent || '#',
+      date:  fmtDate(n.querySelector('pubDate')?.textContent)
+    }));
+    document.getElementById('news-list').outerHTML = renderItems(items, source.label);
+  } catch {
+    const el = document.getElementById('news-list');
+    if (el) el.innerHTML = `<div class="news-error">Feed unavailable. Try another source or consult reality directly.</div>`;
   }
 }
 
@@ -1195,92 +1213,48 @@ function switchNewsSource(id) {
 // SERVICE STATUS
 // ═══════════════════════════════════════════════════════
 const STATUS_SERVICES = [
-  {
-    id: 'anthropic',
-    label: 'Anthropic',
-    summaryUrl: 'https://status.anthropic.com/api/v2/summary.json',
-    incidentsUrl: 'https://status.anthropic.com/api/v2/incidents.json',
-    watch: ['claude.ai', 'Claude API', 'Claude Code', 'platform.claude.com']
-  },
-  {
-    id: 'openai',
-    label: 'OpenAI',
-    summaryUrl: 'https://status.openai.com/api/v2/summary.json',
-    incidentsUrl: 'https://status.openai.com/api/v2/incidents.json',
-    watch: ['ChatGPT', 'API']
-  }
+  { id: 'anthropic', label: 'Anthropic', rssUrl: 'https://status.anthropic.com/history.rss' },
+  { id: 'openai',    label: 'OpenAI',    rssUrl: 'https://status.openai.com/history.rss' }
 ];
 
-function statusIndicatorClass(ind) {
-  if (!ind || ind === 'none' || ind === 'operational') return 'ok';
-  if (['minor', 'degraded_performance', 'partial_outage'].includes(ind)) return 'degraded';
-  if (['major', 'critical', 'major_outage'].includes(ind)) return 'outage';
-  return 'unknown';
-}
-
-function statusIndicatorLabel(ind) {
-  const map = {
-    none:'Operational', operational:'Operational',
-    minor:'Degraded', degraded_performance:'Degraded', partial_outage:'Partial Outage',
-    major:'Outage', critical:'Outage', major_outage:'Major Outage',
-    under_maintenance:'Maintenance'
-  };
-  return map[ind] || 'Unknown';
-}
-
-function compDotColor(status) {
-  if (!status || status === 'operational') return 'var(--green)';
-  if (['degraded_performance','partial_outage'].includes(status)) return 'var(--amber)';
-  if (status === 'major_outage') return 'var(--red)';
-  if (status === 'under_maintenance') return 'var(--text-dim)';
-  return 'var(--text-dim)';
-}
-
-function buildStatusTimeline(incidents) {
+function buildStatusTimeline(items) {
   const now = Date.now();
   const hourMs = 3600000;
-  // 24 slots: index 0 = 24h ago, index 23 = current hour
-  const slots = Array(24).fill(0); // 0=ok, 1=degraded, 2=outage
+  const slots = Array(24).fill(0); // 0=ok, 1=resolved incident, 2=active incident
 
-  for (const inc of incidents) {
-    const start = new Date(inc.created_at).getTime();
-    const end = inc.resolved_at ? new Date(inc.resolved_at).getTime() : now;
-    const sev = ['critical', 'major'].includes(inc.impact) ? 2 : 1;
-    for (let i = 0; i < 24; i++) {
-      const slotStart = now - (23 - i) * hourMs;
-      const slotEnd = slotStart + hourMs;
-      if (start < slotEnd && end > slotStart) {
-        slots[i] = Math.max(slots[i], sev);
-      }
+  for (const item of items) {
+    const pubTime = new Date(item.pubDate).getTime();
+    const hoursAgo = (now - pubTime) / hourMs;
+    if (hoursAgo > 24) continue;
+    const slotIdx = 23 - Math.floor(hoursAgo);
+    if (slotIdx < 0 || slotIdx > 23) continue;
+    const title = (item.title || '').toLowerCase();
+    const isResolved = title.includes('resolved') || title.includes('postmortem');
+    const sev = isResolved ? 1 : 2;
+    // Spread ±1 slot — RSS items are point-in-time updates, not ranges
+    for (let i = Math.max(0, slotIdx - 1); i <= Math.min(23, slotIdx + 1); i++) {
+      slots[i] = Math.max(slots[i], sev);
     }
   }
 
   return slots.map((s, i) => {
     const hour = new Date(now - (23 - i) * hourMs);
-    const label = `${hour.getHours().toString().padStart(2,'0')}:00 — ${s===0?'OK':s===1?'Degraded':'Outage'}`;
+    const hh = hour.getHours().toString().padStart(2, '0');
+    const label = `${hh}:00 — ${s === 0 ? 'OK' : s === 1 ? 'Incident (resolved)' : 'Active incident'}`;
     const bg = s === 0 ? 'rgba(122,184,122,0.65)' : s === 1 ? 'rgba(212,168,64,0.75)' : 'rgba(192,80,64,0.8)';
     return `<div class="status-slot" style="background:${bg}" title="${label}"></div>`;
   }).join('');
 }
 
-function cleanCompName(name) {
-  return name
-    .replace(/\s*\(formerly[^)]*\)/gi, '')
-    .replace(/\s*\([^)]*\)/g, '')
-    .trim();
-}
-
 async function fetchStatus() {
   const container = document.getElementById('status-content');
+
   const results = await Promise.allSettled(
     STATUS_SERVICES.map(async svc => {
-      const [sumRes, incRes] = await Promise.all([
-        fetch(svc.summaryUrl),
-        fetch(svc.incidentsUrl)
-      ]);
-      const summary = await sumRes.json();
-      const incData = await incRes.json();
-      return { svc, summary, incidents: incData.incidents || [] };
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(svc.rssUrl)}&count=50`);
+      const json = await res.json();
+      if (json.status !== 'ok') throw new Error('RSS error');
+      return { svc, items: json.items || [] };
     })
   );
 
@@ -1292,23 +1266,34 @@ async function fetchStatus() {
       return;
     }
 
-    const { svc, summary, incidents } = result.value;
-    const overall = summary.status?.indicator || 'unknown';
-    const badgeClass = statusIndicatorClass(overall);
-    const badgeLabel = statusIndicatorLabel(overall);
+    const { svc, items } = result.value;
+    const now = Date.now();
+    const hourMs = 3600000;
 
-    const components = (summary.components || []).filter(c =>
-      svc.watch.some(w => c.name.toLowerCase().includes(w.toLowerCase()))
-    );
+    // Active = non-resolved update within last 6 hours
+    const active = items.find(item => {
+      const age = now - new Date(item.pubDate).getTime();
+      const t = (item.title || '').toLowerCase();
+      return age < 6 * hourMs && !t.includes('resolved') && !t.includes('postmortem');
+    });
 
-    const compDots = components.map(c =>
-      `<div class="status-component" title="${c.name}: ${c.status}">
-        <div class="status-comp-dot" style="background:${compDotColor(c.status)}"></div>
-        <span class="status-comp-label">${cleanCompName(c.name)}</span>
-      </div>`
-    ).join('');
+    const badgeClass = active ? 'degraded' : 'ok';
+    const badgeLabel = active ? 'Degraded' : 'Operational';
+    const timeline = buildStatusTimeline(items);
 
-    const timeline = buildStatusTimeline(incidents);
+    const recentHtml = items.slice(0, 3).map(item => {
+      const t = item.title || '';
+      const resolved = t.toLowerCase().includes('resolved') || t.toLowerCase().includes('postmortem');
+      const col = resolved ? 'var(--text-dim)' : 'var(--amber)';
+      const date = item.pubDate
+        ? new Date(item.pubDate).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+        : '';
+      return `<a href="${item.link||'#'}" target="_blank" rel="noopener"
+        style="display:block;padding:5px 0;border-bottom:1px solid var(--border);text-decoration:none">
+        <div style="font-size:9px;color:${col};line-height:1.4">${t}</div>
+        <div style="font-size:9px;color:var(--text-dim);margin-top:1px">${date}</div>
+      </a>`;
+    }).join('');
 
     html += `
     <div class="status-service">
@@ -1316,9 +1301,9 @@ async function fetchStatus() {
         <span class="status-service-name">${svc.label}</span>
         <span class="status-badge ${badgeClass}">${badgeLabel}</span>
       </div>
-      <div class="status-components">${compDots || '<span style="font-size:9px;color:var(--text-dim)">No component data</span>'}</div>
       <div class="status-timeline">${timeline}</div>
       <div class="status-timeline-meta"><span>24h ago</span><span>now</span></div>
+      ${recentHtml ? `<div style="margin-top:8px">${recentHtml}</div>` : ''}
     </div>`;
   });
 
