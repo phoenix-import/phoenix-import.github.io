@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>// PERSONAL HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Fira+Code:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#131110;
+  --bg-panel:#1a1714;
+  --bg-hover:#221e1a;
+  --bg-input:#0e0c0b;
+  --text:#e3dbd2;
+  --text-muted:#a08878;
+  --text-dim:#6e5e50;
+  --accent:#e07830;
+  --accent-dim:#7a3f14;
+  --accent-glow:rgba(224,120,48,0.15);
+  --green:#7ab87a;
+  --amber:#d4a840;
+  --red:#c05040;
+  --border:#261f1a;
+  --border-bright:#3a2e26;
+  --radius:4px;
+  --font-head:'Syne',sans-serif;
+  --font-mono:'Fira Code',monospace;
+  --font-serif:'DM Serif Display',serif;
+}
+html,body{height:100%;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:var(--font-mono);font-size:13px;line-height:1.5}
+canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:16px;gap:12px}
+
+/* ── HEADER ── */
+#hud-header{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:16px;
+  padding:10px 16px;
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  border-top:2px solid var(--accent);
+}
+.header-left{display:flex;align-items:center;gap:16px;flex-shrink:0}
+.hud-title{font-family:var(--font-head);font-weight:800;font-size:14px;color:var(--accent);letter-spacing:.08em}
+.hud-date{color:var(--text-muted);font-size:11px;white-space:nowrap}
+.header-center{text-align:center;overflow:hidden}
+.flavour-line{font-family:var(--font-serif);font-style:italic;font-size:13px;color:var(--text);opacity:.75}
+.header-right{display:flex;align-items:center;gap:16px;flex-shrink:0}
+.streak-display{font-size:11px;color:var(--text-muted)}
+.streak-display span{color:var(--accent);font-weight:500}
+
+/* ── ZEF WIDGET ── */
+.zef-widget{position:relative;cursor:default}
+.zef-cat{font-size:14px;color:var(--text-muted);letter-spacing:-.02em;transition:color .3s}
+.zef-cat:hover{color:var(--accent)}
+.zef-tooltip{
+  position:absolute;top:calc(100% + 8px);right:0;
+  background:var(--bg-panel);border:1px solid var(--border-bright);
+  padding:6px 10px;white-space:nowrap;font-size:11px;color:var(--text-muted);
+  pointer-events:none;opacity:0;transition:opacity .2s;z-index:100;
+}
+.zef-widget:hover .zef-tooltip{opacity:1}
+
+/* ── MAIN GRID ── */
+#hud-main{
+  display:grid;
+  grid-template-columns:280px 1fr 300px;
+  gap:12px;
+  flex:1;
+  align-items:start;
+}
+.col-left,.col-center,.col-right{display:flex;flex-direction:column;gap:12px}
+
+/* ── PANELS ── */
+.panel{
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  padding:14px 16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.panel-title{
+  font-family:var(--font-head);font-weight:700;font-size:10px;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-muted);padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ── CHECK-IN ── */
+.checkin-field{display:flex;flex-direction:column;gap:4px;margin-bottom:4px}
+.checkin-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
+.checkin-label .val{color:var(--accent);font-weight:500}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:3px;
+  background:var(--border-bright);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:12px;height:12px;
+  border-radius:50%;background:var(--accent);cursor:pointer;transition:transform .15s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
+.checkin-submit{
+  margin-top:6px;padding:7px 14px;background:transparent;
+  border:1px solid var(--accent);color:var(--accent);
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;cursor:pointer;transition:all .2s;
+}
+.checkin-submit:hover{background:var(--accent);color:var(--bg)}
+.checkin-done{
+  text-align:center;padding:12px 0;
+  font-size:11px;color:var(--text-muted);line-height:1.8;
+}
+.checkin-done .done-label{color:var(--green);display:block;font-weight:500;margin-bottom:4px}
+.checkin-done .redo-btn{
+  display:inline-block;margin-top:8px;font-size:10px;color:var(--text-dim);
+  cursor:pointer;border-bottom:1px solid var(--border-bright);
+}
+.checkin-done .redo-btn:hover{color:var(--text-muted)}
+
+/* ── CHARACTER SHEET ── */
+.stat-row{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
+.stat-header{display:flex;justify-content:space-between;align-items:center}
+.stat-name{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.stat-value{font-size:11px;color:var(--accent)}
+.stat-level-label{font-size:9px;color:var(--text-dim)}
+.stat-bar-track{height:3px;background:var(--border-bright);position:relative;overflow:hidden}
+.stat-bar-fill{height:100%;background:var(--accent);transition:width .6s ease;position:relative}
+.stat-bar-fill.low{background:var(--red)}
+.stat-bar-fill.mid{background:var(--amber)}
+.stat-bar-fill.high{background:var(--green)}
+.stat-comment{font-size:10px;color:var(--text-dim);font-style:italic}
+
+/* ── QUESTS ── */
+.quest-card{
+  border:1px solid var(--accent-dim);padding:12px;
+  background:var(--bg-input);position:relative;
+}
+.quest-category{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:6px}
+.quest-text{font-size:12px;color:var(--text);line-height:1.5;margin-bottom:10px}
+.quest-xp{font-size:10px;color:var(--text-muted);margin-bottom:10px}
+.quest-actions{display:flex;gap:8px}
+.quest-btn{
+  flex:1;padding:6px 8px;font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid;
+}
+.quest-btn.complete{background:transparent;border-color:var(--green);color:var(--green)}
+.quest-btn.complete:hover{background:var(--green);color:var(--bg)}
+.quest-btn.refuse{background:transparent;border-color:var(--border-bright);color:var(--text-dim)}
+.quest-btn.refuse:hover{border-color:var(--text-muted);color:var(--text-muted)}
+.quest-refusal-msg{font-size:11px;color:var(--text-dim);font-style:italic;text-align:center;padding:8px 0}
+.quest-roll-btn{
+  width:100%;padding:8px;background:transparent;border:1px dashed var(--border-bright);
+  color:var(--text-muted);font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;
+}
+.quest-roll-btn:hover{border-color:var(--accent);color:var(--accent)}
+.quest-categories{margin-top:8px}
+.quest-cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.quest-cat-btn{
+  padding:6px 4px;background:transparent;border:1px solid var(--border);
+  color:var(--text-dim);font-family:var(--font-mono);font-size:9px;
+  letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .15s;text-align:center;
+}
+.quest-cat-btn:hover{border-color:var(--accent-dim);color:var(--text-muted)}
+.quest-cat-btn.active{border-color:var(--accent);color:var(--accent)}
+.quest-pool-list{margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+.quest-pool-item{
+  padding:8px;background:var(--bg-input);border:1px solid var(--border);
+  cursor:pointer;transition:border-color .15s;font-size:11px;color:var(--text-muted);
+}
+.quest-pool-item:hover{border-color:var(--accent-dim);color:var(--text)}
+
+/* ── BODY MAP ── */
+.bodymap-container{display:flex;gap:16px;align-items:flex-start}
+.bodymap-svg-wrap{flex-shrink:0}
+.bodymap-zones{flex:1;display:flex;flex-direction:column;gap:4px}
+.zone-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 8px;background:var(--bg-input);border:1px solid var(--border);
+  cursor:pointer;transition:border-color .15s;
+}
+.zone-item:hover{border-color:var(--border-bright)}
+.zone-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.zone-dots{display:flex;gap:3px}
+.zone-dot{
+  width:8px;height:8px;border-radius:50%;border:1px solid var(--border-bright);
+  transition:background .2s;cursor:pointer;
+}
+.zone-dot.active-0{background:var(--green)}
+.zone-dot.active-1{background:var(--amber)}
+.zone-dot.active-2{background:var(--red)}
+.zone-dot.active-3{background:#a02020}
+
+/* ── WEATHER ── */
+.weather-main{text-align:center;padding:8px 0}
+.weather-temp{font-family:var(--font-head);font-size:36px;font-weight:700;color:var(--accent)}
+.weather-apparent{font-size:10px;color:var(--text-muted);margin-top:2px}
+.weather-condition{font-size:12px;color:var(--text-muted);margin:8px 0}
+.weather-details{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.weather-detail{text-align:center;padding:6px;background:var(--bg-input);border:1px solid var(--border)}
+.weather-detail .label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em}
+.weather-detail .value{font-size:13px;color:var(--text-muted);margin-top:2px}
+.weather-interp{
+  font-size:11px;color:var(--text-dim);font-style:italic;
+  padding:8px;background:var(--bg-input);border-left:2px solid var(--accent-dim);margin-top:4px;
+}
+
+/* ── NEWS ── */
+.news-list{display:flex;flex-direction:column;gap:1px}
+.news-item{
+  padding:9px 10px;background:var(--bg-input);border-left:2px solid transparent;
+  transition:border-color .15s;cursor:pointer;text-decoration:none;display:block;
+}
+.news-item:hover{border-left-color:var(--accent-dim)}
+.news-source{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.news-headline{font-size:11px;color:var(--text-muted);line-height:1.4}
+.news-item:hover .news-headline{color:var(--text)}
+.news-meta{font-size:9px;color:var(--text-dim);margin-top:3px}
+.news-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.news-source-btn{
+  padding:3px 8px;background:transparent;border:1px solid var(--border);
+  color:var(--text-dim);font-family:var(--font-mono);font-size:9px;
+  letter-spacing:.05em;cursor:pointer;transition:all .15s;
+}
+.news-source-btn.active{border-color:var(--accent-dim);color:var(--accent)}
+.news-source-btn:hover{border-color:var(--border-bright);color:var(--text-muted)}
+.news-error{font-size:11px;color:var(--text-dim);font-style:italic;padding:8px 0}
+
+/* ── COMPLETED QUEST TOAST ── */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  background:var(--bg-panel);border:1px solid var(--accent);
+  padding:12px 18px;font-size:12px;color:var(--text);
+  max-width:300px;opacity:0;transform:translateY(10px);
+  transition:all .3s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border-bright)}
+::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  #hud-main{grid-template-columns:1fr 1fr}
+  .col-right{grid-column:1/-1;flex-direction:row}
+  #panel-weather,#panel-news{flex:1}
+}
+@media(max-width:600px){
+  #hud-main{grid-template-columns:1fr}
+  .col-right{flex-direction:column}
+  #hud-header{grid-template-columns:1fr auto;grid-template-rows:auto auto}
+  .header-center{grid-column:1/-1;grid-row:2}
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="toast" id="toast"></div>
+
+<div id="app">
+  <header id="hud-header">
+    <div class="header-left">
+      <span class="hud-title">// PERSONAL HUD</span>
+      <span class="hud-date" id="hud-date"></span>
+    </div>
+    <div class="header-center">
+      <span class="flavour-line" id="flavour-line"></span>
+    </div>
+    <div class="header-right">
+      <span class="streak-display" id="streak-display"></span>
+      <div class="zef-widget" id="zef-widget">
+        <span class="zef-cat" id="zef-cat"></span>
+        <div class="zef-tooltip" id="zef-tooltip"></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="hud-main">
+    <div class="col-left">
+      <section class="panel" id="panel-checkin">
+        <h2 class="panel-title">Morning Check-In</h2>
+        <div id="checkin-content"></div>
+      </section>
+      <section class="panel" id="panel-stats">
+        <h2 class="panel-title">Character Sheet</h2>
+        <div id="stats-content"></div>
+      </section>
+    </div>
+
+    <div class="col-center">
+      <section class="panel" id="panel-quests">
+        <h2 class="panel-title">Quest Log</h2>
+        <div id="quests-content"></div>
+      </section>
+      <section class="panel" id="panel-bodymap">
+        <h2 class="panel-title">Body Map</h2>
+        <div id="bodymap-content"></div>
+      </section>
+    </div>
+
+    <div class="col-right">
+      <section class="panel" id="panel-weather">
+        <h2 class="panel-title">Conditions</h2>
+        <div id="weather-content"><span style="color:var(--text-dim);font-size:11px">Fetching weather...</span></div>
+      </section>
+      <section class="panel" id="panel-news">
+        <h2 class="panel-title">Intel</h2>
+        <div id="news-content"><span style="color:var(--text-dim);font-size:11px">Fetching news...</span></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA BANKS — pre-generated, static assets
+// ═══════════════════════════════════════════════════════
+const DATA = {
+  flavourLines: [
+    "The universe has existed for approximately 13.8 billion years. You have about eight hours.",
+    "Low bar: don't make things meaningfully worse.",
+    "Today is exactly as arbitrary as every other day. Proceed accordingly.",
+    "The day begins. Negotiate as needed.",
+    "There are no signs. There is only weather and decisions.",
+    "Your ancestors survived plagues, famines, and ice ages to produce you. Unclear if the pressure helped.",
+    "Somewhere a project manager is writing a status update. You are not that person today.",
+    "Begin.",
+    "The cat has already assessed the situation and found it acceptable.",
+    "If it gets done, it gets done. If not, something else happens.",
+    "The morning has the advantage of not yet being ruined.",
+    "Consider this a soft launch.",
+    "Noted: you woke up. The bar clears.",
+    "What the previous self started, the present self inherits. Renegotiate as needed.",
+    "The body is a vehicle. Today's condition: see check-in.",
+    "Operate without conclusions. Update as data arrives.",
+    "A fine day for incrementalism.",
+    "Standards have been set. Whether they survive contact with reality is today's experiment.",
+    "Priority one: do not add to the pile.",
+    "Existence continues. As before.",
+    "The quest log is light. This is either good news or a diagnostic.",
+    "A reasonable day requires only a few reasonable decisions. Choose them early.",
+    "Boot sequence complete. Awaiting input.",
+    "The dharma wheel turns. The laundry remains.",
+    "No drama required.",
+    "Temperature: manageable. Expectations: calibrated.",
+    "The gompa will still be there. So will the sink.",
+    "Forward motion is not compulsory. Stillness is also a choice.",
+    "Nothing about today is exceptional. This is underrated.",
+    "The check-in is the opening ceremony. Everything else follows."
+  ],
+
+  refusalAcks: [
+    "Logged. Gone. No record of this cowardice will be kept.",
+    "Fair enough. The quest dissolves.",
+    "Noted. The universe is indifferent to your refusal.",
+    "Reasonable. There will be others.",
+    "This one walks into the void. Probably fine.",
+    "Declined. Moving on without ceremony.",
+    "The quest returns to the pool, unimpressed.",
+    "So it goes.",
+    "Your prerogative. The cat approves.",
+    "Done. A new one awaits when you're ready."
+  ],
+
+  statCommentary: {
+    endurance: {
+      low: ["The longboard is not a metaphor. Get on it.", "Legs: present. Momentum: absent."],
+      mid: ["Steady. The body remembers the route.", "Functional range. The commute serves."],
+      high: ["Consistent motion. The board and the body in agreement.", "Endurance high. The commute is efficient."]
+    },
+    strength: {
+      low: ["Physical neglect noted. Not judged — noted.", "The push-ups have been hypothetical for a while."],
+      mid: ["Maintained. The structure holds.", "Adequate for current obligations."],
+      high: ["Physically solid. The body is a tool and it's sharp.", "Strength: genuine. Not performed."]
+    },
+    wisdom: {
+      low: ["The cushion is dusty. The mind reflects this.", "Gompa attendance: theoretical."],
+      mid: ["Grounded. The practice is present, if irregular.", "Wisdom maintained through partial compliance."],
+      high: ["Clear mind, regular practice. The NgalSo lineage is well-served.", "The umze function requires this. You're meeting it."]
+    },
+    constitution: {
+      low: ["The body's maintenance backlog is visible.", "Sleep, food, floor — all neglected in sequence."],
+      mid: ["Tolerable baseline. Could be worse.", "The body is managing. Manage it better."],
+      high: ["Constitution: solid. The fundamentals are covered.", "Well-maintained. The biological infrastructure holds."]
+    },
+    intelligence: {
+      low: ["The language work has been absent. Copy quality will reflect this.", "Cognitive friction rises with disuse."],
+      mid: ["Sharp enough. The copy is competent.", "Languages maintained. The machinery runs."],
+      high: ["Genuinely sharp. The work shows it.", "High intelligence stat: the languages run clean, the copy lands."]
+    },
+    charisma: {
+      low: ["Social bandwidth depleted. The open-plan office took the toll.", "The guitar hasn't been played. Neither has the crowd."],
+      mid: ["Social function maintained. The bar at Jack's remains accessible.", "Functioning in public. Sufficient for now."],
+      high: ["Strong social register. The umze role is natural from here.", "Charisma present and exercised."]
+    },
+    exploration: {
+      low: ["The kitchen has been safe recently. Too safe.", "New recipes: absent. The palate grows conservative."],
+      mid: ["Cooking remains adventurous by average standards. Average is below the bar.", "The spice rack is in use."],
+      high: ["The exploration stat reflects what it should: genuine culinary range.", "High exploration. The kitchen is a laboratory and it's active."]
+    },
+    cognition: {
+      low: ["The systems work has slowed. The redirect tool gathers dust.", "Agnes isn't going to fix herself."],
+      mid: ["Competent systems thinking. The tools function.", "The migration work is ongoing. So is the cognition."],
+      high: ["Systems: sharp. The tooling is clean and the architecture is sound.", "High cognition. The work speaks for itself."]
+    }
+  },
+
+  questPools: {
+    physical: [
+      { text: "Twenty push-ups. Not a workout — a deposit.", xp: { stat: "strength", amount: 15 }, difficulty: 1 },
+      { text: "Take the long route on the longboard today. Add twenty minutes. No podcast.", xp: { stat: "endurance", amount: 20 }, difficulty: 2 },
+      { text: "Stretch for ten minutes. Specifically: the rhomboid and hip flexors. You know why.", xp: { stat: "constitution", amount: 10 }, difficulty: 1 },
+      { text: "Thirty squats at some point today. Can be broken up. No one is watching.", xp: { stat: "strength", amount: 12 }, difficulty: 1 },
+      { text: "Walk somewhere instead of boarding. Thirty minutes, no destination required.", xp: { stat: "endurance", amount: 15 }, difficulty: 1 },
+      { text: "One set to failure on whatever you have available. Document the number.", xp: { stat: "strength", amount: 18 }, difficulty: 2 },
+      { text: "Board to work and back without stopping. Count the run.", xp: { stat: "endurance", amount: 25 }, difficulty: 2 },
+      { text: "Cold water on your face for sixty seconds. Not a shower — just the face. Note the effect.", xp: { stat: "constitution", amount: 8 }, difficulty: 1 }
+    ],
+    domestic: [
+      { text: "The bathroom floor. You've been meaning to do it for days. Today is that day.", xp: { stat: "constitution", amount: 10 }, difficulty: 1 },
+      { text: "Go through one drawer. One. Discard what doesn't belong there.", xp: { stat: "wisdom", amount: 8 }, difficulty: 1 },
+      { text: "Deal with whatever has been sitting on the counter for more than three days.", xp: { stat: "constitution", amount: 8 }, difficulty: 1 },
+      { text: "Do laundry before it becomes an emergency. It is already borderline.", xp: { stat: "constitution", amount: 10 }, difficulty: 1 },
+      { text: "Vacuum. No negotiation. The cat has been busy.", xp: { stat: "constitution", amount: 10 }, difficulty: 1 },
+      { text: "Reorganise one shelf. Not the whole thing — one shelf. Make it right.", xp: { stat: "wisdom", amount: 8 }, difficulty: 1 },
+      { text: "The bins. You know which ones need doing.", xp: { stat: "constitution", amount: 6 }, difficulty: 1 },
+      { text: "Wash the windows. Or at least the one you look through most often.", xp: { stat: "constitution", amount: 12 }, difficulty: 2 }
+    ],
+    creative: [
+      { text: "Open the FL Studio project. Touch it for twenty minutes. You don't have to finish anything.", xp: { stat: "charisma", amount: 15 }, difficulty: 2 },
+      { text: "Write three sentences about something you noticed this week. Not a journal — just three sentences.", xp: { stat: "intelligence", amount: 10 }, difficulty: 1 },
+      { text: "Update the Evershroud Chronicles wiki with one entry you've been deferring.", xp: { stat: "intelligence", amount: 18 }, difficulty: 2 },
+      { text: "Sketch one new NPC concept. Two or three lines of backstory. No stat block required yet.", xp: { stat: "charisma", amount: 12 }, difficulty: 1 },
+      { text: "Play guitar for fifteen minutes. Not practice — play. There's a difference.", xp: { stat: "charisma", amount: 12 }, difficulty: 1 },
+      { text: "Write one piece of copy that's genuinely good. Not for work. For the standard.", xp: { stat: "intelligence", amount: 15 }, difficulty: 2 },
+      { text: "Describe a location in the Evershroud Chronicles as if you were standing in it.", xp: { stat: "intelligence", amount: 12 }, difficulty: 1 },
+      { text: "Spend twenty minutes on the Berynian Calendar. Something needs updating.", xp: { stat: "cognition", amount: 14 }, difficulty: 2 }
+    ],
+    social: [
+      { text: "Message someone you haven't spoken to in over a month. No agenda required.", xp: { stat: "charisma", amount: 15 }, difficulty: 1 },
+      { text: "Call your parents. Or don't — but decide deliberately rather than by default.", xp: { stat: "wisdom", amount: 10 }, difficulty: 2 },
+      { text: "Say something kind to a colleague that isn't transactional.", xp: { stat: "charisma", amount: 8 }, difficulty: 1 },
+      { text: "Go to Jack's. Stay for one beer. Let the evening be social on its own terms.", xp: { stat: "charisma", amount: 18 }, difficulty: 2 },
+      { text: "Check on the sangha schedule. Something may be happening.", xp: { stat: "wisdom", amount: 8 }, difficulty: 1 },
+      { text: "Reply to a message you've been leaving on read. It doesn't need to be long.", xp: { stat: "charisma", amount: 10 }, difficulty: 1 }
+    ],
+    rest: [
+      { text: "Fifteen minutes of actual nothing. Not a podcast. Not a phone. The window, or the ceiling.", xp: { stat: "wisdom", amount: 12 }, difficulty: 1 },
+      { text: "Sit outside for ten minutes at some point today. No purpose required.", xp: { stat: "wisdom", amount: 10 }, difficulty: 1 },
+      { text: "Nap if the body is asking for one. Under forty-five minutes. Set an alarm.", xp: { stat: "constitution", amount: 15 }, difficulty: 1 },
+      { text: "Read something that isn't work or a screen. Twenty minutes.", xp: { stat: "intelligence", amount: 12 }, difficulty: 1 },
+      { text: "Do the gompa practice today, even briefly.", xp: { stat: "wisdom", amount: 20 }, difficulty: 2 },
+      { text: "Audiobook and longboard — the dual-channel recovery session. Schedule it.", xp: { stat: "endurance", amount: 15 }, difficulty: 1 },
+      { text: "End the day at a reasonable hour. Define 'reasonable' before deciding it's flexible.", xp: { stat: "constitution", amount: 10 }, difficulty: 1 }
+    ],
+    cooking: [
+      { text: "Make proper stock from whatever bones or scraps you have. It doesn't need to be today's dinner.", xp: { stat: "exploration", amount: 20 }, difficulty: 2 },
+      { text: "Attempt a momo filling variation you haven't tried before.", xp: { stat: "exploration", amount: 25 }, difficulty: 3 },
+      { text: "Cook a full meal from scratch. No shortcuts. Mise en place respected.", xp: { stat: "exploration", amount: 18 }, difficulty: 2 },
+      { text: "Make something Szechuan-adjacent. The numbing pepper deserves respect.", xp: { stat: "exploration", amount: 20 }, difficulty: 2 },
+      { text: "Bake something. Even bread. Especially bread.", xp: { stat: "exploration", amount: 18 }, difficulty: 2 },
+      { text: "Source one ingredient you don't usually have. Build a dish around it.", xp: { stat: "exploration", amount: 22 }, difficulty: 2 },
+      { text: "Slow cook something overnight. The reduction will be ready when you wake up.", xp: { stat: "exploration", amount: 20 }, difficulty: 2 },
+      { text: "Make something Indonesian-adjacent. The spice work alone is worth the XP.", xp: { stat: "exploration", amount: 20 }, difficulty: 2 }
+    ]
+  },
+
+  weatherInterp: {
+    clear: ["Clear. No meteorological excuse for anything today.", "Clear skies. Longboard conditions: ideal.", "Visibility: excellent. The commute has no weather objections."],
+    cloudy: ["Overcast. The light is flat and honest.", "Grey skies. The day requires no theatrical weather to be difficult.", "Clouds. This is the Netherlands."],
+    rain: ["Rain. Longboard stays home. Accept the bus or accept the condition.", "Wet commute incoming. The board does not enjoy this.", "Rain. Adjust equipment selection accordingly."],
+    drizzle: ["Drizzle. Borderline longboard conditions. Your call.", "Light precipitation. The board has survived worse. Barely.", "A damp morning. The Dutchness is strong."],
+    snow: ["Snow. This is not a longboard day. This is a problem.", "Snow on the ground. Transit wins today.", "Snow. Exceptional event requiring adjusted expectations."],
+    fog: ["Fog. The Netherlands in its natural state.", "Visibility reduced. Standard operating conditions for this country.", "Fog. Atmospheric, if inconvenient."],
+    thunderstorm: ["Thunderstorm. Stay indoors. This is not debatable.", "Electrical weather event. Do not longboard through this.", "Storm incoming. The day reorganises around weather."],
+    wind_strong: ["Strong wind advisory. Longboarding into a headwind builds character you didn't ask for.", "Wind. The commute becomes a workout regardless of effort.", "Wind: significant. The board is a liability today."]
+  },
+
+  zefStates: [
+    { cat: "=^.^=", verdict: "ZEF VERDICT: Acceptable conditions. Maintain." },
+    { cat: "=^-.-^=", verdict: "ZEF VERDICT: Currently unavailable. Leave food and withdraw." },
+    { cat: "=^Ò.Ó^=", verdict: "ZEF VERDICT: Attention deficit detected. Rectify immediately." },
+    { cat: "=^•ω•^=", verdict: "ZEF VERDICT: The impermanence of all things is self-evident." },
+    { cat: "=^>.<^=", verdict: "ZEF VERDICT: Something is wrong and it may be you specifically." }
+  ]
+};
+
+// ═══════════════════════════════════════════════════════
+// STATE MANAGEMENT
+// ═══════════════════════════════════════════════════════
+const STORAGE_KEY = {
+  checkins: 'hud_checkins',
+  stats: 'hud_stats',
+  quests: 'hud_quests_log',
+  activeQuest: 'hud_active_quest',
+  streak: 'hud_streak',
+  bodyMap: 'hud_bodymap'
+};
+
+const DEFAULT_STATS = {
+  endurance:   { value: 40, lastActivity: null, label: "Endurance" },
+  strength:    { value: 35, lastActivity: null, label: "Strength" },
+  wisdom:      { value: 55, lastActivity: null, label: "Wisdom" },
+  constitution:{ value: 45, lastActivity: null, label: "Constitution" },
+  intelligence:{ value: 60, lastActivity: null, label: "Intelligence" },
+  charisma:    { value: 50, lastActivity: null, label: "Charisma" },
+  exploration: { value: 55, lastActivity: null, label: "Exploration" },
+  cognition:   { value: 65, lastActivity: null, label: "Cognition" }
+};
+
+const DEFAULT_BODY_MAP = { jaw: 0, shoulders: 0, upper_back: 0, lower_back: 0, gut: 0, knees: 0 };
+
+const LEVEL_LABELS = ["Dormant","Active","Practiced","Skilled","Master"];
+
+function getLevel(v) {
+  if (v <= 20) return 0;
+  if (v <= 40) return 1;
+  if (v <= 60) return 2;
+  if (v <= 80) return 3;
+  return 4;
+}
+
+function getBarClass(v) {
+  if (v <= 30) return 'low';
+  if (v <= 60) return 'mid';
+  return 'high';
+}
+
+function load(key, def) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : def;
+  } catch { return def; }
+}
+
+function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function applyStatDecay(stats) {
+  const now = Date.now();
+  const dayMs = 86400000;
+  for (const key of Object.keys(stats)) {
+    if (stats[key].lastActivity) {
+      const daysSince = Math.floor((now - stats[key].lastActivity) / dayMs);
+      if (daysSince > 0) {
+        stats[key].value = Math.max(5, stats[key].value - (daysSince * 2));
+      }
+    }
+  }
+  return stats;
+}
+
+function addStatXP(statKey, amount) {
+  const stats = load(STORAGE_KEY.stats, DEFAULT_STATS);
+  if (!stats[statKey]) return;
+  stats[statKey].value = Math.min(100, stats[statKey].value + Math.ceil(amount / 10));
+  stats[statKey].lastActivity = Date.now();
+  save(STORAGE_KEY.stats, stats);
+}
+
+function rand(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function getCheckinToday() {
+  const checkins = load(STORAGE_KEY.checkins, {});
+  return checkins[todayKey()] || null;
+}
+
+function saveCheckin(data) {
+  const checkins = load(STORAGE_KEY.checkins, {});
+  data.timestamp = Date.now();
+  checkins[todayKey()] = data;
+  save(STORAGE_KEY.checkins, checkins);
+  updateStreak();
+}
+
+function updateStreak() {
+  const streak = load(STORAGE_KEY.streak, { count: 0, lastDate: null });
+  const today = todayKey();
+  const yesterday = (() => {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  })();
+  if (streak.lastDate === today) return;
+  if (streak.lastDate === yesterday) { streak.count++; }
+  else { streak.count = 1; }
+  streak.lastDate = today;
+  save(STORAGE_KEY.streak, streak);
+}
+
+// ═══════════════════════════════════════════════════════
+// PARTICLES
+// ═══════════════════════════════════════════════════════
+function initParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function makeParticle() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 1.2 + 0.3,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      a: Math.random() * 0.4 + 0.1
+    };
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  for (let i = 0; i < 80; i++) particles.push(makeParticle());
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(224,120,48,${p.a})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ═══════════════════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════════════════
+function initHeader() {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = new Date();
+  document.getElementById('hud-date').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  // Flavour — daily seed
+  const dayNum = Math.floor(Date.now() / 86400000);
+  const fl = DATA.flavourLines[dayNum % DATA.flavourLines.length];
+  document.getElementById('flavour-line').textContent = fl;
+
+  // Streak
+  const streak = load(STORAGE_KEY.streak, { count: 0, lastDate: null });
+  const el = document.getElementById('streak-display');
+  el.innerHTML = streak.count > 0
+    ? `streak <span>&#x1F525; ${streak.count}</span>`
+    : `streak <span>—</span>`;
+
+  // Zef
+  const zefState = DATA.zefStates[dayNum % DATA.zefStates.length];
+  document.getElementById('zef-cat').textContent = zefState.cat;
+  document.getElementById('zef-tooltip').textContent = zefState.verdict;
+}
+
+// ═══════════════════════════════════════════════════════
+// CHECK-IN
+// ═══════════════════════════════════════════════════════
+const CHECKIN_FIELDS = [
+  { key: 'sleep',      label: 'Sleep quality',  max: 5 },
+  { key: 'energy',     label: 'Energy',          max: 5 },
+  { key: 'agitation',  label: 'Agitation',       max: 5 },
+  { key: 'mood',       label: 'Mood',            max: 5 },
+  { key: 'substances', label: 'Substance use',   max: 5 },
+  { key: 'digestion',  label: 'Digestion',       max: 5 }
+];
+
+function renderCheckin() {
+  const container = document.getElementById('checkin-content');
+  const existing = getCheckinToday();
+
+  if (existing) {
+    renderCheckinDone(container, existing);
+  } else {
+    renderCheckinForm(container);
+  }
+}
+
+function renderCheckinForm(container) {
+  const vals = {};
+  CHECKIN_FIELDS.forEach(f => vals[f.key] = 3);
+
+  let html = '';
+  CHECKIN_FIELDS.forEach(f => {
+    html += `
+    <div class="checkin-field">
+      <div class="checkin-label">
+        <span>${f.label}</span>
+        <span class="val" id="val-${f.key}">3</span>
+      </div>
+      <input type="range" min="0" max="${f.max}" value="3" step="1"
+        id="slider-${f.key}"
+        oninput="document.getElementById('val-${f.key}').textContent=this.value">
+    </div>`;
+  });
+  html += `<button class="checkin-submit" onclick="submitCheckin()">▶ Submit Check-In</button>`;
+  container.innerHTML = html;
+}
+
+function renderCheckinDone(container, data) {
+  const fields = CHECKIN_FIELDS.map(f =>
+    `${f.label}: <strong style="color:var(--accent)">${data[f.key] ?? '—'}</strong>`
+  ).join(' · ');
+
+  container.innerHTML = `
+    <div class="checkin-done">
+      <span class="done-label">✓ Check-in complete</span>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.8">${fields}</div>
+      <span class="redo-btn" onclick="redoCheckin()">redo today's check-in</span>
+    </div>`;
+}
+
+function submitCheckin() {
+  const data = {};
+  CHECKIN_FIELDS.forEach(f => {
+    const el = document.getElementById(`slider-${f.key}`);
+    data[f.key] = el ? parseInt(el.value) : 0;
+  });
+  saveCheckin(data);
+  renderCheckin();
+  initHeader(); // update streak
+  renderQuests(); // energy affects quest filtering
+  showToast("Check-in saved. The system knows your condition.");
+}
+
+function redoCheckin() {
+  const container = document.getElementById('checkin-content');
+  renderCheckinForm(container);
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARACTER SHEET
+// ═══════════════════════════════════════════════════════
+function renderStats() {
+  let stats = load(STORAGE_KEY.stats, DEFAULT_STATS);
+  stats = applyStatDecay(stats);
+  save(STORAGE_KEY.stats, stats);
+
+  const container = document.getElementById('stats-content');
+  let html = '';
+
+  for (const [key, s] of Object.entries(stats)) {
+    const v = Math.round(s.value);
+    const lvl = getLevel(v);
+    const barClass = getBarClass(v);
+    const bank = DATA.statCommentary[key];
+    const comment = bank
+      ? (v <= 30 ? rand(bank.low) : v <= 65 ? rand(bank.mid) : rand(bank.high))
+      : '';
+
+    html += `
+    <div class="stat-row">
+      <div class="stat-header">
+        <span class="stat-name">${s.label}</span>
+        <span>
+          <span class="stat-level-label">${LEVEL_LABELS[lvl]} · </span>
+          <span class="stat-value">${v}</span>
+        </span>
+      </div>
+      <div class="stat-bar-track">
+        <div class="stat-bar-fill ${barClass}" style="width:${v}%"></div>
+      </div>
+      <div class="stat-comment">${comment}</div>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// QUEST SYSTEM
+// ═══════════════════════════════════════════════════════
+let questState = {
+  browsing: false,
+  activeCategory: null
+};
+
+function getMaxDifficulty() {
+  const checkin = getCheckinToday();
+  if (!checkin) return 2;
+  const energy = checkin.energy ?? 3;
+  if (energy <= 1) return 1;
+  if (energy <= 3) return 2;
+  return 3;
+}
+
+function getAllQuests(maxDiff) {
+  const all = [];
+  for (const [cat, quests] of Object.entries(DATA.questPools)) {
+    for (const q of quests) {
+      if (q.difficulty <= maxDiff) {
+        all.push({ ...q, category: cat });
+      }
+    }
+  }
+  return all;
+}
+
+function renderQuests() {
+  const container = document.getElementById('quests-content');
+  const active = load(STORAGE_KEY.activeQuest, null);
+  const maxDiff = getMaxDifficulty();
+
+  let html = '';
+
+  if (active && !questState.browsing) {
+    html += `
+    <div class="quest-card">
+      <div class="quest-category">${active.category.toUpperCase()}</div>
+      <div class="quest-text">${active.text}</div>
+      <div class="quest-xp">+${active.xp.amount} XP → ${active.xp.stat}</div>
+      <div class="quest-actions">
+        <button class="quest-btn complete" onclick="completeQuest()">✓ Complete</button>
+        <button class="quest-btn refuse" onclick="refuseQuest()">✕ Refuse</button>
+      </div>
+    </div>`;
+  } else {
+    if (!questState.browsing) {
+      html += `<button class="quest-roll-btn" onclick="rollRandomQuest()">⟳ Roll Random Quest</button>`;
+    }
+  }
+
+  html += `
+  <div class="quest-categories">
+    <button class="quest-roll-btn" onclick="toggleBrowse()" style="margin-bottom:${questState.browsing?'8px':'0'}">${questState.browsing ? '← Back to Active Quest' : 'Browse by Category'}</button>
+    ${questState.browsing ? renderCategoryBrowse(maxDiff) : ''}
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+function renderCategoryBrowse(maxDiff) {
+  const cats = Object.keys(DATA.questPools);
+  let html = `<div class="quest-cat-grid">`;
+  for (const cat of cats) {
+    const active = questState.activeCategory === cat;
+    html += `<button class="quest-cat-btn ${active?'active':''}" onclick="selectCategory('${cat}')">${cat}</button>`;
+  }
+  html += `</div>`;
+
+  if (questState.activeCategory) {
+    const pool = DATA.questPools[questState.activeCategory].filter(q => q.difficulty <= maxDiff);
+    html += `<div class="quest-pool-list">`;
+    if (pool.length === 0) {
+      html += `<div style="font-size:11px;color:var(--text-dim);padding:8px">No quests available at current energy level.</div>`;
+    } else {
+      for (let i = 0; i < pool.length; i++) {
+        html += `<div class="quest-pool-item" onclick="selectQuest('${questState.activeCategory}',${i})">
+          ${pool[i].text}
+          <span style="color:var(--text-dim);font-size:9px;display:block;margin-top:2px">+${pool[i].xp.amount}xp → ${pool[i].xp.stat}</span>
+        </div>`;
+      }
+    }
+    html += `</div>`;
+  }
+
+  return html;
+}
+
+function rollRandomQuest() {
+  const maxDiff = getMaxDifficulty();
+  const all = getAllQuests(maxDiff);
+  if (all.length === 0) return;
+  const q = rand(all);
+  save(STORAGE_KEY.activeQuest, q);
+  questState.browsing = false;
+  renderQuests();
+}
+
+function toggleBrowse() {
+  questState.browsing = !questState.browsing;
+  if (!questState.browsing) questState.activeCategory = null;
+  renderQuests();
+}
+
+function selectCategory(cat) {
+  questState.activeCategory = questState.activeCategory === cat ? null : cat;
+  renderQuests();
+}
+
+function selectQuest(cat, idx) {
+  const maxDiff = getMaxDifficulty();
+  const pool = DATA.questPools[cat].filter(q => q.difficulty <= maxDiff);
+  const q = { ...pool[idx], category: cat };
+  save(STORAGE_KEY.activeQuest, q);
+  questState.browsing = false;
+  questState.activeCategory = null;
+  renderQuests();
+}
+
+function completeQuest() {
+  const q = load(STORAGE_KEY.activeQuest, null);
+  if (!q) return;
+
+  addStatXP(q.xp.stat, q.xp.amount);
+
+  const log = load(STORAGE_KEY.quests, []);
+  log.push({ ...q, completedAt: Date.now(), date: todayKey() });
+  save(STORAGE_KEY.quests, log);
+  save(STORAGE_KEY.activeQuest, null);
+
+  renderStats();
+  renderQuests();
+  showToast(`Quest complete. +${q.xp.amount} XP → ${q.xp.stat}`);
+}
+
+function refuseQuest() {
+  save(STORAGE_KEY.activeQuest, null);
+  const msg = rand(DATA.refusalAcks);
+  const container = document.getElementById('quests-content');
+
+  let html = `<div class="quest-refusal-msg">${msg}</div>`;
+  html += `<button class="quest-roll-btn" style="margin-top:8px" onclick="rollRandomQuest()">⟳ Roll Another</button>`;
+  html += `<div class="quest-categories" style="margin-top:8px">
+    <button class="quest-roll-btn" onclick="questState.browsing=true;renderQuests()">Browse by Category</button>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// BODY MAP
+// ═══════════════════════════════════════════════════════
+const BODY_ZONES = [
+  { key: 'jaw',       label: 'Jaw / Head' },
+  { key: 'shoulders', label: 'Neck / Shoulders' },
+  { key: 'upper_back',label: 'Upper Back' },
+  { key: 'lower_back',label: 'Lower Back' },
+  { key: 'gut',       label: 'Gut / Abdomen' },
+  { key: 'knees',     label: 'Knees / Legs' }
+];
+
+const ZONE_COLORS = ['var(--green)', 'var(--amber)', 'var(--accent)', 'var(--red)'];
+const ZONE_LABELS = ['Fine', 'Mild', 'Moderate', 'Significant'];
+
+function renderBodyMap() {
+  const bm = load(STORAGE_KEY.bodyMap, DEFAULT_BODY_MAP);
+  const container = document.getElementById('bodymap-content');
+
+  const svg = buildBodySVG(bm);
+
+  let zonesHtml = '';
+  for (const zone of BODY_ZONES) {
+    const val = bm[zone.key] ?? 0;
+    let dotsHtml = '';
+    for (let i = 0; i < 4; i++) {
+      const isActive = i <= val && val > 0;
+      const color = isActive ? ZONE_COLORS[val] : 'var(--border-bright)';
+      dotsHtml += `<div class="zone-dot" style="background:${color}" title="${ZONE_LABELS[i]}" onclick="cycleZone('${zone.key}')"></div>`;
+    }
+    if (val === 0) dotsHtml = `<div class="zone-dot" style="background:var(--green)" onclick="cycleZone('${zone.key}')"></div>
+      <div class="zone-dot" onclick="cycleZone('${zone.key}')"></div>
+      <div class="zone-dot" onclick="cycleZone('${zone.key}')"></div>
+      <div class="zone-dot" onclick="cycleZone('${zone.key}')"></div>`;
+
+    zonesHtml += `
+    <div class="zone-item" onclick="cycleZone('${zone.key}')">
+      <span class="zone-label">${zone.label}</span>
+      <div class="zone-dots">${dotsHtml}</div>
+    </div>`;
+  }
+
+  container.innerHTML = `
+    <div class="bodymap-container">
+      <div class="bodymap-svg-wrap">${svg}</div>
+      <div class="bodymap-zones">${zonesHtml}</div>
+    </div>`;
+}
+
+function buildBodySVG(bm) {
+  const zoneColor = (key, opacity=0.7) => {
+    const v = bm[key] ?? 0;
+    if (v === 0) return `rgba(122,184,122,${opacity})`;
+    if (v === 1) return `rgba(212,168,64,${opacity})`;
+    if (v === 2) return `rgba(224,120,48,${opacity})`;
+    return `rgba(192,80,64,${opacity})`;
+  };
+
+  return `<svg viewBox="0 0 60 170" width="60" height="170" xmlns="http://www.w3.org/2000/svg">
+    <style>.bz{cursor:pointer;transition:opacity .2s;stroke:rgba(255,255,255,0.08);stroke-width:0.5}</style>
+    <!-- Head/Jaw -->
+    <ellipse cx="30" cy="14" rx="10" ry="12" class="bz" fill="${zoneColor('jaw')}" onclick="cycleZone('jaw')"/>
+    <!-- Neck -->
+    <rect x="26" y="25" width="8" height="8" class="bz" fill="${zoneColor('shoulders')}" onclick="cycleZone('shoulders')"/>
+    <!-- Shoulders/Chest -->
+    <rect x="14" y="33" width="32" height="28" rx="3" class="bz" fill="${zoneColor('shoulders')}" onclick="cycleZone('shoulders')"/>
+    <!-- Upper back indicator -->
+    <rect x="17" y="36" width="26" height="20" rx="2" class="bz" fill="${zoneColor('upper_back', 0.5)}" onclick="cycleZone('upper_back')"/>
+    <!-- Abdomen/Gut -->
+    <rect x="17" y="61" width="26" height="24" rx="2" class="bz" fill="${zoneColor('gut')}" onclick="cycleZone('gut')"/>
+    <!-- Lower Back/Hips -->
+    <rect x="17" y="85" width="26" height="18" rx="2" class="bz" fill="${zoneColor('lower_back')}" onclick="cycleZone('lower_back')"/>
+    <!-- Left leg -->
+    <rect x="17" y="103" width="11" height="55" rx="3" class="bz" fill="${zoneColor('knees')}" onclick="cycleZone('knees')"/>
+    <!-- Right leg -->
+    <rect x="32" y="103" width="11" height="55" rx="3" class="bz" fill="${zoneColor('knees')}" onclick="cycleZone('knees')"/>
+  </svg>`;
+}
+
+function cycleZone(key) {
+  const bm = load(STORAGE_KEY.bodyMap, DEFAULT_BODY_MAP);
+  bm[key] = ((bm[key] ?? 0) + 1) % 4;
+  save(STORAGE_KEY.bodyMap, bm);
+  renderBodyMap();
+}
+
+// ═══════════════════════════════════════════════════════
+// WEATHER
+// ═══════════════════════════════════════════════════════
+const WMO_CODES = {
+  0: { label: 'Clear sky', cat: 'clear' },
+  1: { label: 'Mainly clear', cat: 'clear' },
+  2: { label: 'Partly cloudy', cat: 'cloudy' },
+  3: { label: 'Overcast', cat: 'cloudy' },
+  45: { label: 'Fog', cat: 'fog' },
+  48: { label: 'Depositing rime fog', cat: 'fog' },
+  51: { label: 'Light drizzle', cat: 'drizzle' },
+  53: { label: 'Moderate drizzle', cat: 'drizzle' },
+  55: { label: 'Dense drizzle', cat: 'drizzle' },
+  61: { label: 'Slight rain', cat: 'rain' },
+  63: { label: 'Moderate rain', cat: 'rain' },
+  65: { label: 'Heavy rain', cat: 'rain' },
+  66: { label: 'Light freezing rain', cat: 'rain' },
+  67: { label: 'Heavy freezing rain', cat: 'rain' },
+  71: { label: 'Slight snow', cat: 'snow' },
+  73: { label: 'Moderate snow', cat: 'snow' },
+  75: { label: 'Heavy snow', cat: 'snow' },
+  80: { label: 'Slight showers', cat: 'rain' },
+  81: { label: 'Moderate showers', cat: 'rain' },
+  82: { label: 'Violent showers', cat: 'rain' },
+  95: { label: 'Thunderstorm', cat: 'thunderstorm' },
+  96: { label: 'Thunderstorm w/ hail', cat: 'thunderstorm' },
+  99: { label: 'Thunderstorm w/ heavy hail', cat: 'thunderstorm' }
+};
+
+async function fetchWeather() {
+  const container = document.getElementById('weather-content');
+  try {
+    // IP geolocation — approximate, no key needed
+    const geo = await fetch('https://ipapi.co/json/').then(r => r.json());
+    const lat = geo.latitude;
+    const lon = geo.longitude;
+    const city = geo.city || geo.region || 'Unknown';
+    const tz = encodeURIComponent(geo.timezone || 'Europe/Amsterdam');
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,relative_humidity_2m&timezone=${tz}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const c = data.current;
+    const code = WMO_CODES[c.weather_code] || { label: 'Unknown', cat: 'cloudy' };
+    const windKph = Math.round(c.wind_speed_10m);
+
+    let interpCat = code.cat;
+    if (windKph > 30) interpCat = 'wind_strong';
+    const interps = DATA.weatherInterp[interpCat] || DATA.weatherInterp.cloudy;
+    const interp = rand(interps);
+
+    container.innerHTML = `
+      <div class="weather-main">
+        <div class="weather-temp">${Math.round(c.temperature_2m)}°C</div>
+        <div class="weather-apparent">Feels like ${Math.round(c.apparent_temperature)}°C</div>
+        <div class="weather-condition">${code.label}</div>
+      </div>
+      <div class="weather-details">
+        <div class="weather-detail">
+          <div class="label">Wind</div>
+          <div class="value">${windKph} km/h</div>
+        </div>
+        <div class="weather-detail">
+          <div class="label">Humidity</div>
+          <div class="value">${c.relative_humidity_2m}%</div>
+        </div>
+        <div class="weather-detail">
+          <div class="label">Precip</div>
+          <div class="value">${c.precipitation} mm</div>
+        </div>
+        <div class="weather-detail">
+          <div class="label">Location</div>
+          <div class="value" style="font-size:10px">~${city}</div>
+        </div>
+      </div>
+      <div class="weather-interp">${interp}</div>`;
+  } catch (e) {
+    document.getElementById('weather-content').innerHTML = `<div class="news-error">Weather unavailable. Consult the window.</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// NEWS
+// ═══════════════════════════════════════════════════════
+const NEWS_SOURCES = [
+  { id: 'nos',     label: 'NOS',     url: 'https://feeds.nos.nl/nosnieuwsalgemeen' },
+  { id: 'bbc',     label: 'BBC',     url: 'http://feeds.bbci.co.uk/news/world/rss.xml' },
+  { id: 'ap',      label: 'AP',      url: 'https://apnews.com/rss' },
+  { id: 'reuters', label: 'Reuters', url: 'https://feeds.reuters.com/reuters/worldNews' }
+];
+
+let activeNewsSource = 'nos';
+
+async function fetchNews(sourceId) {
+  const container = document.getElementById('news-content');
+  const source = NEWS_SOURCES.find(s => s.id === sourceId) || NEWS_SOURCES[0];
+
+  const filterBtns = NEWS_SOURCES.map(s =>
+    `<button class="news-source-btn ${s.id === sourceId ? 'active' : ''}"
+      onclick="switchNewsSource('${s.id}')">${s.label}</button>`
+  ).join('');
+
+  container.innerHTML = `
+    <div class="news-filter">${filterBtns}</div>
+    <div id="news-list"><span style="color:var(--text-dim);font-size:11px">Fetching...</span></div>`;
+
+  try {
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(source.url)}&count=8`;
+    const res = await fetch(apiUrl);
+    const json = await res.json();
+
+    if (json.status !== 'ok' || !json.items?.length) throw new Error('No items');
+
+    let html = '<div class="news-list">';
+    for (const item of json.items) {
+      const date = item.pubDate
+        ? new Date(item.pubDate).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+        : '';
+      html += `
+      <a class="news-item" href="${item.link}" target="_blank" rel="noopener">
+        <div class="news-source">${source.label}</div>
+        <div class="news-headline">${item.title}</div>
+        ${date ? `<div class="news-meta">${date}</div>` : ''}
+      </a>`;
+    }
+    html += '</div>';
+
+    document.getElementById('news-list').outerHTML = html;
+  } catch (e) {
+    const listEl = document.getElementById('news-list');
+    if (listEl) listEl.innerHTML = `<div class="news-error">Feed unavailable. Try another source or consult reality directly.</div>`;
+  }
+}
+
+function switchNewsSource(id) {
+  activeNewsSource = id;
+  fetchNews(id);
+}
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initParticles();
+  initHeader();
+  renderCheckin();
+  renderStats();
+  renderQuests();
+  renderBodyMap();
+  fetchWeather();
+  fetchNews(activeNewsSource);
+});
+</script>
+</body>
+</html>
