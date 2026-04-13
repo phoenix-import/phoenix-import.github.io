@@ -284,8 +284,16 @@ def main():
         def _norm_pct(p: str) -> str:
             return re.sub(r"%[0-9a-fA-F]{2}", lambda m: m.group().upper(), p)
         if _norm_pct(src_path) == _norm_pct(dest_path_raw):
-            unresolved_rows.append((src_path, raw_dest, "self-referential"))
-            seen_sources.add(src_path)
+            # The htaccess was just doing www/HTTPS normalisation — source == dest.
+            # The source URL itself may still need a Shopify redirect, so try
+            # resolving it directly through the lookup tables before giving up.
+            resolved, status = resolve_destination(src_path, lookup, collection_handles)
+            if status != "unresolved" and resolved != src_path:
+                seen_sources.add(src_path)
+                resolved_rows.append((src_path, resolved))
+            else:
+                unresolved_rows.append((src_path, raw_dest, "self-referential"))
+                seen_sources.add(src_path)
             continue
 
         # If the source URL is already a key in the existing redirect tables,
