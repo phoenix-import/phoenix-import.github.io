@@ -22,6 +22,7 @@ import csv
 import os
 import re
 import sys
+from difflib import SequenceMatcher
 from urllib.parse import unquote
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -75,6 +76,39 @@ def lang_from_path(path: str) -> str | None:
     return m.group(1).lower() if m else None
 
 
+def fuzzy_best_collection(slug: str, collection_handles: set[str], threshold: float) -> str | None:
+    """Return the best-matching collection handle if similarity ≥ threshold, else None."""
+    best_score, best_handle = 0.0, None
+    for h in collection_handles:
+        score = SequenceMatcher(None, slug, h).ratio()
+        if score > best_score:
+            best_score, best_handle = score, h
+    return best_handle if best_score >= threshold else None
+
+
+def clean_product_slug(slug: str) -> str:
+    """Strip trailing size/dimension/colour suffixes so fuzzy match focuses on the product name."""
+    # Remove trailing tokens that look like sizes (e.g. -l, -xl, -200-ml, -147x208-cm, -08-cm, -24-cm)
+    slug = re.sub(r"(-(?:\d[\dx]*[a-z]*|[a-z]{1,2}))+$", "", slug)
+    return slug
+
+
+def keyword_best_collection(slug: str, collection_handles: set[str]) -> str | None:
+    """
+    Return a collection handle whose name starts with the same first word as slug,
+    preferring the shortest (most specific) matching handle.
+    Returns None if no match is found.
+    """
+    first_word = slug.split("-")[0]
+    if not first_word:
+        return None
+    candidates = [h for h in collection_handles if h.startswith(first_word + "-") or h == first_word]
+    if not candidates:
+        return None
+    # Prefer the shortest match (most specific / least generic)
+    return min(candidates, key=len)
+
+
 def is_shopify_path(path: str) -> bool:
     """True if path is already in a Shopify URL format."""
     if any(seg in path for seg in ("/collections/", "/products/", "/pages/", "/blogs/")):
@@ -120,6 +154,11 @@ def load_lookup_tables() -> tuple[dict[str, str], set[str]]:
                         if src not in lookup:
                             lookup[src] = dst
                             loaded += 1
+                        # Also index a lowercase key so percent-encoded paths
+                        # like /de/2/%C3%BCber-uns.aspx resolve when lowercased.
+                        src_lower = src.lower()
+                        if src_lower not in lookup:
+                            lookup[src_lower] = dst
                         if dst.startswith("/collections/"):
                             collection_handles.add(dst[len("/collections/"):])
     print(f"  Loaded {loaded} mappings, {len(collection_handles)} collection handles")
@@ -202,15 +241,43 @@ def resolve_destination(
             if parent_slug in collection_handles:
                 return f"/collections/{parent_slug}", "fallback"
 
+    # --- Fallback for unresolved /lang/2/ info pages → lang homepage ---
+    if re.search(r"/[a-z]{2}/2/", path):
+        lang = lang_from_path(path)
+        return (f"/{lang}" if lang else "/"), "fallback"
+
     # --- Extra fallback for old /lang/4/SKU/ product paths ---
-    # If the exact slug isn't found, try any product with the same SKU in the same language
-    m = re.match(r"^(/[a-z]{2})/4/(\d+)/", path)
+    # SKU may be numeric (12345) or alphanumeric (st09). If the exact slug
+    # isn't found, try any product with the same SKU in the same language.
+    m = re.match(r"^(/[a-z]{2})/4/([^/]+)/(.+?)\.aspx$", path)
     if m:
-        lang_prefix, sku = m.group(1), m.group(2)
+        lang_prefix, sku, prod_slug = m.group(1), m.group(2), m.group(3)
         sku_pattern = f"{lang_prefix}/4/{sku}/"
         for candidate_src, candidate_dst in lookup.items():
             if candidate_src.startswith(sku_pattern):
                 return strip_domain(candidate_dst), "fallback"
+
+        # Discontinued product — fuzzy match slug against collection handles,
+        # then keyword (first-word) match, fall back to lang homepage if nothing sticks.
+        clean = clean_product_slug(prod_slug)
+        handle = fuzzy_best_collection(clean, collection_handles, threshold=0.60)
+        lang = lang_prefix.lstrip("/")
+        if handle:
+            return f"/collections/{handle}", "fallback"
+        handle = keyword_best_collection(clean, collection_handles)
+        if handle:
+            return f"/collections/{handle}", "fallback"
+        return f"/{lang}", "fallback"
+
+    # --- Fuzzy category match for unresolved /lang/3/ paths ---
+    if re.search(r"/[a-z]{2}/3/", path):
+        slug = re.sub(r"\.aspx$", "", path.split("/")[-1])
+        handle = fuzzy_best_collection(slug, collection_handles, threshold=0.70)
+        if handle:
+            return f"/collections/{handle}", "fallback"
+        # Fall back to lang homepage
+        lang = lang_from_path(path)
+        return (f"/{lang}" if lang else "/"), "fallback"
 
     return path, "unresolved"
 
