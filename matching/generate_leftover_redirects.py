@@ -44,7 +44,8 @@ LOOKUP_FILES = {
     "utilize":    "utilize_redirects_{lang}.csv",
 }
 
-OUTPUT_FILE     = os.path.join(SCRIPT_DIR, f"{_stem}_redirects.csv")
+_parsed_stem = re.sub(r"^LeftoverRedirects_", "LeftoverRedirectsParsed_", _stem)
+OUTPUT_FILE     = os.path.join(SCRIPT_DIR, f"{_parsed_stem}.csv")
 UNRESOLVED_FILE = os.path.join(SCRIPT_DIR, f"{_stem}_unresolved.csv")
 SKIPPED_FILE    = os.path.join(SCRIPT_DIR, f"{_stem}_skipped_rewrites.csv")
 
