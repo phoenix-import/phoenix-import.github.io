@@ -71,8 +71,8 @@ def strip_domain(url: str) -> str:
 
 
 def lang_from_path(path: str) -> str | None:
-    m = re.match(r"^/([a-z]{2})/", path)
-    return m.group(1) if m else None
+    m = re.match(r"^/([a-zA-Z]{2})/", path)
+    return m.group(1).lower() if m else None
 
 
 def is_shopify_path(path: str) -> bool:
@@ -143,11 +143,16 @@ def resolve_destination(
       'fallback'    — resolved via a best-effort fallback (parent category / slug)
       'unresolved'  — could not resolve
     """
-    path = strip_domain(raw_dest)
+    path = strip_domain(raw_dest).lower()  # normalise: all lookup keys are lowercase
 
     # Already a Shopify-format path
     if is_shopify_path(path):
         return path, "ok"
+
+    # Destination is a root URL with language param (e.g. /?language=IT → /it)
+    m_lang = re.match(r"^/\?language=([a-z]{2})$", path)
+    if m_lang:
+        return f"/{m_lang.group(1)}", "fallback"
 
     # Webshop product-list URLs → language homepage
     if "/webshop/" in path:
@@ -189,12 +194,13 @@ def resolve_destination(
         # 2. Parent category path: /lang/3/cat/subcat.aspx → /lang/3/cat.aspx
         parts = path.rstrip("/").split("/")  # ['', 'nl', '3', 'cat', 'subcat.aspx']
         if len(parts) >= 5:
-            parent_path = "/" + "/".join(parts[1:4]) + ".aspx"  # /nl/3/cat.aspx
+            parent_path = "/" + "/".join(parts[1:4]) + ".aspx"  # /lang/3/cat.aspx
             if parent_path in lookup:
                 return strip_domain(lookup[parent_path]), "fallback"
-            parent_lower = parent_path.lower()
-            if parent_lower in lookup:
-                return strip_domain(lookup[parent_lower]), "fallback"
+            # Parent slug might itself be a known collection handle
+            parent_slug = parts[3]
+            if parent_slug in collection_handles:
+                return f"/collections/{parent_slug}", "fallback"
 
     # --- Extra fallback for old /lang/4/SKU/ product paths ---
     # If the exact slug isn't found, try any product with the same SKU in the same language
