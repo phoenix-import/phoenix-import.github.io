@@ -1,0 +1,6 @@
+# Temporary checkpoint files created by translate_specs.py
+.checkpoint_*.json
+
+# Translation output files (large xlsx, managed separately)
+*specs.xlsx
+*specs_raw.xlsx
