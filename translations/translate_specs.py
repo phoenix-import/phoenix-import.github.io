@@ -49,7 +49,7 @@ LANGUAGE_CONFIG = {
     "ES": {"locale": "es", "name": "Spanish (Español)"},
 }
 
-BATCH_SIZE = 200
+BATCH_SIZE = 150
 MAX_RETRIES = 3
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -163,7 +163,7 @@ def translate_batch(
                 input=numbered,
                 capture_output=True,
                 text=True,
-                timeout=180,
+                timeout=240,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"claude CLI error: {result.stderr.strip()}")
