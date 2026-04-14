@@ -38,8 +38,9 @@ from openpyxl import load_workbook
 # Config
 # ---------------------------------------------------------------------------
 
-BASE_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx")
-OUTPUT_DIR = Path("translations")
+BASE_DIR = Path(__file__).resolve().parent
+BASE_FILE = BASE_DIR / "Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx"
+OUTPUT_DIR = BASE_DIR
 
 LANGUAGE_CONFIG = {
     "EN": {"locale": "en", "name": "English"},
@@ -311,8 +312,12 @@ def main():
             translated_cell.value = repack_translation(value, cat, translated_text)
             translate_count += 1
 
+    print("Saving output file...", flush=True)
     wb.save(out_file)
-    # Remove checkpoint now that output file is written successfully
+    if not out_file.exists():
+        print(f"ERROR: save appeared to succeed but {out_file} not found on disk!")
+        sys.exit(1)
+    # Only remove checkpoint after confirming file is on disk
     if checkpoint_file.exists():
         checkpoint_file.unlink()
     print(f"\nRows copied as-is : {copy_count}")
