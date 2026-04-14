@@ -5,9 +5,12 @@ Part A: Clear any pre-existing values in 'Translated content'.
 Part B: Delete non-spec rows from the base file.
 
 Non-spec categories (deleted):
-  json_richtext_lexical  — Lexical rich-text dicts {"type": ...}
-  json_richtext_blocks   — Block-reference dicts {"blocks": [...]}
-  plain_seo_title        — Contains SEO keywords (groothandel, bestel online, b2b, phoenix import)
+  json_dict              — Any JSON dict (app config, plugin data, rich text, block refs)
+                           Product spec metafields use arrays or primitives, never dicts.
+  json_array_en_category — JSON arrays containing English category tag phrases
+                           (e.g. ["Candles and candle holders","Organic products"])
+  plain_seo_title        — Contains SEO keywords (groothandel, bestel online, online bestellen,
+                           b2b, phoenix import, leverancier) or ` | ` separator pattern
   plain_long_text        — Plain text longer than 100 chars
   plain_language_tag     — Language availability codes like NL/EN/DE/IT/FR/ES
   plain_sku              — Product identifier codes like 01647831L
@@ -26,7 +29,14 @@ import openpyxl
 BASE_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx")
 BACKUP_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026_ORIGINAL.xlsx")
 
-SEO_KEYWORDS = ["groothandel", "bestel online", "b2b", "phoenix import"]
+SEO_KEYWORDS = ["groothandel", "bestel online", "online bestellen", "b2b", "phoenix import", "leverancier", " | "]
+
+# English words that appear in category tag metafields but never in Dutch product specs.
+EN_CATEGORY_INDICATORS = [
+    " and ", " or ", " with ", " for ", " of ", " the ",
+    "products", "lifestyle", "holders", "gemstones", "jewelry",
+    "organic", "candles", "statues", "stationery", "incense", "singing",
+]
 
 RE_LANGUAGE_TAG = re.compile(r"^[A-Z]{2}(/[A-Z]{2})+$")
 RE_SKU = re.compile(r"^[A-Z]{0,3}\d{5,}[A-Z]{0,2}$")
@@ -42,12 +52,13 @@ def classify(value: str) -> str:
     try:
         parsed = json.loads(v)
         if isinstance(parsed, dict):
-            if "type" in parsed:
-                return "json_richtext_lexical"
-            if "blocks" in parsed:
-                return "json_richtext_blocks"
-            # Other dicts: keep (unknown spec format)
-            return ""
+            # All JSON dicts are app/plugin config, rich text, or block refs — never product specs.
+            # Product spec metafields use arrays (json_array) or primitives (json_numeric).
+            return "json_dict"
+        if isinstance(parsed, list):
+            v_lower = v.lower()
+            if any(kw in v_lower for kw in EN_CATEGORY_INDICATORS):
+                return "json_array_en_category"
         # Lists and numbers: keep (specs)
         return ""
     except (json.JSONDecodeError, ValueError):
