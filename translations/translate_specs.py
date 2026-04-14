@@ -38,8 +38,9 @@ from openpyxl import load_workbook
 # Config
 # ---------------------------------------------------------------------------
 
-BASE_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx")
-OUTPUT_DIR = Path("translations")
+BASE_DIR = Path(__file__).resolve().parent
+BASE_FILE = BASE_DIR / "Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx"
+OUTPUT_DIR = BASE_DIR
 
 LANGUAGE_CONFIG = {
     "EN": {"locale": "en", "name": "English"},
@@ -49,7 +50,7 @@ LANGUAGE_CONFIG = {
     "ES": {"locale": "es", "name": "Spanish (Español)"},
 }
 
-BATCH_SIZE = 100
+BATCH_SIZE = 150
 MAX_RETRIES = 3
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -163,7 +164,7 @@ def translate_batch(
                 input=numbered,
                 capture_output=True,
                 text=True,
-                timeout=120,
+                timeout=240,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"claude CLI error: {result.stderr.strip()}")
@@ -221,6 +222,7 @@ def main():
 
     suffix = "specs" if repair else "specs_raw"
     out_file = OUTPUT_DIR / f"{lang}{suffix}.xlsx"
+    checkpoint_file = OUTPUT_DIR / f".checkpoint_{lang}{'_repair' if repair else ''}.json"
 
     print(f"\nTranslating → {lang} ({'repair' if repair else 'raw'})")
     print(f"Output: {out_file}")
@@ -256,17 +258,35 @@ def main():
     translatable = list(unique_strings.keys())
     print(f"Unique translatable strings: {len(translatable)}")
 
-    # --- Translate in batches ---
+    # --- Load checkpoint if resuming ---
     system_prompt = build_system_prompt(lang_name, repair)
     translations: dict[str, str] = {}  # translatable_text → translated_text
 
-    total_batches = (len(translatable) + BATCH_SIZE - 1) // BATCH_SIZE
-    for i in range(0, len(translatable), BATCH_SIZE):
-        batch = translatable[i : i + BATCH_SIZE]
-        batch_num = i // BATCH_SIZE + 1
-        print(f"  Batch {batch_num}/{total_batches} ({len(batch)} strings)...", end=" ", flush=True)
+    if checkpoint_file.exists():
+        with open(checkpoint_file) as f:
+            translations = json.load(f)
+        print(f"Resuming from checkpoint: {len(translations)} strings already translated.")
+
+    # Skip strings already in checkpoint
+    remaining = [s for s in translatable if s not in translations]
+    total_batches = (len(remaining) + BATCH_SIZE - 1) // BATCH_SIZE
+    done_batches = (len(translatable) - len(remaining)) // BATCH_SIZE
+
+    if not remaining:
+        print("All strings already translated (checkpoint complete).")
+    else:
+        print(f"Strings remaining: {len(remaining)} across {total_batches} batches.")
+
+    for i in range(0, len(remaining), BATCH_SIZE):
+        batch = remaining[i : i + BATCH_SIZE]
+        batch_num = done_batches + i // BATCH_SIZE + 1
+        total = done_batches + total_batches
+        print(f"  Batch {batch_num}/{total} ({len(batch)} strings)...", end=" ", flush=True)
         batch_result = translate_batch(batch, system_prompt)
         translations.update(batch_result)
+        # Save checkpoint after every successful batch
+        with open(checkpoint_file, "w") as f:
+            json.dump(translations, f, ensure_ascii=False)
         print("done")
 
     print(f"Translation complete. {len(translations)} strings translated.")
@@ -292,7 +312,14 @@ def main():
             translated_cell.value = repack_translation(value, cat, translated_text)
             translate_count += 1
 
+    print("Saving output file...", flush=True)
     wb.save(out_file)
+    if not out_file.exists():
+        print(f"ERROR: save appeared to succeed but {out_file} not found on disk!")
+        sys.exit(1)
+    # Only remove checkpoint after confirming file is on disk
+    if checkpoint_file.exists():
+        checkpoint_file.unlink()
     print(f"\nRows copied as-is : {copy_count}")
     print(f"Rows translated    : {translate_count}")
     print(f"Saved: {out_file}")
