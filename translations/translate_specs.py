@@ -49,7 +49,7 @@ LANGUAGE_CONFIG = {
     "ES": {"locale": "es", "name": "Spanish (Español)"},
 }
 
-BATCH_SIZE = 100
+BATCH_SIZE = 500
 MAX_RETRIES = 3
 MODEL = "claude-haiku-4-5-20251001"
 
