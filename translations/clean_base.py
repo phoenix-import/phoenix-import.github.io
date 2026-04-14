@@ -9,6 +9,9 @@ Non-spec categories (deleted):
                            Product spec metafields use arrays or primitives, never dicts.
   json_array_en_category — JSON arrays containing English category tag phrases
                            (e.g. ["Candles and candle holders","Organic products"])
+  json_array_channel     — JSON arrays whose elements are all sales-channel / audience words
+                           (Shop, Webshop, Wholesale, Yoga studio, Yoga, Meditation centre)
+  plain_shopify_gid      — Shopify global ID references (gid://shopify/...)
   plain_seo_title        — Contains SEO keywords (groothandel, bestel online, online bestellen,
                            b2b, phoenix import, leverancier) or ` | ` separator pattern
   plain_long_text        — Plain text longer than 100 chars
@@ -38,8 +41,13 @@ EN_CATEGORY_INDICATORS = [
     "organic", "candles", "statues", "stationery", "incense", "singing",
 ]
 
+# Sales-channel / audience classification values — these are grouping tags, not product specs.
+# A JSON array is deleted only when ALL its elements (lowercased) are in this set.
+CHANNEL_WORDS = {"shop", "webshop", "wholesale", "yoga studio", "yoga", "meditation centre"}
+
 RE_LANGUAGE_TAG = re.compile(r"^[A-Z]{2}(/[A-Z]{2})+$")
 RE_SKU = re.compile(r"^[A-Z]{0,3}\d{5,}[A-Z]{0,2}$")
+RE_SHOPIFY_GID = re.compile(r"^gid://shopify/")
 
 
 def classify(value: str) -> str:
@@ -59,12 +67,18 @@ def classify(value: str) -> str:
             v_lower = v.lower()
             if any(kw in v_lower for kw in EN_CATEGORY_INDICATORS):
                 return "json_array_en_category"
+            # Channel/audience tags: all elements must be known channel words
+            if all(isinstance(el, str) and el.lower() in CHANNEL_WORDS for el in parsed):
+                return "json_array_channel"
         # Lists and numbers: keep (specs)
         return ""
     except (json.JSONDecodeError, ValueError):
         pass
 
     # Plain text checks
+    if RE_SHOPIFY_GID.match(v):
+        return "plain_shopify_gid"
+
     v_lower = v.lower()
     for kw in SEO_KEYWORDS:
         if kw in v_lower:
