@@ -5,11 +5,11 @@ Reads the cleaned base xlsx and produces a translated output file for one langua
 Every row in the cleaned base is a product spec — there are no rows to skip.
 
 Row classification:
-  json_array        Parses as JSON list          → Translate inner text
-  json_numeric      Parses as JSON number         → Copy as-is
-  plain_country_code  Regex ^[A-Z]{2}$            → Copy as-is (ISO origin code)
-  plain_numeric_dim   All digits/separators       → Copy as-is
-  plain_spec        Everything else               → Translate
+  json_array          Parses as JSON list          → Translate inner text
+  json_numeric        Parses as JSON number         → Copy as-is
+  plain_country_code  Regex ^[A-Z]{2}$             → Copy as-is (ISO origin code)
+  plain_numeric_dim   All digits/separators        → Copy as-is
+  plain_spec          Everything else              → Translate
 
 Modes:
   --repair   Claude is asked to repair encoding corruption before translating
@@ -21,19 +21,17 @@ Usage:
   python translations/translate_specs.py --lang DE --repair   → DEspecs.xlsx
   ...
 
-Requires:
-  ANTHROPIC_API_KEY environment variable
+Uses the local `claude` CLI for API calls — no ANTHROPIC_API_KEY needed.
 """
 
 import argparse
 import json
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
 
-import anthropic
-import openpyxl
 from openpyxl import load_workbook
 
 # ---------------------------------------------------------------------------
@@ -89,7 +87,6 @@ def extract_translatable(value: str, category: str) -> str | None:
     if category == "json_array":
         try:
             items = json.loads(value.strip())
-            # Items separated by newlines within the batch entry
             return "\n".join(str(i) for i in items)
         except Exception:
             return value.strip()
@@ -97,14 +94,14 @@ def extract_translatable(value: str, category: str) -> str | None:
 
 
 def repack_translation(original: str, category: str, translated: str) -> str:
-    """Re-wrap a translated string back into its original format."""
+    """Re-wrap a translated string back into its original JSON format."""
     if category == "json_array":
         try:
             original_items = json.loads(original.strip())
             translated_lines = [l.strip() for l in translated.strip().splitlines()]
             if len(translated_lines) == len(original_items):
                 return json.dumps(translated_lines, ensure_ascii=False)
-            # Mismatch — fall back to wrapping the whole translation in a list
+            # Count mismatch — wrap whole translation as single-element list
             return json.dumps([translated.strip()], ensure_ascii=False)
         except Exception:
             return translated
@@ -122,60 +119,61 @@ def build_system_prompt(lang_name: str, repair: bool) -> str:
         "Infer the intended character from context, repair it, then translate the repaired text."
         if repair else ""
     )
-    return f"""You are translating product specification values for a Dutch B2B wholesale shop \
-selling spiritual and new-age products (Phoenix Import). Source language: Dutch. \
-Target language: {lang_name}.
-
-Rules:
-- Translate material names, packaging types, attribute labels, country names, colour names, \
-product descriptors, scent names, and size labels.
-- Keep proper nouns (brand names, product names) only if they have no standard translation.
-- For multi-line inputs representing JSON array elements: translate each line independently \
-and return the same number of lines in the same order.
-- Keep measurement units (cm, ml, g, kg, mm, st) unchanged.
-- Translate country names to their {lang_name} equivalents \
-(e.g. India → Indien in German, Inde in French).
-- Do NOT add explanations, notes, or extra text.{repair_instruction}
-- Return ONLY the translated values, one per line, in the same numbered order as input.
-- Format: each line starts with its number and a period, e.g. "1. translated value"."""
+    return (
+        f"You are translating product specification values for a Dutch B2B wholesale shop "
+        f"selling spiritual and new-age products (Phoenix Import). "
+        f"Source language: Dutch. Target language: {lang_name}.\n\n"
+        f"Rules:\n"
+        f"- Translate material names, packaging types, attribute labels, country names, "
+        f"colour names, product descriptors, scent names, and size labels.\n"
+        f"- Keep proper nouns (brand names, product names) only if they have no standard translation.\n"
+        f"- For multi-line inputs representing JSON array elements: translate each line "
+        f"independently and return the same number of lines in the same order.\n"
+        f"- Keep measurement units (cm, ml, g, kg, mm, st) unchanged.\n"
+        f"- Translate country names to their {lang_name} equivalents "
+        f"(e.g. India → Indien in German, Inde in French).\n"
+        f"- Do NOT add explanations, notes, or extra text.{repair_instruction}\n"
+        f"- Return ONLY the translated values, one per line, in the same numbered order as input.\n"
+        f"- Format: each line starts with its number and a period, e.g. \"1. translated value\"."
+    )
 
 
 # ---------------------------------------------------------------------------
-# API call
+# Translation via claude CLI
 # ---------------------------------------------------------------------------
 
 def translate_batch(
-    client: anthropic.Anthropic,
     strings: list[str],
     system_prompt: str,
-    system_prompt_cached: bool,
 ) -> dict[str, str]:
-    """Translate a list of unique strings. Returns {original: translated}."""
+    """Translate a list of unique strings using the claude CLI.
+    Returns {original: translated}."""
     numbered = "\n".join(f"{i+1}. {s}" for i, s in enumerate(strings))
-
-    system = [
-        {
-            "type": "text",
-            "text": system_prompt,
-            "cache_control": {"type": "ephemeral"},
-        }
-    ] if system_prompt_cached else system_prompt
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=4096,
-                system=system,
-                messages=[{"role": "user", "content": numbered}],
+            result = subprocess.run(
+                [
+                    "claude", "--print",
+                    "--model", MODEL,
+                    "--system-prompt", system_prompt,
+                    "--tools", "",
+                    "--no-session-persistence",
+                ],
+                input=numbered,
+                capture_output=True,
+                text=True,
+                timeout=120,
             )
-            raw = response.content[0].text.strip()
+            if result.returncode != 0:
+                raise RuntimeError(f"claude CLI error: {result.stderr.strip()}")
+            raw = result.stdout.strip()
             return parse_numbered_response(strings, raw)
-        except anthropic.APIError as e:
+        except Exception as e:
             if attempt == MAX_RETRIES:
                 raise
             wait = 2 ** attempt
-            print(f"    API error (attempt {attempt}/{MAX_RETRIES}): {e} — retrying in {wait}s")
+            print(f"    Error (attempt {attempt}/{MAX_RETRIES}): {e} — retrying in {wait}s")
             time.sleep(wait)
 
     return {}
@@ -185,7 +183,6 @@ def parse_numbered_response(originals: list[str], raw: str) -> dict[str, str]:
     """Parse numbered API response back into {original: translated}."""
     result = {}
     lines = raw.splitlines()
-    # Extract lines that start with "N." or "N) "
     parsed = []
     for line in lines:
         m = re.match(r"^\s*(\d+)[.)]\s+(.*)", line)
@@ -250,7 +247,7 @@ def main():
         rows_data.append((row[0].row, value, cat))
 
     # --- Collect unique translatable strings ---
-    unique_strings = {}  # translatable_text → (original_value, category)
+    unique_strings: dict[str, tuple] = {}  # translatable_text → (original_value, category)
     for _, value, cat in rows_data:
         text = extract_translatable(value, cat)
         if text is not None and text not in unique_strings:
@@ -260,23 +257,21 @@ def main():
     print(f"Unique translatable strings: {len(translatable)}")
 
     # --- Translate in batches ---
-    client = anthropic.Anthropic()
     system_prompt = build_system_prompt(lang_name, repair)
-    translations = {}  # translatable_text → translated_text
+    translations: dict[str, str] = {}  # translatable_text → translated_text
 
     total_batches = (len(translatable) + BATCH_SIZE - 1) // BATCH_SIZE
     for i in range(0, len(translatable), BATCH_SIZE):
         batch = translatable[i : i + BATCH_SIZE]
         batch_num = i // BATCH_SIZE + 1
         print(f"  Batch {batch_num}/{total_batches} ({len(batch)} strings)...", end=" ", flush=True)
-        batch_result = translate_batch(client, batch, system_prompt, system_prompt_cached=True)
+        batch_result = translate_batch(batch, system_prompt)
         translations.update(batch_result)
         print("done")
 
     print(f"Translation complete. {len(translations)} strings translated.")
 
     # --- Write output file ---
-    # Update Translated content and Locale columns in-place
     copy_count = 0
     translate_count = 0
 
