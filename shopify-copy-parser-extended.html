@@ -357,7 +357,6 @@ function processHTML(rawHTML, lang, useWholesale, collectionsCount = 8) {
     const result = findTopHandles(linkText, lang);
     if (result.confident) {
       a.setAttribute("href", "/collections/" + result.top[0].handle);
-      if (useWholesale) a.textContent = wholesaleLabel(result.top[0].handle, lang);
       linksMatched++;
       logs.push({ type:"ok",   msg: '\u2713 "' + linkText + '" \u2192 /collections/' + result.top[0].handle });
     } else if (result.top.length > 0) {
@@ -737,7 +736,6 @@ document.getElementById("resolveApplyBtn").addEventListener("click", () => {
       el.setAttribute("href", HOMEPAGE);
     } else {
       el.setAttribute("href", "/collections/" + chosen);
-      if (useWholesale) el.textContent = wholesaleLabel(chosen, lang);
     }
     el.removeAttribute("data-resolve-id");
     resolved++;
