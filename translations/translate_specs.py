@@ -39,7 +39,7 @@ from openpyxl import load_workbook
 # ---------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
-BASE_FILE = BASE_DIR / "Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx"
+BASE_FILE = BASE_DIR / "Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-22-2026.xlsx"
 OUTPUT_DIR = BASE_DIR
 
 LANGUAGE_CONFIG = {
