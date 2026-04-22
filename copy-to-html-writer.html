@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix Import – Copy to HTML Writer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #68437B;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+    header span { font-size: 13px; opacity: 0.65; }
+
+    .controls {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    button.secondary:hover { background: #f9fafb; border-color: #9ca3af; }
+    button.secondary.copied { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+
+    button.ghost {
+      background: transparent;
+      color: #9ca3af;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    button.ghost:hover { background: #f9fafb; color: #374151; border-color: #9ca3af; }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: #d1fae5;
+      color: #065f46;
+      font-weight: 500;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      height: calc(100vh - 110px);
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #e5e7eb;
+    }
+
+    .pane:last-child { border-right: none; }
+
+    .pane-header {
+      padding: 10px 16px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pane-header h2 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      padding: 16px;
+      background: #fff;
+      color: #1a1a2e;
+    }
+
+    textarea#output {
+      background: #f9fafb;
+    }
+
+    .cheatsheet {
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      padding: 8px 16px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .cheatsheet .cs-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #9ca3af;
+      margin-right: 4px;
+    }
+
+    .cheatsheet code {
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 10.5px;
+      background: #e5e7eb;
+      color: #374151;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .cheatsheet span {
+      font-size: 11px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Phoenix Import — Copy to HTML Writer</h1>
+  <span>Write plain text, get Shopify-ready HTML instantly</span>
+  <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import" style="height:36px;"></a>
+</header>
+
+<div class="controls">
+  <button class="secondary" id="copyBtn">Copy Output</button>
+  <button class="ghost" id="clearBtn">Clear</button>
+  <span class="badge" id="badge">live</span>
+</div>
+
+<div class="workspace">
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Plain text input</h2>
+      <span class="hint">Write your copy using the syntax below</span>
+    </div>
+    <textarea id="input" placeholder="# Main product heading&#10;&#10;## Features&#10;&#10;Write your paragraph text here. Use **bold** for emphasis.&#10;&#10;- Bullet item one&#10;- Bullet item two&#10;&#10;Add a [link](https://example.com) like this."></textarea>
+    <div class="cheatsheet">
+      <span><span class="cs-label">Headings</span><code># H1</code> <code>## H2</code> <code>### H3</code></span>
+      <span><span class="cs-label">Style</span><code>**bold**</code> <code>*italic*</code></span>
+      <span><span class="cs-label">Link</span><code>[label](url)</code></span>
+      <span><span class="cs-label">List</span><code>- item</code> or <code>1. item</code></span>
+      <span><span class="cs-label">Para</span>blank line between paragraphs</span>
+    </div>
+  </div>
+
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Shopify-ready HTML output</h2>
+      <span class="hint">Paste directly into metafield</span>
+    </div>
+    <textarea id="output" readonly placeholder="HTML appears here as you type…"></textarea>
+  </div>
+</div>
+
+<script>
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function inlineFormat(raw) {
+  let t = escapeHTML(raw);
+  // Links before bold/italic so URLs with underscores aren't mangled
+  t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => `<a href="${url}">${label}</a>`);
+  // Bold: **text** or __text__
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  // Italic: *text* or _text_ (single markers)
+  t = t.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  t = t.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+  return t;
+}
+
+function convert(text) {
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Skip blank lines
+    if (line.trim() === '') { i++; continue; }
+
+    // ATX headings: # ## ###  (cap at h3 for Shopify metafields)
+    const hm = line.match(/^(#{1,6})\s+(.+)/);
+    if (hm) {
+      const level = Math.min(hm[1].length, 3);
+      out.push(`<h${level}>${inlineFormat(hm[2].trim())}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*•]\s/.test(line)) {
+      out.push('<ul>');
+      while (i < lines.length && /^[-*•]\s/.test(lines[i])) {
+        out.push(`  <li>${inlineFormat(lines[i].replace(/^[-*•]\s+/, '').trim())}</li>`);
+        i++;
+      }
+      out.push('</ul>');
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s/.test(line)) {
+      out.push('<ol>');
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        out.push(`  <li>${inlineFormat(lines[i].replace(/^\d+\.\s+/, '').trim())}</li>`);
+        i++;
+      }
+      out.push('</ol>');
+      continue;
+    }
+
+    // Paragraph: collect consecutive non-special lines until blank line or block element
+    const paraLines = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() !== '' &&
+      !/^#{1,6}\s/.test(lines[i]) &&
+      !/^[-*•]\s/.test(lines[i]) &&
+      !/^\d+\.\s/.test(lines[i])
+    ) {
+      paraLines.push(inlineFormat(lines[i].trim()));
+      i++;
+    }
+    if (paraLines.length > 0) {
+      out.push(`<p>${paraLines.join(' ')}</p>`);
+    }
+  }
+
+  return out.join('\n');
+}
+
+const inputEl  = document.getElementById('input');
+const outputEl = document.getElementById('output');
+const badgeEl  = document.getElementById('badge');
+
+inputEl.addEventListener('input', () => {
+  const html = convert(inputEl.value);
+  outputEl.value = html;
+  badgeEl.textContent = html.trim() ? 'live' : 'live';
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const out = outputEl.value;
+  if (!out) return;
+  navigator.clipboard.writeText(out).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy Output';
+      btn.classList.remove('copied');
+    }, 1800);
+  });
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  inputEl.value = '';
+  outputEl.value = '';
+  inputEl.focus();
+});
+</script>
+</body>
+</html>

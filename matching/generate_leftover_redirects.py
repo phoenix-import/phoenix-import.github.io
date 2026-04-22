@@ -46,8 +46,11 @@ LOOKUP_FILES = {
 
 _parsed_stem = re.sub(r"^LeftoverRedirects_", "LeftoverRedirectsParsed_", _stem)
 OUTPUT_FILE     = os.path.join(SCRIPT_DIR, f"{_parsed_stem}.csv")
+HTACCESS_FILE   = os.path.join(SCRIPT_DIR, f"{_parsed_stem}.htaccess")
 UNRESOLVED_FILE = os.path.join(SCRIPT_DIR, f"{_stem}_unresolved.csv")
 SKIPPED_FILE    = os.path.join(SCRIPT_DIR, f"{_stem}_skipped_rewrites.csv")
+
+SHOPIFY_DOMAIN = "https://www.phoeniximport.com"
 
 
 # ---------------------------------------------------------------------------
@@ -404,10 +407,15 @@ def main():
         writer.writerow(["Pattern", "Destination"])
         writer.writerows(rewrite_rows)
 
+    with open(HTACCESS_FILE, "w", encoding="utf-8") as f:
+        for src, dst in resolved_rows:
+            f.write(f"Redirect 301 {src} {SHOPIFY_DOMAIN}{dst}\n")
+
     print(f"\nDone!")
     print(f"  Resolved:              {len(resolved_rows):>4}  → {os.path.basename(OUTPUT_FILE)}")
     print(f"  Unresolved / skipped:  {len(unresolved_rows):>4}  → {os.path.basename(UNRESOLVED_FILE)}")
     print(f"  RewriteRules (regex):  {len(rewrite_rows):>4}  → {os.path.basename(SKIPPED_FILE)}")
+    print(f"  htaccess output:       {len(resolved_rows):>4}  → {os.path.basename(HTACCESS_FILE)}")
 
 
 if __name__ == "__main__":
