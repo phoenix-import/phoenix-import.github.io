@@ -265,7 +265,8 @@ def main() -> None:
 
         if handle:
             counts[method] += 1
-            writers[lang][1].writerow([from_path, f"/collections/{handle}"])
+            prefix = "" if lang == "nl" else f"/{lang}"
+            writers[lang][1].writerow([from_path, f"{prefix}/collections/{handle}"])
         else:
             counts["unresolved"] += 1
             unresolved_rows.append((lang, from_path, src_slug, tgt_slug))
