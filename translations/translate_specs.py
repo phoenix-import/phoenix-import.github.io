@@ -32,6 +32,7 @@ import sys
 import time
 from pathlib import Path
 
+import openpyxl
 from openpyxl import load_workbook
 
 # ---------------------------------------------------------------------------
@@ -39,7 +40,7 @@ from openpyxl import load_workbook
 # ---------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
-BASE_FILE = BASE_DIR / "Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx"
+BASE_FILE = BASE_DIR / "Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-22-2026.xlsx"
 OUTPUT_DIR = BASE_DIR
 
 LANGUAGE_CONFIG = {
@@ -227,26 +228,30 @@ def main():
     print(f"\nTranslating → {lang} ({'repair' if repair else 'raw'})")
     print(f"Output: {out_file}")
 
-    # --- Load base file ---
+    # --- Load base file (read_only for speed) ---
     print(f"Loading base file: {BASE_FILE}")
-    wb = load_workbook(BASE_FILE)
+    wb = load_workbook(BASE_FILE, read_only=True)
     ws = wb.active
 
-    header = {cell.value: cell.column for cell in ws[1]}
+    header_row_vals = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+    header = {cell: idx + 1 for idx, cell in enumerate(header_row_vals) if cell is not None}
     col_default = header["Default content"]
     col_translated = header["Translated content"]
     col_locale = header["Locale"]
+    num_cols = len(header_row_vals)
 
-    total_rows = ws.max_row - 1
-    print(f"Rows to process: {total_rows}")
-
-    # --- Classify all rows ---
+    # --- Classify all rows (streaming) ---
     rows_data = []  # list of (row_num, value, category)
-    for row in ws.iter_rows(min_row=2, values_only=False):
-        val = row[col_default - 1].value
+    total_rows = 0
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        val = row[col_default - 1]
         value = str(val).strip() if val is not None else ""
         cat = classify_row(value)
-        rows_data.append((row[0].row, value, cat))
+        rows_data.append((row_num, value, cat))
+        total_rows += 1
+    wb.close()
+
+    print(f"Rows to process: {total_rows}")
 
     # --- Collect unique translatable strings ---
     unique_strings: dict[str, tuple] = {}  # translatable_text → (original_value, category)
@@ -291,29 +296,51 @@ def main():
 
     print(f"Translation complete. {len(translations)} strings translated.")
 
-    # --- Write output file ---
+    # --- Write output file (streaming read_only → write_only for speed) ---
+    print("Writing output file (streaming)...", flush=True)
     copy_count = 0
     translate_count = 0
 
-    for row_num, value, cat in rows_data:
-        text = extract_translatable(value, cat)
-        ws_row = ws[row_num]
-        translated_cell = ws_row[col_translated - 1]
-        locale_cell = ws_row[col_locale - 1]
+    # Fast lookup: row_num → (value, category)
+    row_lookup = {row_num: (value, cat) for row_num, value, cat in rows_data}
 
-        locale_cell.value = locale
+    wb_src = load_workbook(BASE_FILE, read_only=True)
+    ws_src = wb_src.active
+
+    wb_out = openpyxl.Workbook(write_only=True)
+    ws_out = wb_out.create_sheet()
+
+    for ws_row_num, row_values in enumerate(ws_src.iter_rows(values_only=True), start=1):
+        row_list = list(row_values)
+        # Pad short rows
+        while len(row_list) < num_cols:
+            row_list.append(None)
+
+        if ws_row_num == 1:
+            ws_out.append(row_list)
+            continue
+
+        if ws_row_num not in row_lookup:
+            ws_out.append(row_list)
+            continue
+
+        value, cat = row_lookup[ws_row_num]
+        text = extract_translatable(value, cat)
+        row_list[col_locale - 1] = locale
 
         if text is None:
-            # Copy as-is
-            translated_cell.value = value
+            row_list[col_translated - 1] = value
             copy_count += 1
         else:
             translated_text = translations.get(text, value)
-            translated_cell.value = repack_translation(value, cat, translated_text)
+            row_list[col_translated - 1] = repack_translation(value, cat, translated_text)
             translate_count += 1
 
+        ws_out.append(row_list)
+
+    wb_src.close()
     print("Saving output file...", flush=True)
-    wb.save(out_file)
+    wb_out.save(out_file)
     if not out_file.exists():
         print(f"ERROR: save appeared to succeed but {out_file} not found on disk!")
         sys.exit(1)

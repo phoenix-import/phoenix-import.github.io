@@ -28,9 +28,10 @@ import shutil
 from pathlib import Path
 
 import openpyxl
+from openpyxl import load_workbook
 
-BASE_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026.xlsx")
-BACKUP_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-13-2026_ORIGINAL.xlsx")
+BASE_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-22-2026.xlsx")
+BACKUP_FILE = Path("translations/Mani_Bhadra_BV_-_Phoenix_Import_translations_Apr-22-2026_ORIGINAL.xlsx")
 
 SEO_KEYWORDS = ["groothandel", "bestel online", "online bestellen", "b2b", "phoenix import", "leverancier", " | "]
 
@@ -60,17 +61,13 @@ def classify(value: str) -> str:
     try:
         parsed = json.loads(v)
         if isinstance(parsed, dict):
-            # All JSON dicts are app/plugin config, rich text, or block refs — never product specs.
-            # Product spec metafields use arrays (json_array) or primitives (json_numeric).
             return "json_dict"
         if isinstance(parsed, list):
             v_lower = v.lower()
             if any(kw in v_lower for kw in EN_CATEGORY_INDICATORS):
                 return "json_array_en_category"
-            # Channel/audience tags: all elements must be known channel words
             if all(isinstance(el, str) and el.lower() in CHANNEL_WORDS for el in parsed):
                 return "json_array_channel"
-        # Lists and numbers: keep (specs)
         return ""
     except (json.JSONDecodeError, ValueError):
         pass
@@ -97,62 +94,71 @@ def classify(value: str) -> str:
 
 
 def main():
-    if not BASE_FILE.exists():
-        print(f"ERROR: Base file not found: {BASE_FILE}")
+    if not BASE_FILE.exists() and not BACKUP_FILE.exists():
+        print(f"ERROR: Neither base file nor backup found.")
         return
 
     # --- Backup ---
     if BACKUP_FILE.exists():
-        print(f"Backup already exists, skipping: {BACKUP_FILE}")
+        print(f"Backup already exists: {BACKUP_FILE}")
     else:
         shutil.copy2(BASE_FILE, BACKUP_FILE)
         print(f"Backup created: {BACKUP_FILE}")
 
-    print(f"\nLoading: {BASE_FILE}")
-    wb = openpyxl.load_workbook(BASE_FILE)
-    ws = wb.active
+    # Always read from backup so Part A + Part B are both applied cleanly
+    source = BACKUP_FILE if BACKUP_FILE.exists() else BASE_FILE
+    print(f"\nLoading: {source}")
+
+    # Use read_only for fast streaming read
+    wb_src = load_workbook(source, read_only=True)
+    ws_src = wb_src.active
 
     # --- Identify column indices (1-based) ---
-    header = {cell.value: cell.column for cell in ws[1]}
+    header_row = next(ws_src.iter_rows(min_row=1, max_row=1, values_only=True))
+    header = {cell: idx + 1 for idx, cell in enumerate(header_row) if cell is not None}
     required = {"Default content", "Translated content"}
     missing = required - set(header)
     if missing:
         print(f"ERROR: Missing columns: {missing}")
+        wb_src.close()
         return
 
     col_default = header["Default content"]
     col_translated = header["Translated content"]
 
-    total_rows = ws.max_row - 1  # exclude header
-    print(f"Rows (excluding header): {total_rows}")
-
-    # --- Part A: Clear pre-existing translations ---
+    # --- Stream rows: classify, count, collect "keep" rows ---
+    total_rows = 0
     cleared = 0
-    for row in ws.iter_rows(min_row=2):
-        cell = row[col_translated - 1]
-        if cell.value not in (None, ""):
-            cell.value = None
-            cleared += 1
-    print(f"\nPart A — Pre-existing translations cleared: {cleared}")
-
-    # --- Part B: Classify and delete non-spec rows ---
     counts = {}
-    rows_to_delete = []  # collect row numbers to delete (descending order)
+    kept_rows = []  # list of row tuples (values only) with Translated content blanked
 
-    for row in ws.iter_rows(min_row=2):
-        default_cell = row[col_default - 1]
-        value = str(default_cell.value) if default_cell.value is not None else ""
+    print("Scanning rows...", flush=True)
+    for row in ws_src.iter_rows(min_row=2, values_only=True):
+        total_rows += 1
+        val = row[col_default - 1]
+        value = str(val).strip() if val is not None else ""
         category = classify(value)
+
         if category:
             counts[category] = counts.get(category, 0) + 1
-            rows_to_delete.append(row[0].row)
+            continue  # skip (delete)
 
-    # Delete from bottom up to preserve row numbers
-    rows_to_delete.sort(reverse=True)
-    for row_num in rows_to_delete:
-        ws.delete_rows(row_num)
+        # Keep this row — blank 'Translated content' (Part A)
+        row_list = list(row)
+        # Pad short rows to header width
+        num_cols = len(header_row)
+        while len(row_list) < num_cols:
+            row_list.append(None)
+        if row_list[col_translated - 1] not in (None, ""):
+            row_list[col_translated - 1] = None
+            cleared += 1
+        kept_rows.append(tuple(row_list))
 
-    deleted_total = len(rows_to_delete)
+    wb_src.close()
+    print(f"Rows scanned: {total_rows}")
+    print(f"\nPart A — Pre-existing translations cleared: {cleared}")
+
+    deleted_total = sum(counts.values())
     remaining = total_rows - deleted_total
 
     print(f"\nPart B — Rows deleted by category:")
@@ -161,9 +167,20 @@ def main():
     print(f"  {'TOTAL deleted':<28} {deleted_total:>6}")
     print(f"  {'Rows remaining':<28} {remaining:>6}")
 
-    # --- Save in-place ---
-    wb.save(BASE_FILE)
-    print(f"\nSaved cleaned file: {BASE_FILE}")
+    # --- Write output using write_only mode (fast streaming write) ---
+    print(f"\nWriting cleaned file...", flush=True)
+    wb_out = openpyxl.Workbook(write_only=True)
+    ws_out = wb_out.create_sheet()
+
+    # Write header
+    ws_out.append(list(header_row))
+
+    # Write kept rows
+    for row in kept_rows:
+        ws_out.append(list(row))
+
+    wb_out.save(BASE_FILE)
+    print(f"Saved cleaned file: {BASE_FILE}")
     print("\n⏸  Please visually inspect the cleaned file before running translate_specs.py.")
 
 
