@@ -397,6 +397,41 @@ function updateOutput() {
 
 editor.addEventListener('input', updateOutput);
 
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    // After a heading, insert a plain paragraph instead of another heading
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const block = sel.getRangeAt(0).startContainer;
+    const heading = block.nodeType === Node.TEXT_NODE ? block.parentElement : block;
+    const headingEl = heading.closest('h1,h2,h3');
+    if (!headingEl) return;
+    e.preventDefault();
+    // Move caret to end of heading, then insert a <p> after it
+    const range = sel.getRangeAt(0);
+    const atEnd = range.endOffset === (range.endContainer.length ?? 0) &&
+                  !range.endContainer.nextSibling?.nodeValue;
+    if (atEnd) {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      headingEl.insertAdjacentElement('afterend', p);
+      const newRange = document.createRange();
+      newRange.setStart(p, 0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    } else {
+      document.execCommand('insertParagraph', false, null);
+      document.execCommand('formatBlock', false, 'p');
+    }
+    updateOutput();
+  } else if (e.key === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '<br>');
+    updateOutput();
+  }
+});
+
 // Toolbar command buttons
 document.getElementById('toolbar').addEventListener('mousedown', e => {
   const btn = e.target.closest('button[data-cmd]');
