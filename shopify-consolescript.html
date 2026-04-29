@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NL Console-Script Generator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#fff; color:#333; margin:0; padding:0; }
+    header { background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:18px; font-weight:600; margin:0; }
+    header img { height:36px; margin-left:auto; }
+    .content { padding:20px; max-width:1100px; }
+    label { display:block; margin-top:14px; font-weight:600; }
+    input[type="file"] { width:100%; max-width:640px; margin-top:6px; }
+    button { margin-top:14px; padding:10px 14px; border:0; border-radius:8px; background:#ca427e; color:#fff; cursor:pointer; font-size:14px; font-family:inherit; }
+    button:hover:not(:disabled) { background:#b33a6f; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    pre { background:#f4f4f5; border:1px solid #d1d5db; border-radius:8px; padding:12px; white-space:pre-wrap; margin-top:14px; color:#333; font-size:13px; }
+    textarea { width:100%; min-height:340px; margin-top:10px; font-family:ui-monospace,Consolas,Menlo,monospace; font-size:12px; padding:10px; border-radius:8px; border:1px solid #d1d5db; }
+    .muted { color:#666; font-size:13px; }
+    .warn { color:#a00; font-size:13px; }
+    code { background:#f4f4f5; padding:1px 5px; border-radius:4px; font-size:12px; }
+    ol { padding-left:22px; }
+    ol li { margin:4px 0; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>NL Console-Script Generator</h1>
+  </header>
+  <div class="content">
+    <p class="muted">
+      Upload an NL CSV (columns: <code>sku, title, title_specs, handle, body_html</code>).
+      Generates a console-script that resolves GIDs by SKU and pushes default-locale fields via productUpdate.
+      After running, the script downloads <code>sku-gid.csv</code> for use in Tool B (T&amp;A formatter).
+    </p>
+
+    <ol class="muted">
+      <li>Generate the script below and copy it.</li>
+      <li>Open the Shopify storefront domain in a tab — <code>manibhadra-phoeniximport.myshopify.com/products.json</code> works. <strong>Not</strong> the admin domain (admin overrides fetch).</li>
+      <li>Open DevTools console, paste, hit Enter.</li>
+      <li>Paste the admin API token when prompted.</li>
+      <li>Wait for "Done" — script will trigger the <code>sku-gid.csv</code> download.</li>
+    </ol>
+
+    <label for="csvFile">NL CSV (.csv)</label>
+    <input id="csvFile" type="file" accept=".csv">
+
+    <div class="row">
+      <button id="generate" disabled>Generate Console Script</button>
+      <button id="copy" disabled>Copy to Clipboard</button>
+      <button id="download" disabled>Download .js</button>
+    </div>
+
+    <pre id="report"></pre>
+    <textarea id="output" spellcheck="false" placeholder="Generated script will appear here..."></textarea>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+let parsedRows = null;
+
+$('csvFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: results => {
+      const required = ['sku','title','title_specs','handle','body_html'];
+      const got = results.meta.fields || [];
+      const missing = required.filter(c => !got.includes(c));
+      const report = $('report');
+      if (missing.length) {
+        parsedRows = null;
+        $('generate').disabled = true;
+        report.textContent = 'Missing required columns: ' + missing.join(', ') + '\nFound: ' + got.join(', ');
+        report.className = 'warn';
+        return;
+      }
+      const rows = results.data.filter(r => r.sku && String(r.sku).trim());
+      const dupSkus = {};
+      for (const r of rows) dupSkus[r.sku] = (dupSkus[r.sku] || 0) + 1;
+      const dups = Object.entries(dupSkus).filter(([_,n]) => n > 1).map(([s])=>s);
+      parsedRows = rows;
+      report.className = '';
+      report.textContent =
+        'Parsed ' + rows.length + ' rows.\n' +
+        (dups.length ? 'WARNING: duplicate SKUs in input: ' + dups.join(', ') + '\n' : '') +
+        'SKUs: ' + rows.map(r=>r.sku).join(', ');
+      $('generate').disabled = false;
+    },
+    error: err => {
+      parsedRows = null;
+      $('generate').disabled = true;
+      $('report').textContent = 'CSV parse error: ' + err.message;
+      $('report').className = 'warn';
+    }
+  });
+});
+
+function buildScript(rows) {
+  const products = rows.map(r => ({
+    sku: String(r.sku).trim(),
+    title: r.title || '',
+    title_specs: r.title_specs || '',
+    handle: r.handle || '',
+    body_html: r.body_html || ''
+  }));
+  const productsJson = JSON.stringify(products, null, 2);
+  return `// Phoenix Import — NL push console-script
+// Run on Shopify storefront domain (manibhadra-phoeniximport.myshopify.com), NOT admin.
+// Generated ${new Date().toISOString()} for ${products.length} product(s).
+
+(async () => {
+  const TOKEN = prompt('Shopify Admin API token (shpat_...):');
+  if (!TOKEN || !TOKEN.startsWith('shpat_')) {
+    console.error('No valid token provided. Aborting.');
+    return;
+  }
+
+  const ENDPOINT = '/admin/api/2024-01/graphql.json';
+
+  const NL_DATA = ${productsJson};
+
+  const log = (...a) => console.log('[NL push]', ...a);
+  log('Loaded', NL_DATA.length, 'products from script.');
+
+  // ----- 1. Resolve SKU -> GID via batched GraphQL -----
+  log('Resolving SKUs to GIDs...');
+  const skuToGid = {};
+  const dupResolved = {};
+  const SKU_BATCH = 50;
+  for (let i = 0; i < NL_DATA.length; i += SKU_BATCH) {
+    const batch = NL_DATA.slice(i, i + SKU_BATCH);
+    const queryStr = batch.map(p => 'sku:' + p.sku).join(' OR ');
+    const q = '{ products(first:250, query:"' + queryStr + '") { edges { node { id legacyResourceId variants(first:1){ edges{ node{ sku } } } } } } }';
+    try {
+      const r = await fetch(ENDPOINT, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-Shopify-Access-Token': TOKEN },
+        body: JSON.stringify({ query: q })
+      });
+      const j = await r.json();
+      if (j.errors) { console.error('GraphQL errors on lookup batch:', j.errors); continue; }
+      for (const e of j.data.products.edges) {
+        const sku = e.node.variants.edges[0]?.node.sku;
+        if (sku && batch.find(p => p.sku === sku)) {
+          if (skuToGid[sku]) {
+            dupResolved[sku] = (dupResolved[sku] || [skuToGid[sku]]).concat([e.node.legacyResourceId]);
+            // Prefer highest legacy ID per CLAUDE.md convention
+            if (BigInt(e.node.legacyResourceId) > BigInt(skuToGid[sku])) skuToGid[sku] = e.node.legacyResourceId;
+          } else {
+            skuToGid[sku] = e.node.legacyResourceId;
+          }
+        }
+      }
+    } catch (err) { console.error('Lookup batch failed:', err.message); }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  const missing = NL_DATA.filter(p => !skuToGid[p.sku]).map(p => p.sku);
+  if (missing.length) console.warn('Missing GIDs for SKUs:', missing);
+  if (Object.keys(dupResolved).length) console.warn('Duplicate SKUs resolved (kept highest):', dupResolved);
+  log('Resolved', Object.keys(skuToGid).length, '/', NL_DATA.length, 'SKUs to GIDs.');
+
+  // ----- 2. productUpdate in batches of 25 -----
+  const updates = NL_DATA.filter(p => skuToGid[p.sku]).map(p => ({
+    sku: p.sku,
+    gid: 'gid://shopify/Product/' + skuToGid[p.sku],
+    input: {
+      id: 'gid://shopify/Product/' + skuToGid[p.sku],
+      title: p.title,
+      descriptionHtml: p.body_html,
+      handle: p.handle,
+      seo: { title: p.title_specs, description: p.title_specs }
+    }
+  }));
+
+  log('Pushing productUpdate for', updates.length, 'products in batches of 25...');
+  const results = { success: [], failed: [], skipped: missing.map(s => ({ sku: s, reason: 'GID lookup failed' })) };
+
+  for (let i = 0; i < updates.length; i += 25) {
+    const batch = updates.slice(i, i + 25);
+    const aliases = batch.map((u, idx) => 'm' + idx + ': productUpdate(input: $i' + idx + ') { product { id handle } userErrors { field message } }').join('\\n  ');
+    const varDefs = batch.map((_, idx) => '$i' + idx + ': ProductInput!').join(', ');
+    const mutation = 'mutation push(' + varDefs + ') {\\n  ' + aliases + '\\n}';
+    const variables = {};
+    batch.forEach((u, idx) => { variables['i' + idx] = u.input; });
+
+    try {
+      const r = await fetch(ENDPOINT, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-Shopify-Access-Token': TOKEN },
+        body: JSON.stringify({ query: mutation, variables })
+      });
+      const j = await r.json();
+      if (j.errors) {
+        console.error('GraphQL top-level errors on batch starting', i, ':', j.errors);
+        for (const u of batch) results.failed.push({ sku: u.sku, gid: u.gid, errors: j.errors });
+      } else {
+        batch.forEach((u, idx) => {
+          const res = j.data?.['m' + idx];
+          if (res?.userErrors?.length) {
+            results.failed.push({ sku: u.sku, gid: u.gid, errors: res.userErrors });
+          } else if (res?.product) {
+            results.success.push({ sku: u.sku, gid: u.gid, handle: res.product.handle });
+          } else {
+            results.failed.push({ sku: u.sku, gid: u.gid, errors: [{ message: 'Empty response' }] });
+          }
+        });
+      }
+    } catch (err) {
+      for (const u of batch) results.failed.push({ sku: u.sku, gid: u.gid, errors: [{ message: err.message }] });
+    }
+    log('Batch', Math.floor(i/25)+1, 'done.', results.success.length, 'ok,', results.failed.length, 'failed so far.');
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  log('=== Done ===');
+  log('Success:', results.success.length);
+  log('Failed:', results.failed.length);
+  log('Skipped (no GID):', results.skipped.length);
+  if (results.failed.length) console.log('Failures:', results.failed);
+
+  window._consoleResults = { skuToGid, results };
+  log('Full results in window._consoleResults');
+
+  // ----- 3. Download sku-gid.csv -----
+  const csvLines = ['sku,gid'];
+  for (const sku of NL_DATA.map(p => p.sku)) {
+    if (skuToGid[sku]) csvLines.push(sku + ',gid://shopify/Product/' + skuToGid[sku]);
+  }
+  const blob = new Blob([csvLines.join('\\r\\n') + '\\r\\n'], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sku-gid.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+  log('Downloaded sku-gid.csv (' + (csvLines.length - 1) + ' rows).');
+})();
+`;
+}
+
+$('generate').addEventListener('click', () => {
+  if (!parsedRows) return;
+  const script = buildScript(parsedRows);
+  $('output').value = script;
+  $('copy').disabled = false;
+  $('download').disabled = false;
+  $('report').textContent = 'Generated script: ' + script.length + ' chars for ' + parsedRows.length + ' product(s).\nReady to copy or download.';
+});
+
+$('copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('output').value);
+    $('copy').textContent = 'Copied ✓';
+    setTimeout(()=>{ $('copy').textContent = 'Copy to Clipboard'; }, 1500);
+  } catch (e) {
+    $('output').select();
+    document.execCommand('copy');
+  }
+});
+
+$('download').addEventListener('click', () => {
+  const blob = new Blob([$('output').value], { type: 'text/javascript;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nl-push-' + new Date().toISOString().slice(0,10) + '.js';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
