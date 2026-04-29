@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>T&amp;A CSV Formatter</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#fff; color:#333; margin:0; padding:0; }
+    header { background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:18px; font-weight:600; margin:0; }
+    .content { padding:20px; max-width:1100px; }
+    label { display:block; margin-top:14px; font-weight:600; }
+    label .opt { font-weight:400; color:#888; font-size:12px; margin-left:6px; }
+    input[type="file"] { width:100%; max-width:640px; margin-top:6px; }
+    button { margin-top:14px; padding:10px 14px; border:0; border-radius:8px; background:#ca427e; color:#fff; cursor:pointer; font-size:14px; font-family:inherit; }
+    button:hover:not(:disabled) { background:#b33a6f; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    pre { background:#f4f4f5; border:1px solid #d1d5db; border-radius:8px; padding:12px; white-space:pre-wrap; margin-top:14px; color:#333; font-size:13px; }
+    .muted { color:#666; font-size:13px; }
+    .warn { color:#a00; font-size:13px; }
+    .ok { color:#2a7; font-size:12px; margin-left:8px; }
+    code { background:#f4f4f5; padding:1px 5px; border-radius:4px; font-size:12px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px 24px; max-width:880px; }
+    @media (max-width:720px) { .grid { grid-template-columns: 1fr; } }
+    ol { padding-left:22px; }
+    ol li { margin:4px 0; }
+    .downloads { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+    .downloads a { display:inline-block; padding:8px 12px; background:#f4f4f5; border:1px solid #d1d5db; border-radius:6px; text-decoration:none; color:#333; font-size:13px; }
+    .downloads a:hover { background:#eaeaea; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header><h1>T&amp;A CSV Formatter</h1></header>
+  <div class="content">
+    <p class="muted">
+      Combine the SKU&rarr;GID mapping (from <code>consolegen</code>) with the NL CSV plus locale CSVs to produce
+      Translate &amp; Adapt-ready imports for EN/DE/FR/IT/ES.
+      Each output CSV is 5 rows per product (title, body_html, handle, meta_title, meta_description).
+    </p>
+
+    <ol class="muted">
+      <li>Run NL push first via <code>consolegen</code> &mdash; that fills default-locale fields and produces <code>sku-gid.csv</code>.</li>
+      <li>Upload all the files below. NL is required; locales are optional &mdash; only those uploaded get T&amp;A CSVs.</li>
+      <li>Click Generate. Download each locale's CSV, then upload via Languages &rarr; Import (tick "Overwrite existing translations").</li>
+    </ol>
+
+    <label>SKU &rarr; GID mapping <span class="opt">(sku-gid.csv from consolegen)</span></label>
+    <input id="f-skugid" type="file" accept=".csv">
+    <span id="s-skugid" class="ok"></span>
+
+    <div class="grid">
+      <div>
+        <label>NL CSV <span class="opt">(required)</span></label>
+        <input id="f-NL" type="file" accept=".csv">
+        <span id="s-NL" class="ok"></span>
+      </div>
+      <div>
+        <label>EN CSV <span class="opt">(optional)</span></label>
+        <input id="f-EN" type="file" accept=".csv">
+        <span id="s-EN" class="ok"></span>
+      </div>
+      <div>
+        <label>DE CSV <span class="opt">(optional)</span></label>
+        <input id="f-DE" type="file" accept=".csv">
+        <span id="s-DE" class="ok"></span>
+      </div>
+      <div>
+        <label>FR CSV <span class="opt">(optional)</span></label>
+        <input id="f-FR" type="file" accept=".csv">
+        <span id="s-FR" class="ok"></span>
+      </div>
+      <div>
+        <label>IT CSV <span class="opt">(optional)</span></label>
+        <input id="f-IT" type="file" accept=".csv">
+        <span id="s-IT" class="ok"></span>
+      </div>
+      <div>
+        <label>ES CSV <span class="opt">(optional)</span></label>
+        <input id="f-ES" type="file" accept=".csv">
+        <span id="s-ES" class="ok"></span>
+      </div>
+    </div>
+
+    <button id="generate" disabled>Generate T&amp;A CSVs</button>
+
+    <pre id="report"></pre>
+    <div id="downloads" class="downloads"></div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LOCALES = ['EN','DE','FR','IT','ES'];
+
+// State: parsed contents per file slot
+const state = {
+  skuGid: null,    // Map: sku -> gid (full gid://shopify/Product/...)
+  NL: null,        // Map: sku -> {title, title_specs, handle, body_html}
+  EN: null, DE: null, FR: null, IT: null, ES: null
+};
+
+function bindFile(slotId, parser) {
+  $(slotId).addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = $('s-' + slotId.replace('f-',''));
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: results => {
+        const ok = parser(results, status);
+        if (ok) refreshGenerateButton();
+      },
+      error: err => { status.textContent = '✗ parse error: ' + err.message; status.className = 'warn'; }
+    });
+  });
+}
+
+bindFile('f-skugid', (results, status) => {
+  const required = ['sku','gid'];
+  const got = results.meta.fields || [];
+  const missing = required.filter(c => !got.includes(c));
+  if (missing.length) {
+    state.skuGid = null;
+    status.textContent = '✗ missing columns: ' + missing.join(', ');
+    status.className = 'warn';
+    return false;
+  }
+  const map = new Map();
+  for (const r of results.data) {
+    if (r.sku && r.gid) map.set(String(r.sku).trim(), String(r.gid).trim());
+  }
+  state.skuGid = map;
+  status.textContent = '✓ ' + map.size + ' SKU→GID mappings';
+  status.className = 'ok';
+  return true;
+});
+
+function makeLocaleParser(locale) {
+  return (results, status) => {
+    const required = ['sku','title','title_specs','handle','body_html'];
+    const got = results.meta.fields || [];
+    const missing = required.filter(c => !got.includes(c));
+    if (missing.length) {
+      state[locale] = null;
+      status.textContent = '✗ missing columns: ' + missing.join(', ');
+      status.className = 'warn';
+      return false;
+    }
+    const map = new Map();
+    for (const r of results.data) {
+      const sku = String(r.sku || '').trim();
+      if (!sku) continue;
+      map.set(sku, {
+        title: r.title || '',
+        title_specs: r.title_specs || '',
+        handle: r.handle || '',
+        body_html: r.body_html || ''
+      });
+    }
+    state[locale] = map;
+    status.textContent = '✓ ' + map.size + ' rows';
+    status.className = 'ok';
+    return true;
+  };
+}
+
+bindFile('f-NL', makeLocaleParser('NL'));
+for (const L of LOCALES) bindFile('f-' + L, makeLocaleParser(L));
+
+function refreshGenerateButton() {
+  const haveAnyLocale = LOCALES.some(L => state[L]);
+  $('generate').disabled = !(state.skuGid && state.NL && haveAnyLocale);
+}
+
+function csvCell(v) {
+  const s = (v == null) ? '' : String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replaceAll('"', '""') + '"';
+  }
+  return s;
+}
+const csvRow = arr => arr.map(csvCell).join(',');
+
+function buildLocaleTNA(locale) {
+  const localeMap = state[locale];
+  const nlMap = state.NL;
+  const gidMap = state.skuGid;
+  const issues = { noGid: [], noNL: [] };
+  const HEADER = ['Type','Identification','Field','Locale','Market','Status','Default content','Translated content'];
+  const rows = [csvRow(HEADER)];
+  const localeLower = locale.toLowerCase();
+  for (const [sku, loc] of localeMap.entries()) {
+    const gid = gidMap.get(sku);
+    if (!gid) { issues.noGid.push(sku); continue; }
+    const nl = nlMap.get(sku);
+    if (!nl) { issues.noNL.push(sku); continue; }
+    const fields = [
+      ['title',            nl.title,        loc.title],
+      ['body_html',        nl.body_html,    loc.body_html],
+      ['handle',           nl.handle,       loc.handle],
+      ['meta_title',       nl.title_specs,  loc.title_specs],
+      ['meta_description', nl.title_specs,  loc.title_specs]
+    ];
+    for (const [field, def, trans] of fields) {
+      rows.push(csvRow(['Product', gid, field, localeLower, '', '', def, trans]));
+    }
+  }
+  return { csv: rows.join('\r\n') + '\r\n', rowCount: rows.length - 1, issues };
+}
+
+$('generate').addEventListener('click', () => {
+  $('downloads').innerHTML = '';
+  const lines = [];
+  const stats = {};
+  for (const L of LOCALES) {
+    if (!state[L]) continue;
+    const { csv, rowCount, issues } = buildLocaleTNA(L);
+    stats[L] = { rowCount, issues };
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tna_' + L + '.csv';
+    a.textContent = 'Download tna_' + L + '.csv (' + rowCount + ' rows)';
+    $('downloads').appendChild(a);
+    lines.push(L + ': ' + rowCount + ' rows' +
+      (issues.noGid.length ? '  [no GID: ' + issues.noGid.join(',') + ']' : '') +
+      (issues.noNL.length  ? '  [no NL: '  + issues.noNL.join(',')  + ']' : '')
+    );
+  }
+
+  // Cross-check NL vs locales for missing translations
+  const nlSkus = new Set(state.NL.keys());
+  for (const L of LOCALES) {
+    if (!state[L]) continue;
+    const localeSkus = new Set(state[L].keys());
+    const missingInLocale = [...nlSkus].filter(s => !localeSkus.has(s));
+    if (missingInLocale.length) lines.push('  ! NL has ' + missingInLocale.length + ' SKU(s) not in ' + L + ': ' + missingInLocale.join(','));
+  }
+
+  $('report').textContent =
+    'SKU→GID size: ' + state.skuGid.size + '\n' +
+    'NL rows: ' + state.NL.size + '\n' +
+    lines.join('\n') + '\n\n' +
+    'T&A CSVs ready for download. Upload via Shopify admin → Languages → pick locale → Import → tick "Overwrite existing translations".';
+});
+</script>
+</body>
+</html>
