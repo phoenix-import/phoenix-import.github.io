@@ -182,6 +182,11 @@ function csvCell(v) {
 }
 const csvRow = arr => arr.map(csvCell).join(',');
 
+// Shopify normalises bare & to &amp; in body_html on save. Pre-encode here so
+// Default content matches what Shopify actually stores (T&A digest comparison).
+const ENTITY_RE = /&(?!(?:amp|lt|gt|quot|apos|nbsp|#\d+|#x[0-9a-fA-F]+);)/g;
+const encodeAmp = s => s.replace(ENTITY_RE, '&amp;');
+
 function buildLocaleTNA(locale) {
   const localeMap = state[locale];
   const nlMap = state.NL;
@@ -196,11 +201,11 @@ function buildLocaleTNA(locale) {
     const nl = nlMap.get(sku);
     if (!nl) { issues.noNL.push(sku); continue; }
     const fields = [
-      ['title',            nl.title,        loc.title],
-      ['body_html',        nl.body_html,    loc.body_html],
-      ['handle',           nl.handle,       loc.handle],
-      ['meta_title',       nl.title_specs,  loc.title_specs],
-      ['meta_description', nl.title_specs,  loc.title_specs]
+      ['title',            nl.title,                 loc.title],
+      ['body_html',        encodeAmp(nl.body_html),  encodeAmp(loc.body_html)],
+      ['handle',           nl.handle,                loc.handle],
+      ['meta_title',       nl.title_specs,           loc.title_specs],
+      ['meta_description', nl.title_specs,           loc.title_specs]
     ];
     for (const [field, def, trans] of fields) {
       rows.push(csvRow(['Product', gid, field, localeLower, '', '', def, trans]));
