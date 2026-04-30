@@ -1,0 +1,244 @@
+{{ 'section-contact-form.css' | asset_url | stylesheet_tag }}
+
+<style>
+  .contact__phone-group {
+    display: grid;
+    grid-template-columns: 13rem 1fr;
+    gap: 0 1rem;
+    align-items: start;
+  }
+
+  .contact__phone-label {
+    grid-column: 1 / -1;
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    letter-spacing: 0.1rem;
+    text-transform: uppercase;
+    color: rgba(var(--color-foreground), 0.75);
+  }
+
+  .contact__phone-group .select {
+    width: 100%;
+  }
+
+  .contact__honeypot {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+</style>
+
+{%- if page.content != blank -%}
+  <div class="contact__description page-width">
+    <div class="rte">{{ page.content }}</div>
+  </div>
+{%- endif -%}
+
+<div class="contact page-width">
+  <div class="contact__form-wrapper isolate">
+    {%- form 'contact', id: 'ContactForm', class: 'contact__form' -%}
+
+      {%- if form.posted_successfully? -%}
+        <div class="form-status form-status-list form__message" tabindex="-1" autofocus>
+          {% render 'icon-success' %}
+          <h2 class="form-status__title">{{ 'sections.contact_form_custom.success_heading' | t }}</h2>
+          <p>{{ 'sections.contact_form_custom.success_message' | t }}</p>
+        </div>
+      {%- elsif form.errors -%}
+        <div class="form-status form-status-list form__message" tabindex="-1" autofocus>
+          {% render 'icon-error' %}
+          <h2 class="form-status__title">{{ 'sections.contact_form_custom.error_heading' | t }}</h2>
+          {{ form.errors | default_errors }}
+        </div>
+      {%- endif -%}
+
+      <div class="contact__fields">
+
+        <div class="field">
+          <input class="field__input"
+                 type="text"
+                 id="ContactForm-company"
+                 name="contact[company]"
+                 placeholder=" "
+                 autocomplete="organization">
+          <label class="field__label" for="ContactForm-company">
+            {{ 'sections.contact_form_custom.label_company' | t }}
+          </label>
+        </div>
+
+        <div class="field">
+          <input class="field__input"
+                 type="text"
+                 id="ContactForm-customer-number"
+                 name="contact[customer_number]"
+                 placeholder=" ">
+          <label class="field__label" for="ContactForm-customer-number">
+            {{ 'sections.contact_form_custom.label_customer_number' | t }}
+          </label>
+        </div>
+
+        <div class="field">
+          <input class="field__input"
+                 type="text"
+                 id="ContactForm-first-name"
+                 name="contact[first_name]"
+                 placeholder=" "
+                 autocomplete="given-name">
+          <label class="field__label" for="ContactForm-first-name">
+            {{ 'sections.contact_form_custom.label_first_name' | t }}
+          </label>
+        </div>
+
+        <div class="field">
+          <input class="field__input"
+                 type="text"
+                 id="ContactForm-last-name"
+                 name="contact[last_name]"
+                 placeholder=" "
+                 autocomplete="family-name">
+          <label class="field__label" for="ContactForm-last-name">
+            {{ 'sections.contact_form_custom.label_last_name' | t }}
+          </label>
+        </div>
+
+        <div class="field">
+          <input class="field__input"
+                 type="email"
+                 id="ContactForm-email"
+                 name="contact[email]"
+                 value="{{ form.email }}"
+                 placeholder=" "
+                 autocomplete="email"
+                 required
+                 aria-required="true">
+          <label class="field__label" for="ContactForm-email">
+            {{ 'sections.contact_form_custom.label_email' | t }}
+            <span aria-hidden="true"> *</span>
+          </label>
+          {%- if form.errors.messages['email'] -%}
+            <small class="contact__field-error">
+              {{ form.errors.translated_fields['email'] | capitalize }}
+              {{ form.errors.messages['email'] }}
+            </small>
+          {%- endif -%}
+        </div>
+
+        <div class="contact__phone-group">
+          <span class="contact__phone-label">
+            {{ 'sections.contact_form_custom.label_phone' | t }}
+          </span>
+          <div class="select">
+            <select class="select__select"
+                    id="ContactForm-phone-code"
+                    name="contact[phone_country_code]"
+                    aria-label="{{ 'sections.contact_form_custom.label_phone_code' | t }}">
+              <option value="+31">+31 (NL)</option>
+              <option value="+32">+32 (BE)</option>
+              <option value="+49">+49 (DE)</option>
+              <option value="+33">+33 (FR)</option>
+              <option value="+39">+39 (IT)</option>
+              <option value="+34">+34 (ES)</option>
+              <option value="+351">+351 (PT)</option>
+              <option value="+44">+44 (GB)</option>
+              <option value="+353">+353 (IE)</option>
+              <option value="+43">+43 (AT)</option>
+              <option value="+41">+41 (CH)</option>
+              <option value="+352">+352 (LU)</option>
+              <option value="+45">+45 (DK)</option>
+              <option value="+46">+46 (SE)</option>
+              <option value="+47">+47 (NO)</option>
+              <option value="+358">+358 (FI)</option>
+              <option value="+48">+48 (PL)</option>
+              <option value="+420">+420 (CZ)</option>
+              <option value="+36">+36 (HU)</option>
+              <option value="+30">+30 (GR)</option>
+              <option value="+90">+90 (TR)</option>
+              <option value="+1">+1 (US/CA)</option>
+              <option value="+55">+55 (BR)</option>
+              <option value="+61">+61 (AU)</option>
+              <option value="+81">+81 (JP)</option>
+              <option value="+86">+86 (CN)</option>
+              <option value="+91">+91 (IN)</option>
+              <option value="+971">+971 (AE)</option>
+              <option value="+27">+27 (ZA)</option>
+            </select>
+            {% render 'icon-caret' %}
+          </div>
+          <div class="field">
+            <input class="field__input"
+                   type="tel"
+                   id="ContactForm-phone"
+                   name="contact[phone_number]"
+                   placeholder=" "
+                   autocomplete="tel">
+            <label class="field__label" for="ContactForm-phone">
+              {{ 'sections.contact_form_custom.placeholder_phone' | t }}
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <textarea class="text-area field__input"
+                    id="ContactForm-body"
+                    name="contact[body]"
+                    placeholder=" "
+                    required
+                    aria-required="true">{{- form.body -}}</textarea>
+          <label class="form__label field__label" for="ContactForm-body">
+            {{ 'sections.contact_form_custom.label_message' | t }}
+            <span aria-hidden="true"> *</span>
+          </label>
+        </div>
+
+        <div class="contact__honeypot" aria-hidden="true">
+          <label for="ContactForm-url">Website</label>
+          <input type="text"
+                 id="ContactForm-url"
+                 name="contact[body_url]"
+                 tabindex="-1"
+                 autocomplete="off">
+        </div>
+
+      </div>
+
+      <div class="contact__button">
+        <button type="submit" class="button button--secondary">
+          {{ 'sections.contact_form_custom.button_submit' | t }}
+        </button>
+      </div>
+
+    {%- endform -%}
+  </div>
+</div>
+
+<script>
+  (function () {
+    var form = document.getElementById('ContactForm');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      var hp = document.getElementById('ContactForm-url');
+      if (hp && hp.value.trim() !== '') {
+        e.preventDefault();
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Contact form (custom)",
+  "tag": "section",
+  "class": "section",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Contact form (custom)"
+    }
+  ]
+}
+{% endschema %}

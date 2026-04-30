@@ -1,0 +1,20 @@
+{
+  "sections": {
+    "contact_form_custom": {
+      "label_company": "Nom de l'entreprise",
+      "label_customer_number": "Numéro client (si disponible)",
+      "label_first_name": "Prénom",
+      "label_last_name": "Nom",
+      "label_email": "Adresse e-mail",
+      "label_phone": "Numéro de téléphone",
+      "label_phone_code": "Indicatif pays",
+      "placeholder_phone": "Numéro de téléphone",
+      "label_message": "Votre question ou message",
+      "button_submit": "Envoyer",
+      "success_heading": "Merci pour votre message",
+      "success_message": "Nous vous répondrons dans les plus brefs délais.",
+      "error_heading": "Une erreur s'est produite",
+      "error_message": "Veuillez vérifier les champs indiqués et réessayer."
+    }
+  }
+}

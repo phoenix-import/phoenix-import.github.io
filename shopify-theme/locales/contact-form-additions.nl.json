@@ -1,0 +1,20 @@
+{
+  "sections": {
+    "contact_form_custom": {
+      "label_company": "Bedrijfsnaam",
+      "label_customer_number": "Klantnummer (indien van toepassing)",
+      "label_first_name": "Voornaam",
+      "label_last_name": "Achternaam",
+      "label_email": "E-mailadres",
+      "label_phone": "Telefoonnummer",
+      "label_phone_code": "Landnummer",
+      "placeholder_phone": "Telefoonnummer",
+      "label_message": "Uw vraag of opmerking",
+      "button_submit": "Verzenden",
+      "success_heading": "Bedankt voor uw bericht",
+      "success_message": "We nemen zo snel mogelijk contact met u op.",
+      "error_heading": "Er is iets misgegaan",
+      "error_message": "Controleer de gemarkeerde velden en probeer het opnieuw."
+    }
+  }
+}
