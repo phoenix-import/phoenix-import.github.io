@@ -42,7 +42,7 @@
     <ol class="muted">
       <li>Upload the file. Tool validates and shows a summary.</li>
       <li>Generate &amp; copy the Shopify console-script. Paste into the storefront console (<code>https://manibhadra-phoeniximport.myshopify.com/products.json</code>) and run.</li>
-      <li>Download the two Paragon xlsx files and import them into Paragon.</li>
+      <li>Download the two Paragon xlsx files and import them into Paragon (product import first, then associations).</li>
     </ol>
 
     <label>Input file <span class="opt">(.csv or .xlsx)</span></label>
@@ -66,6 +66,7 @@
         <button id="btn-prg-product" disabled>Download PRG_product_import.xlsx</button>
         <button id="btn-prg-associated" disabled>Download PRG_associated_import.xlsx</button>
       </div>
+      <p class="muted" style="margin-top:8px;">Product import includes <code>status=Active</code> column &mdash; without it, Paragon demotes imported products to TEMP and the associations import then fails referential validation.</p>
     </div>
   </div>
 
@@ -74,9 +75,8 @@ const $ = id => document.getElementById(id);
 const VALID_LOCALES = ['NL','EN','DE','FR','IT','ES'];
 const NON_NL_LOCALES = ['EN','DE','FR','IT','ES'];
 
-let parsed = null; // { skus: [...], byKey: { 'sku|LANG': {sku,lang,title,copy} } }
+let parsed = null;
 
-// ---- Locale-aware handle generation (mirror of extract.js / urlgen) ----
 const accentMap = {
   'á':'a','à':'a','ä':'a','â':'a','å':'a','ã':'a','ą':'a','ā':'a',
   'é':'e','è':'e','ë':'e','ê':'e','ę':'e','ē':'e','ė':'e',
@@ -130,7 +130,6 @@ function titleNoSpecs(titleSpecs) {
   return titleSpecs.includes('--') ? titleSpecs.split('--')[0].trim() : titleSpecs.trim();
 }
 
-// ---- File parsing ----
 function readAsRows(file) {
   return new Promise((resolve, reject) => {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
@@ -175,7 +174,6 @@ $('f-input').addEventListener('change', async e => {
     const rawRows = await readAsRows(file);
     if (!rawRows.length) throw new Error('File is empty.');
 
-    // Normalise column names (allow case variations: SKU/sku, LANG/lang, etc.)
     const colmap = {};
     const headerKeys = Object.keys(rawRows[0]);
     for (const k of headerKeys) {
@@ -206,7 +204,6 @@ $('f-input').addEventListener('change', async e => {
     }
 
     if (!skuSet.size) throw new Error('No valid rows found.');
-    // Every SKU must have at least an NL row
     const skusWithoutNL = [...skuSet].filter(s => !byKey[s + '|NL']);
     if (skusWithoutNL.length) throw new Error('SKUs missing NL row: ' + skusWithoutNL.join(', '));
 
@@ -218,7 +215,6 @@ $('f-input').addEventListener('change', async e => {
       'SKUs: ' + skuSet.size + '\n' +
       'Locales present: ' + localesPresent.join(', ') + '\n';
     if (issues.length) report += '\nIssues:\n  ' + issues.slice(0,20).join('\n  ') + (issues.length>20?'\n  ...':'');
-    // Per-locale counts
     const perLocale = VALID_LOCALES.map(L => L + '=' + [...skuSet].filter(s => byKey[s+'|'+L]).length).join(' ');
     report += '\nPer-locale row counts: ' + perLocale;
     $('report').textContent = report;
@@ -233,7 +229,6 @@ $('f-input').addEventListener('change', async e => {
   }
 });
 
-// ---- Build internal data structure for script generation ----
 function buildDataBySku() {
   const dataBySku = {};
   for (const sku of parsed.skus) {
@@ -252,7 +247,6 @@ function buildDataBySku() {
   return dataBySku;
 }
 
-// ---- Console-script generation ----
 function buildScript() {
   const dataBySku = buildDataBySku();
   const localesPresent = ['NL', ...NON_NL_LOCALES.filter(L => parsed.skus.some(s => parsed.byKey[s+'|'+L]))];
@@ -289,7 +283,6 @@ function buildScript() {
     return r.json();
   };
 
-  // 1. SKU -> GID
   log('[1/4] Resolving SKUs to GIDs...');
   const skuToGid = {};
   for (let i = 0; i < skus.length; i += 50) {
@@ -312,7 +305,6 @@ function buildScript() {
   if (missing.length) console.warn('Missing GIDs:', missing);
   log('Resolved', matched.length, '/', skus.length, 'SKUs.');
 
-  // 2. NL push
   log('[2/4] Pushing NL via productUpdate...');
   const nlResults = { success: [], failed: [] };
   const nlUpdates = matched.map(sku => ({
@@ -352,7 +344,6 @@ function buildScript() {
   if (NON_NL.length === 0) {
     log('No non-NL locales. Skipping translations.');
   } else {
-    // 3. Fetch digests
     log('[3/4] Fetching digests for', matched.length, 'products...');
     const digestsBySku = {};
     for (let i = 0; i < matched.length; i += 25) {
@@ -369,7 +360,6 @@ function buildScript() {
       await new Promise(r => setTimeout(r, 300));
     }
 
-    // 4. translationsRegister
     log('[4/4] Pushing translations for', NON_NL.length, 'locale(s)...');
     const trResults = { success: [], failed: [] };
     const fieldMap = {
@@ -392,7 +382,6 @@ function buildScript() {
             const digest = digestsBySku[sku][key];
             const value = getter(loc);
             if (!digest || value == null || value === '') continue;
-            // Skip handle translations that match the NL handle (cross-locale collision is harmless)
             if (key === 'handle' && value === DATA[sku].NL.handle) continue;
             translations.push({ locale: L.toLowerCase(), key, value, translatableContentDigest: digest });
           }
@@ -431,7 +420,6 @@ function buildScript() {
   if (nlResults.failed.length) console.log('NL failures:', nlResults.failed);
   window._consoleResults = { skuToGid, nlResults, missing };
 
-  // sku-gid.csv
   const csvLines = ['sku,gid'];
   for (const sku of skus) if (skuToGid[sku]) csvLines.push(sku + ',gid://shopify/Product/' + skuToGid[sku]);
   const blob = new Blob([csvLines.join('\\r\\n') + '\\r\\n'], { type: 'text/csv;charset=utf-8;' });
@@ -461,13 +449,13 @@ $('btn-copy').addEventListener('click', async () => {
   }
 });
 
-// ---- Paragon xlsx generation ----
 $('btn-prg-product').addEventListener('click', () => {
-  const rows = [['productID','artikelomschrijving','omschrijving','englishDescription']];
+  // Status column right after productID — without it, Paragon demotes imported products to TEMP
+  const rows = [['productID','status','artikelomschrijving','omschrijving','englishDescription']];
   for (const sku of parsed.skus) {
     const nl = parsed.byKey[sku+'|NL'];
     const en = parsed.byKey[sku+'|EN'];
-    rows.push([sku, nl ? nl.title : '', nl ? nl.title : '', en ? en.title : '']);
+    rows.push([sku, 'Active', nl ? nl.title : '', nl ? nl.title : '', en ? en.title : '']);
   }
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
