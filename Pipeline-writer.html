@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pipeline Writer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+  <style>
+    body { font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#fff; color:#333; margin:0; padding:0; }
+    header { background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:18px; font-weight:600; margin:0; }
+    .content { padding:20px; max-width:1400px; }
+    .muted { color:#666; font-size:13px; }
+    .warn { color:#a00; font-size:13px; }
+    .ok { color:#2a7; font-size:13px; }
+    code { background:#f4f4f5; padding:1px 5px; border-radius:4px; font-size:12px; }
+
+    .batch-bar {
+      display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+      padding:10px 12px; background:#f8f6fa; border:1px solid #e3dde9; border-radius:8px;
+      margin-bottom:14px;
+    }
+    .batch-bar .label { font-weight:600; font-size:13px; margin-right:6px; color:#68437B; }
+    .chip {
+      padding:6px 10px; border-radius:6px; font-size:13px; cursor:pointer; user-select:none;
+      background:#fff; border:1px solid #d1c8da; color:#333;
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .chip:hover { background:#f4eef9; }
+    .chip.active { background:#68437B; color:#fff; border-color:#68437B; }
+    .chip .ind { font-size:11px; }
+    .chip.complete .ind { color:#2a7; }
+    .chip.active.complete .ind { color:#9af0bf; }
+    .chip.incomplete .ind { color:#c66; }
+    .chip.active.incomplete .ind { color:#fcc; }
+
+    .btn {
+      padding:8px 12px; border:0; border-radius:6px; background:#ca427e; color:#fff;
+      cursor:pointer; font-size:13px; font-family:inherit;
+    }
+    .btn:hover:not(:disabled) { background:#b33a6f; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn-secondary { background:#fff; color:#68437B; border:1px solid #68437B; }
+    .btn-secondary:hover:not(:disabled) { background:#f4eef9; }
+    .btn-danger { background:#fff; color:#a33; border:1px solid #a33; }
+    .btn-danger:hover:not(:disabled) { background:#fdf0f0; }
+
+    .product-meta {
+      display:grid; grid-template-columns: 200px 1fr; gap:10px 16px; align-items:center;
+      margin:6px 0 10px;
+    }
+    .product-meta label { font-weight:600; font-size:13px; }
+    .product-meta input[type="text"] {
+      padding:7px 9px; border:1px solid #d1d5db; border-radius:6px;
+      font-family:inherit; font-size:14px; width:100%; box-sizing:border-box;
+    }
+
+    .locale-tabs { display:flex; gap:4px; flex-wrap:wrap; margin:14px 0 8px; }
+    .locale-tabs .tab {
+      padding:6px 12px; border-radius:6px 6px 0 0; cursor:pointer; user-select:none;
+      background:#f4f4f5; border:1px solid #d1d5db; border-bottom:none;
+      font-size:13px; color:#333;
+      display:inline-flex; align-items:center; gap:5px;
+    }
+    .locale-tabs .tab:hover { background:#eaeaea; }
+    .locale-tabs .tab.active { background:#fff; font-weight:600; color:#68437B; border-bottom:1px solid #fff; position:relative; top:1px; }
+    .locale-tabs .tab .ind { font-size:11px; }
+    .locale-tabs .tab.complete .ind { color:#2a7; }
+    .locale-tabs .tab.incomplete .ind { color:#c66; }
+
+    .editor-card {
+      border:1px solid #d1d5db; border-radius:0 8px 8px 8px; padding:14px;
+      background:#fff;
+    }
+    .title-row { margin-bottom:10px; }
+    .title-row label { display:block; font-weight:600; font-size:13px; margin-bottom:4px; }
+    .title-row input {
+      width:100%; box-sizing:border-box; padding:7px 9px;
+      border:1px solid #d1d5db; border-radius:6px;
+      font-family:inherit; font-size:14px;
+    }
+    .title-row .hint { font-size:12px; color:#888; margin-top:4px; }
+
+    .editor-grid {
+      display:grid; grid-template-columns: 1fr 1fr; gap:14px;
+    }
+    @media (max-width:920px) { .editor-grid { grid-template-columns: 1fr; } }
+    .editor-grid > div h3 { margin:0 0 6px; font-size:13px; color:#68437B; font-weight:600; }
+    #editor { min-height:340px; background:#fff; }
+    .ql-toolbar.ql-snow { border-radius:6px 6px 0 0; }
+    .ql-container.ql-snow { border-radius:0 0 6px 6px; min-height:300px; font-family:inherit; font-size:14px; }
+    #html-preview {
+      background:#f4f4f5; border:1px solid #d1d5db; border-radius:6px;
+      padding:10px; min-height:340px; max-height:540px; overflow:auto;
+      font-family:ui-monospace,Consolas,Menlo,monospace; font-size:12px;
+      white-space:pre-wrap; word-break:break-word;
+    }
+
+    .editor-actions { margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+    .download-bar {
+      margin-top:24px; padding:14px; background:#f8f6fa;
+      border:1px solid #e3dde9; border-radius:8px;
+      display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+    }
+    .download-bar .summary { font-size:13px; color:#333; flex:1; min-width:240px; }
+  </style>
+</head>
+<body>
+  <header><h1>Pipeline Writer</h1></header>
+  <div class="content">
+    <p class="muted">
+      Author product copy directly. Fill <code>SKU</code>, <code>TITLE</code>, and <code>BODY</code>
+      for all six locales (NL, EN, DE, FR, IT, ES). Add as many products as you need.
+      Download a CSV that drops straight into <code>pipegen</code>.
+    </p>
+
+    <div class="batch-bar" id="batch-bar">
+      <span class="label">Batch:</span>
+      <span id="chip-list"></span>
+      <button class="btn btn-secondary" id="btn-new-product">+ New product</button>
+    </div>
+
+    <div class="product-meta">
+      <label for="sku-input">SKU</label>
+      <input id="sku-input" type="text" placeholder="e.g. 11648" autocomplete="off">
+    </div>
+
+    <div class="locale-tabs" id="locale-tabs"></div>
+
+    <div class="editor-card">
+      <div class="title-row">
+        <label for="title-input">TITLE <span class="muted" style="font-weight:400;">— include the spec, format: <code>Name -- 100 ml</code></span></label>
+        <input id="title-input" type="text" placeholder="e.g. Theemok set Mystieke symbolen goud -- ±400 ml" autocomplete="off">
+      </div>
+
+      <div class="editor-grid">
+        <div>
+          <h3>Editor</h3>
+          <div id="editor"></div>
+        </div>
+        <div>
+          <h3>HTML output (live)</h3>
+          <pre id="html-preview"></pre>
+        </div>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn-danger btn" id="btn-delete-product">Delete this product</button>
+      </div>
+    </div>
+
+    <div class="download-bar">
+      <div class="summary" id="summary"></div>
+      <button class="btn" id="btn-download" disabled>Download CSV</button>
+    </div>
+  </div>
+
+<script>
+const LOCALES = ['NL','EN','DE','FR','IT','ES'];
+
+function emptyByLocale() {
+  const o = {};
+  for (const L of LOCALES) o[L] = { title:'', body:'' };
+  return o;
+}
+function emptyProduct() {
+  return { sku:'', byLocale: emptyByLocale() };
+}
+
+const state = {
+  products: [emptyProduct()],
+  activeIdx: 0,
+  currentLocale: 'NL'
+};
+
+// Quill setup
+const quill = new Quill('#editor', {
+  modules: {
+    toolbar: [
+      [{ header: [false, 2, 3, 4] }],
+      ['bold', 'italic', 'underline'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link'],
+      ['clean']
+    ]
+  },
+  theme: 'snow',
+  placeholder: 'Write the product copy...'
+});
+
+let suppressChange = false;
+quill.on('text-change', () => {
+  if (suppressChange) return;
+  state.products[state.activeIdx].byLocale[state.currentLocale].body = currentBodyHtml();
+  renderHtmlPreview();
+  renderTabsAndChips();
+  renderSummary();
+});
+
+function currentBodyHtml() {
+  // Quill produces "<p><br></p>" for empty; treat as empty
+  const html = quill.root.innerHTML.trim();
+  if (html === '<p><br></p>') return '';
+  return html;
+}
+
+function bodyIsFilled(html) {
+  if (!html) return false;
+  // Strip tags and entities, check for any visible character
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || '').trim().length > 0;
+}
+
+function isLocaleFilled(productIdx, locale) {
+  const p = state.products[productIdx];
+  if (!p) return false;
+  const { title, body } = p.byLocale[locale];
+  return title.trim().length > 0 && bodyIsFilled(body);
+}
+
+function isProductComplete(productIdx) {
+  const p = state.products[productIdx];
+  if (!p) return false;
+  if (!p.sku.trim()) return false;
+  return LOCALES.every(L => isLocaleFilled(productIdx, L));
+}
+
+function allProductsComplete() {
+  return state.products.length > 0 && state.products.every((_, i) => isProductComplete(i));
+}
+
+function renderChips() {
+  const list = document.getElementById('chip-list');
+  list.innerHTML = '';
+  state.products.forEach((p, i) => {
+    const chip = document.createElement('span');
+    const complete = isProductComplete(i);
+    chip.className = 'chip' + (i === state.activeIdx ? ' active' : '') + (complete ? ' complete' : ' incomplete');
+    chip.innerHTML = '<span>' + (p.sku.trim() || '<em>(no SKU)</em>') + '</span><span class="ind">' + (complete ? '✓' : '●') + '</span>';
+    chip.addEventListener('click', () => switchToProduct(i));
+    list.appendChild(chip);
+  });
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('locale-tabs');
+  tabs.innerHTML = '';
+  for (const L of LOCALES) {
+    const tab = document.createElement('span');
+    const filled = isLocaleFilled(state.activeIdx, L);
+    tab.className = 'tab' + (L === state.currentLocale ? ' active' : '') + (filled ? ' complete' : ' incomplete');
+    tab.innerHTML = L + ' <span class="ind">' + (filled ? '✓' : '●') + '</span>';
+    tab.addEventListener('click', () => switchToLocale(L));
+    tabs.appendChild(tab);
+  }
+}
+
+function renderHtmlPreview() {
+  document.getElementById('html-preview').textContent = currentBodyHtml();
+}
+
+function renderSummary() {
+  const total = state.products.length;
+  const complete = state.products.filter((_,i) => isProductComplete(i)).length;
+  const ok = allProductsComplete();
+  const summary = document.getElementById('summary');
+  if (ok) {
+    summary.innerHTML = '<span class="ok">✓ All ' + total + ' product(s) complete in all six locales — ready to download.</span>';
+  } else {
+    summary.innerHTML = '<span class="warn">' + complete + ' of ' + total + ' product(s) complete. CSV export requires every product to have SKU, TITLE, and BODY in all six locales.</span>';
+  }
+  document.getElementById('btn-download').disabled = !ok;
+}
+
+function renderTabsAndChips() {
+  renderChips();
+  renderTabs();
+}
+
+function loadActiveIntoEditor() {
+  const p = state.products[state.activeIdx];
+  document.getElementById('sku-input').value = p.sku;
+  const slot = p.byLocale[state.currentLocale];
+  document.getElementById('title-input').value = slot.title;
+  suppressChange = true;
+  if (slot.body) {
+    quill.clipboard.dangerouslyPasteHTML(slot.body, 'silent');
+  } else {
+    quill.setText('');
+  }
+  suppressChange = false;
+  renderHtmlPreview();
+}
+
+function switchToProduct(idx) {
+  if (idx < 0 || idx >= state.products.length) return;
+  state.activeIdx = idx;
+  loadActiveIntoEditor();
+  renderTabsAndChips();
+  renderSummary();
+}
+
+function switchToLocale(L) {
+  state.currentLocale = L;
+  loadActiveIntoEditor();
+  renderTabsAndChips();
+  renderSummary();
+}
+
+document.getElementById('sku-input').addEventListener('input', e => {
+  state.products[state.activeIdx].sku = e.target.value;
+  renderTabsAndChips();
+  renderSummary();
+});
+
+document.getElementById('title-input').addEventListener('input', e => {
+  state.products[state.activeIdx].byLocale[state.currentLocale].title = e.target.value;
+  renderTabsAndChips();
+  renderSummary();
+});
+
+document.getElementById('btn-new-product').addEventListener('click', () => {
+  state.products.push(emptyProduct());
+  state.activeIdx = state.products.length - 1;
+  state.currentLocale = 'NL';
+  loadActiveIntoEditor();
+  renderTabsAndChips();
+  renderSummary();
+});
+
+document.getElementById('btn-delete-product').addEventListener('click', () => {
+  if (state.products.length <= 1) {
+    // Reset rather than leave empty batch
+    state.products = [emptyProduct()];
+    state.activeIdx = 0;
+  } else {
+    state.products.splice(state.activeIdx, 1);
+    if (state.activeIdx >= state.products.length) state.activeIdx = state.products.length - 1;
+  }
+  state.currentLocale = 'NL';
+  loadActiveIntoEditor();
+  renderTabsAndChips();
+  renderSummary();
+});
+
+// CSV export
+function csvCell(v) {
+  const s = (v == null) ? '' : String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replaceAll('"', '""') + '"';
+  }
+  return s;
+}
+const csvRow = arr => arr.map(csvCell).join(',');
+
+document.getElementById('btn-download').addEventListener('click', () => {
+  if (!allProductsComplete()) return;
+  const rows = [csvRow(['SKU','LANG','TITLE','COPY'])];
+  for (const p of state.products) {
+    for (const L of LOCALES) {
+      const slot = p.byLocale[L];
+      rows.push(csvRow([p.sku, L, slot.title, slot.body]));
+    }
+  }
+  const csv = rows.join('\r\n') + '\r\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const stamp = new Date().toISOString().slice(0,10);
+  a.download = 'writer_' + stamp + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// Initial render
+loadActiveIntoEditor();
+renderTabsAndChips();
+renderSummary();
+</script>
+</body>
+</html>
