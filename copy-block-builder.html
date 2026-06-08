@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix Import – Copy Block Builder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #68437B;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+    header span.tag { font-size: 13px; opacity: 0.65; }
+
+    .controls {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 9px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .controls .ctrl-label { font-size: 12px; color: #6b7280; font-weight: 600; }
+    .controls label.ctrl-inline { font-size: 12px; color: #374151; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+    .controls select {
+      height: 30px; padding: 0 8px; border: 1px solid #d1d5db; border-radius: 6px;
+      font-size: 13px; color: #374151; background: #fff; cursor: pointer; font-family: inherit;
+    }
+    .ctrl-sep { width: 1px; height: 22px; background: #e5e7eb; }
+    .ctrl-spacer { flex: 1; }
+
+    .targets { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+    .targets label {
+      font-size: 12px; display: inline-flex; align-items: center; gap: 3px;
+      padding: 3px 7px; border: 1px solid #e5e7eb; border-radius: 99px; cursor: pointer; user-select: none;
+    }
+    .targets label.base { background: #f3e8ff; border-color: #d8b4fe; color: #6b21a8; cursor: default; }
+    .targets input { cursor: pointer; }
+
+    button.secondary {
+      background: #ca427e; color: #fff; border: 1px solid #ca427e; border-radius: 6px;
+      padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    button.secondary:hover { background: #b33a6f; border-color: #b33a6f; }
+    button.secondary.copied { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+
+    button.ghost {
+      background: transparent; color: #9ca3af; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 7px 12px; font-size: 13px; cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    button.ghost:hover { background: #f9fafb; color: #374151; border-color: #9ca3af; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 185px 160px minmax(0, 1.05fr) minmax(0, 0.95fr);
+      flex: 1;
+      height: calc(100vh - 104px);
+    }
+
+    .pane {
+      display: flex; flex-direction: column; border-right: 1px solid #e5e7eb;
+      overflow: hidden; min-width: 0;
+    }
+    .pane:last-child { border-right: none; }
+
+    .pane-header {
+      padding: 9px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px;
+    }
+    .pane-header h2 {
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hint { font-size: 11px; color: #9ca3af; }
+
+    .mini-btn {
+      background: #fdf2f8; color: #b33a6f; border: 1px solid #f3c6dd; border-radius: 6px;
+      padding: 4px 9px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .mini-btn:hover { background: #fce4f0; }
+
+    /* Products list */
+    .product-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .product-item {
+      display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #fff;
+      border: 1px solid #e5e7eb; border-radius: 7px; cursor: pointer; transition: all 0.12s;
+    }
+    .product-item:hover { border-color: #c4b5fd; }
+    .product-item.active { border-color: #68437B; background: #f5f3ff; }
+    .product-name { flex: 1; font-size: 13px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-item.active .product-name { color: #4c1d95; font-weight: 600; }
+    .product-remove { background: transparent; border: none; color: #c4c4cc; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .product-remove:hover { color: #b33a6f; }
+
+    /* Palette */
+    .palette { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+    .palette-item {
+      display: flex; align-items: center; gap: 7px; text-align: left; padding: 8px 10px;
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; font-family: inherit;
+      font-size: 12.5px; font-weight: 500; color: #374151; cursor: grab; transition: all 0.12s;
+    }
+    .palette-item::before { content: "＋"; color: #ca427e; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+    .palette-item:hover { border-color: #ca427e; background: #fdf2f8; color: #1a1a2e; }
+    .palette-item:active { cursor: grabbing; }
+
+    /* Product fields */
+    .product-fields { display: flex; gap: 8px; padding: 10px 12px; background: #fff; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
+    .pf {
+      padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; color: #1a1a2e; outline: none;
+    }
+    .pf:focus { border-color: #68437B; }
+    #skuInput { width: 110px; flex-shrink: 0; font-family: "Menlo", "Consolas", monospace; font-size: 12px; }
+    #titleInput { flex: 1; min-width: 0; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex; align-items: center; gap: 1px; padding: 5px 8px; background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; flex-shrink: 0;
+    }
+    .toolbar button {
+      min-width: 28px; height: 26px; padding: 0 6px; background: transparent; border: 1px solid transparent;
+      border-radius: 4px; cursor: pointer; font-size: 13px; color: #374151; display: inline-flex;
+      align-items: center; justify-content: center; transition: all 0.1s; line-height: 1; font-family: inherit;
+    }
+    .toolbar button:hover { background: #e5e7eb; border-color: #d1d5db; }
+    .toolbar button.active { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+    .toolbar .sep { display: inline-block; width: 1px; height: 18px; background: #d1d5db; margin: 0 4px; flex-shrink: 0; }
+    .toolbar select { height: 26px; padding: 0 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; color: #374151; background: #fff; cursor: pointer; outline: none; }
+    .toolbar select:hover { border-color: #9ca3af; }
+
+    /* Block stack */
+    .stack { flex: 1; overflow-y: auto; padding: 12px; background: #f4f4f5; display: flex; flex-direction: column; gap: 9px; }
+    .stack-hint { margin: auto; max-width: 240px; text-align: center; color: #9ca3af; font-size: 13px; line-height: 1.6; padding: 24px; }
+    .block-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 9px; overflow: hidden; box-shadow: 0 1px 2px rgba(16,24,40,0.04); }
+    .block-card.dragging { opacity: 0.4; }
+    .block-head { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: #f9fafb; border-bottom: 1px solid #f0f0f0; }
+    .drag-handle { cursor: grab; color: #9ca3af; font-size: 15px; line-height: 1; user-select: none; padding: 2px 4px; }
+    .drag-handle:active { cursor: grabbing; }
+    .block-label { flex: 1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #68437B; }
+    .block-remove { background: transparent; border: none; color: #9ca3af; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 4px; }
+    .block-remove:hover { color: #b33a6f; background: #fdf2f8; }
+    .drop-indicator { height: 2px; background: #ca427e; border-radius: 2px; margin: -4px 0; }
+
+    /* Editor (contenteditable) + preview typography */
+    .editor { outline: none; font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.7; color: #1a1a2e; background: #fff; }
+    .block-editor { min-height: 56px; padding: 10px 14px; }
+    .block-editor:empty::before { content: attr(data-placeholder); color: #c4c4cc; pointer-events: none; display: block; }
+
+    .editor h1, .preview h1 { font-size: 1.6em; font-weight: 700; margin: 0.5em 0 0.25em; }
+    .editor h2, .preview h2 { font-size: 1.3em; font-weight: 600; margin: 0.5em 0 0.25em; }
+    .editor h3, .preview h3 { font-size: 1.1em; font-weight: 600; margin: 0.5em 0 0.25em; }
+    .editor p,  .preview p  { margin: 0.3em 0; }
+    .editor ul, .editor ol, .preview ul, .preview ol { padding-left: 1.5em; margin: 0.3em 0; }
+    .editor blockquote, .preview blockquote { border-left: 3px solid #68437B; margin: 0.5em 0; padding: 4px 12px; color: #555; background: #f9fafb; }
+    .editor a, .preview a { color: #68437B; }
+    .editor hr, .preview hr { border: none; border-top: 1px solid #d1d5db; margin: 0.75em 0; }
+
+    /* Output pane */
+    .preview { flex: 1.1; overflow-y: auto; padding: 14px; background: #fff; border-bottom: 1px solid #e5e7eb; font-size: 14px; line-height: 1.7; color: #1a1a2e; }
+    .preview:empty::before { content: "Live preview of the selected product appears here…"; color: #c4c4cc; }
+    .out-status { font-size: 11px; color: #6b7280; padding: 6px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
+    .out-status .warn { color: #b45309; }
+    textarea#output {
+      flex: 1; border: none; outline: none; resize: none; font-family: "Menlo", "Consolas", monospace;
+      font-size: 12px; line-height: 1.6; padding: 14px; background: #f9fafb; color: #1a1a2e;
+    }
+    .legend { font-size: 11px; color: #6b7280; padding: 8px 14px; background: #fff; border-top: 1px solid #e5e7eb; line-height: 1.5; flex-shrink: 0; }
+    .legend code { background: #f4f4f5; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Phoenix Import — Copy Block Builder</h1>
+  <span class="tag">Build product copy in blocks · export a translation-ready import file</span>
+  <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import" style="height:36px;"></a>
+</header>
+
+<div class="controls">
+  <label class="ctrl-inline">Base language
+    <select id="baseLang"></select>
+  </label>
+  <span class="ctrl-sep"></span>
+  <span class="ctrl-label">Translate into</span>
+  <span id="targetLangs" class="targets"></span>
+  <span class="ctrl-spacer"></span>
+  <button class="secondary" id="downloadBtn">Download CSV</button>
+  <button class="secondary" id="downloadXlsxBtn">Download XLSX</button>
+  <button class="secondary" id="copyCsvBtn">Copy import file</button>
+  <button class="ghost" id="exportBtn">Export project</button>
+  <button class="ghost" id="importBtn">Import project</button>
+  <button class="ghost" id="clearBtn">Clear all</button>
+</div>
+
+<div class="workspace">
+  <!-- Pane 1: Products -->
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Products</h2>
+      <button class="mini-btn" id="newProductBtn">＋ New</button>
+    </div>
+    <div class="product-list" id="productList"></div>
+  </div>
+
+  <!-- Pane 2: Block palette -->
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Block palette</h2>
+      <span class="hint">Drag / click</span>
+    </div>
+    <div class="palette" id="palette"></div>
+  </div>
+
+  <!-- Pane 3: Current product editor -->
+  <div class="pane">
+    <div class="pane-header">
+      <h2 id="editorPaneTitle">Blocks</h2>
+      <span class="hint">Drag the ⠿ handle to reorder</span>
+    </div>
+
+    <div class="product-fields">
+      <input id="skuInput" class="pf" placeholder="SKU">
+      <input id="titleInput" class="pf pf-title" placeholder="Product title  —  use  --  for handle specs, e.g.  Singing Bowl -- 10cm Brass">
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <button title="Undo (Ctrl+Z)" data-cmd="undo">↶</button>
+      <button title="Redo (Ctrl+Y)" data-cmd="redo">↷</button>
+      <span class="sep"></span>
+      <select id="formatSelect" title="Paragraph style">
+        <option value="p">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+      </select>
+      <span class="sep"></span>
+      <button title="Bold (Ctrl+B)" data-cmd="bold" style="font-weight:700">B</button>
+      <button title="Italic (Ctrl+I)" data-cmd="italic" style="font-style:italic">I</button>
+      <button title="Underline (Ctrl+U)" data-cmd="underline" style="text-decoration:underline">U</button>
+      <button title="Strikethrough" data-cmd="strikeThrough" style="text-decoration:line-through">S</button>
+      <span class="sep"></span>
+      <button title="Subscript" data-cmd="subscript" style="font-size:11px">X<sub>2</sub></button>
+      <button title="Superscript" data-cmd="superscript" style="font-size:11px">X<sup>2</sup></button>
+      <span class="sep"></span>
+      <button title="Remove formatting" data-cmd="removeFormat" style="font-size:11px">T<sub>x</sub></button>
+      <span class="sep"></span>
+      <button title="Numbered list" data-cmd="insertOrderedList">1.</button>
+      <button title="Bullet list" data-cmd="insertUnorderedList">•</button>
+      <button title="Decrease indent" data-cmd="outdent">⇤</button>
+      <button title="Increase indent" data-cmd="indent">⇥</button>
+      <span class="sep"></span>
+      <button title="Blockquote" id="blockquoteBtn" style="font-size:16px;font-weight:700">&ldquo;</button>
+      <span class="sep"></span>
+      <button title="Align left" data-cmd="justifyLeft" aria-label="Align left">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3V5zm0 4h12v2H3V9zm0 4h18v2H3v-2zm0 4h12v2H3v-2z"/></svg>
+      </button>
+      <button title="Align center" data-cmd="justifyCenter" aria-label="Align center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3V5zm3 4h12v2H6V9zm-3 4h18v2H3v-2zm3 4h12v2H6v-2z"/></svg>
+      </button>
+      <button title="Align right" data-cmd="justifyRight" aria-label="Align right">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3V5zm6 4h12v2H9V9zm-6 4h18v2H3v-2zm6 4h12v2H9v-2z"/></svg>
+      </button>
+      <button title="Justify" data-cmd="justifyFull" aria-label="Justify">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3V5zm0 4h18v2H3V9zm0 4h18v2H3v-2zm0 4h18v2H3v-2z"/></svg>
+      </button>
+      <span class="sep"></span>
+      <button title="Insert link" id="linkBtn">Link</button>
+      <button title="Remove link" data-cmd="unlink">Unlink</button>
+      <span class="sep"></span>
+      <button title="Horizontal rule" data-cmd="insertHorizontalRule">―</button>
+    </div>
+
+    <div class="stack" id="stack">
+      <div class="stack-hint" id="stackHint">Drag a block here, or click one in the palette, to start building this product's copy.</div>
+    </div>
+  </div>
+
+  <!-- Pane 4: Preview + import file -->
+  <div class="pane">
+    <div class="pane-header">
+      <h2>Import file</h2>
+      <span class="hint">SKU · LANG · TITLE · COPY</span>
+    </div>
+    <div class="preview" id="preview"></div>
+    <div class="out-status" id="outStatus"></div>
+    <textarea id="output" readonly spellcheck="false"></textarea>
+    <div class="legend">
+      One row per product &times; language. The <strong>base-language</strong> row is filled; other locales carry
+      <code>[[TRANSLATE_TITLE]]</code> / <code>[[TRANSLATE_COPY]]</code> placeholders for the AI translation step
+      (the <code>LANG</code> column is the target). Once filled, this file feeds the Pipeline Generator.
+    </div>
+  </div>
+</div>
+
+<script>
+// Use <p> as default block separator (Chrome wraps in <div> otherwise)
+try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
+
+const STORAGE_KEY = 'copyBlockBuilder.project';
+const LEGACY_KEY = 'copyBlockBuilder.doc';
+
+// Locales mirror the Pipeline Generator (shopify-consoleimport.html). NL is Shopify's
+// default and is mandatory there, so it is always present as a row.
+const VALID_LOCALES = ['NL', 'EN', 'DE', 'FR', 'IT', 'ES'];
+const LANG_LABEL = { NL: '🇳🇱 NL', EN: '🇬🇧 EN', DE: '🇩🇪 DE', FR: '🇫🇷 FR', IT: '🇮🇹 IT', ES: '🇪🇸 ES' };
+const TITLE_PH = '[[TRANSLATE_TITLE]]';
+const COPY_PH  = '[[TRANSLATE_COPY]]';
+
+/* ---- Block-type palette config ---------------------------------------- */
+const BLOCK_TYPES = {
+  product_type:  { label: "Product type",           seed: "text" },
+  practical:     { label: "Practical description",   seed: "text" },
+  evocative:     { label: "Evocative description",   seed: "text" },
+  sku:           { label: "SKU / price",             seed: "text" },
+  content_list:  { label: "Content list (set)",      seed: "list" },
+  ingredients:   { label: "Ingredients",             seed: "list" },
+  esoteric:      { label: "Esoteric significance",   seed: "text" },
+  how_to_use:    { label: "How to use",              seed: "text" },
+  safety:        { label: "Safety guidelines",       seed: "text" },
+  brand_line:    { label: "Brand / line info",       seed: "text" },
+  commercial:    { label: "Commercial boilerplate",  seed: "text" },
+  symbolism:     { label: "Symbolism boilerplate",   seed: "text" }
+};
+
+function seedHtml(type) {
+  return BLOCK_TYPES[type] && BLOCK_TYPES[type].seed === 'list' ? '<ul><li><br></li></ul>' : '';
+}
+function newId() { return 'id_' + Math.random().toString(36).slice(2, 9); }
+
+/* ---- localStorage helpers --------------------------------------------- */
+function load(key, def) {
+  try { const v = localStorage.getItem(key); return v == null ? def : JSON.parse(v); }
+  catch (e) { return def; }
+}
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+
+/* ---- Clean-HTML serializer (from copy-to-html-writer.html) ------------ */
+function escAttr(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function escText(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function serializeNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) return escText(node.textContent);
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+  const tag = node.tagName.toLowerCase();
+  const kids = Array.from(node.childNodes).map(serializeNode).join('');
+  if (tag === 'br') return '<br>';
+  if (tag === 'hr') return '<hr>\n';
+  const tagMap = { b: 'strong', i: 'em', strike: 's' };
+  const out = tagMap[tag] || tag;
+  if (tag === 'div') {
+    if (!kids.trim() && !kids.includes('<br>')) return '';
+    return `<p>${kids || '<br>'}</p>\n`;
+  }
+  if (tag === 'span' || tag === 'font') return kids;
+  let attrs = '';
+  if (tag === 'a') {
+    const href = node.getAttribute('href');
+    if (href) attrs += ` href="${escAttr(href)}"`;
+  }
+  const ta = node.style && node.style.textAlign;
+  if (ta && ta !== 'left' && ta !== 'start' && ta !== '') attrs += ` style="text-align:${ta}"`;
+  const blockTags = new Set(['p','h1','h2','h3','ul','ol','li','blockquote']);
+  const inlineTags = new Set(['strong','em','u','s','sub','sup','a']);
+  if (blockTags.has(out)) {
+    const body = kids.trim() ? kids : '<br>';
+    return `<${out}${attrs}>${body}</${out}>\n`;
+  }
+  if (inlineTags.has(out)) {
+    if (!kids) return '';
+    return `<${out}${attrs}>${kids}</${out}>`;
+  }
+  return kids;
+}
+function getHTML(editorEl) {
+  return Array.from(editorEl.childNodes).map(serializeNode).join('').replace(/\n{2,}/g, '\n').trim();
+}
+
+/* ---- State ------------------------------------------------------------ */
+let project = loadProject();
+let activeEditor = null;
+let dragState = null;
+let indicator = null;
+
+function sanitizeBlocks(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.filter(b => b && BLOCK_TYPES[b.type])
+            .map(b => ({ id: b.id || newId(), type: b.type, html: typeof b.html === 'string' ? b.html : '' }));
+}
+function sanitizeProject(pr) {
+  const baseLang = VALID_LOCALES.includes(pr.baseLang) ? pr.baseLang : 'NL';
+  let targets = Array.isArray(pr.targets) ? pr.targets.filter(L => VALID_LOCALES.includes(L)) : [...VALID_LOCALES];
+  if (!targets.includes(baseLang)) targets.push(baseLang);
+  if (!targets.includes('NL')) targets.push('NL');
+  let products = Array.isArray(pr.products) ? pr.products.map(p => ({
+    id: p.id || newId(),
+    sku: typeof p.sku === 'string' ? p.sku : '',
+    title: typeof p.title === 'string' ? p.title : '',
+    blocks: sanitizeBlocks(p.blocks)
+  })) : [];
+  if (!products.length) products = [{ id: newId(), sku: '', title: '', blocks: [] }];
+  const activeId = products.some(p => p.id === pr.activeId) ? pr.activeId : products[0].id;
+  return { baseLang, targets, products, activeId };
+}
+function loadProject() {
+  const pr = load(STORAGE_KEY, null);
+  if (pr && pr.products) return sanitizeProject(pr);
+  // Migrate a v1 single-document project, if present.
+  const legacy = load(LEGACY_KEY, null);
+  const prod = { id: newId(), sku: '', title: '', blocks: sanitizeBlocks(legacy) };
+  return { baseLang: 'NL', targets: [...VALID_LOCALES], products: [prod], activeId: prod.id };
+}
+function activeProduct() { return project.products.find(p => p.id === project.activeId) || null; }
+
+/* ---- DOM refs --------------------------------------------------------- */
+const baseLangSel  = document.getElementById('baseLang');
+const targetLangs  = document.getElementById('targetLangs');
+const productList  = document.getElementById('productList');
+const palette      = document.getElementById('palette');
+const skuInput     = document.getElementById('skuInput');
+const titleInput   = document.getElementById('titleInput');
+const editorPaneTitle = document.getElementById('editorPaneTitle');
+const stack        = document.getElementById('stack');
+const stackHint    = document.getElementById('stackHint');
+const preview      = document.getElementById('preview');
+const outStatus    = document.getElementById('outStatus');
+const outputEl     = document.getElementById('output');
+const toolbar      = document.getElementById('toolbar');
+const formatSelect = document.getElementById('formatSelect');
+
+/* ---- Language controls ------------------------------------------------ */
+function renderLangControls() {
+  baseLangSel.innerHTML = '';
+  VALID_LOCALES.forEach(L => {
+    const o = document.createElement('option');
+    o.value = L; o.textContent = LANG_LABEL[L];
+    if (L === project.baseLang) o.selected = true;
+    baseLangSel.appendChild(o);
+  });
+
+  targetLangs.innerHTML = '';
+  VALID_LOCALES.forEach(L => {
+    const isBase = L === project.baseLang;
+    const forced = isBase || L === 'NL'; // NL row is mandatory for the Pipeline Generator
+    const lab = document.createElement('label');
+    if (isBase) lab.className = 'base';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.lang = L;
+    cb.checked = project.targets.includes(L) || forced;
+    cb.disabled = forced;
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(' ' + LANG_LABEL[L] + (isBase ? ' (base)' : '')));
+    targetLangs.appendChild(lab);
+  });
+}
+
+baseLangSel.addEventListener('change', () => {
+  project.baseLang = baseLangSel.value;
+  if (!project.targets.includes(project.baseLang)) project.targets.push(project.baseLang);
+  if (!project.targets.includes('NL')) project.targets.push('NL');
+  renderLangControls();
+  renderProducts();
+  updateOutputs();
+});
+
+targetLangs.addEventListener('change', e => {
+  const cb = e.target.closest('input[data-lang]');
+  if (!cb) return;
+  const L = cb.dataset.lang;
+  if (cb.checked) { if (!project.targets.includes(L)) project.targets.push(L); }
+  else { project.targets = project.targets.filter(x => x !== L); }
+  updateOutputs();
+});
+
+/* ---- Products --------------------------------------------------------- */
+function productLabel(p) { return p.sku ? p.sku + (p.title ? ' · ' + titleNoSpecs(p.title) : '') : (p.title ? titleNoSpecs(p.title) : 'Untitled product'); }
+function titleNoSpecs(t) { return t.includes('--') ? t.split('--')[0].trim() : t.trim(); }
+
+function renderProducts() {
+  productList.innerHTML = '';
+  project.products.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'product-item' + (p.id === project.activeId ? ' active' : '');
+    item.dataset.id = p.id;
+    item.innerHTML = '<span class="product-name"></span><button class="product-remove" title="Remove product">×</button>';
+    item.querySelector('.product-name').textContent = productLabel(p);
+    productList.appendChild(item);
+  });
+}
+
+productList.addEventListener('click', e => {
+  const rm = e.target.closest('.product-remove');
+  if (rm) { removeProduct(rm.closest('.product-item').dataset.id); return; }
+  const item = e.target.closest('.product-item');
+  if (item) selectProduct(item.dataset.id);
+});
+
+document.getElementById('newProductBtn').addEventListener('click', () => {
+  const np = { id: newId(), sku: '', title: '', blocks: [] };
+  project.products.push(np);
+  project.activeId = np.id;
+  activeEditor = null;
+  renderProducts(); renderProductFields(); renderStack(); updateOutputs();
+  skuInput.focus();
+});
+
+function selectProduct(id) {
+  if (id === project.activeId) return;
+  project.activeId = id;
+  activeEditor = null;
+  renderProducts(); renderProductFields(); renderStack(); updateOutputs();
+}
+
+function removeProduct(id) {
+  const p = project.products.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm('Remove product "' + productLabel(p) + '"? This cannot be undone.')) return;
+  const idx = project.products.findIndex(x => x.id === id);
+  project.products.splice(idx, 1);
+  if (!project.products.length) project.products.push({ id: newId(), sku: '', title: '', blocks: [] });
+  if (project.activeId === id) project.activeId = project.products[Math.max(0, idx - 1)].id;
+  activeEditor = null;
+  renderProducts(); renderProductFields(); renderStack(); updateOutputs();
+}
+
+function renderProductFields() {
+  const p = activeProduct();
+  skuInput.value = p ? p.sku : '';
+  titleInput.value = p ? p.title : '';
+  skuInput.disabled = titleInput.disabled = !p;
+  editorPaneTitle.textContent = p ? ('Blocks · ' + (p.sku || 'new product')) : 'Blocks';
+}
+
+skuInput.addEventListener('input', () => {
+  const p = activeProduct(); if (!p) return;
+  p.sku = skuInput.value;
+  editorPaneTitle.textContent = 'Blocks · ' + (p.sku || 'new product');
+  renderProducts(); updateOutputs();
+});
+titleInput.addEventListener('input', () => {
+  const p = activeProduct(); if (!p) return;
+  p.title = titleInput.value;
+  renderProducts(); updateOutputs();
+});
+
+/* ---- Palette ---------------------------------------------------------- */
+function renderPalette() {
+  palette.innerHTML = '';
+  Object.entries(BLOCK_TYPES).forEach(([type, cfg]) => {
+    const btn = document.createElement('button');
+    btn.className = 'palette-item';
+    btn.draggable = true;
+    btn.dataset.type = type;
+    btn.textContent = cfg.label;
+    palette.appendChild(btn);
+  });
+}
+palette.addEventListener('click', e => {
+  const item = e.target.closest('.palette-item');
+  if (item) addBlock(item.dataset.type);
+});
+palette.addEventListener('dragstart', e => {
+  const item = e.target.closest('.palette-item');
+  if (!item) return;
+  dragState = { kind: 'palette', type: item.dataset.type };
+  e.dataTransfer.effectAllowed = 'copy';
+  e.dataTransfer.setData('text/plain', item.dataset.type);
+});
+palette.addEventListener('dragend', () => { clearIndicator(); dragState = null; });
+
+/* ---- Block stack ------------------------------------------------------ */
+function renderStack() {
+  stack.querySelectorAll('.block-card').forEach(c => c.remove());
+  const p = activeProduct();
+  const blocks = p ? p.blocks : [];
+  stackHint.style.display = blocks.length ? 'none' : 'block';
+  blocks.forEach(block => {
+    const cfg = BLOCK_TYPES[block.type];
+    const card = document.createElement('div');
+    card.className = 'block-card';
+    card.dataset.id = block.id;
+    const head = document.createElement('div');
+    head.className = 'block-head';
+    head.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="block-label"></span><button class="block-remove" title="Remove block">×</button>';
+    head.querySelector('.block-label').textContent = cfg.label;
+    const editor = document.createElement('div');
+    editor.className = 'editor block-editor';
+    editor.contentEditable = 'true';
+    editor.dataset.id = block.id;
+    editor.setAttribute('data-placeholder', cfg.label + '…');
+    editor.innerHTML = block.html || '';
+    card.appendChild(head);
+    card.appendChild(editor);
+    stack.appendChild(card);
+    wireBlock(card, editor, block);
+  });
+}
+
+function wireBlock(card, editor, block) {
+  editor.addEventListener('input', () => updateBlockHtml(editor));
+  editor.addEventListener('keydown', e => handleEditorKeydown(e, editor));
+  editor.addEventListener('mousedown', () => { card.draggable = false; });
+  editor.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  });
+  const handle = card.querySelector('.drag-handle');
+  handle.addEventListener('mousedown', () => { card.draggable = true; });
+  handle.addEventListener('mouseup', () => { card.draggable = false; });
+  card.addEventListener('dragstart', e => {
+    if (!card.draggable) return;
+    dragState = { kind: 'reorder', id: block.id };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', block.id);
+    setTimeout(() => card.classList.add('dragging'), 0);
+  });
+  card.addEventListener('dragend', () => {
+    card.draggable = false;
+    card.classList.remove('dragging');
+    clearIndicator();
+    dragState = null;
+  });
+  card.querySelector('.block-remove').addEventListener('click', () => removeBlock(block.id));
+}
+
+function addBlock(type, atIndex) {
+  const p = activeProduct();
+  if (!p || !BLOCK_TYPES[type]) return;
+  const block = { id: newId(), type, html: seedHtml(type) };
+  if (atIndex == null || atIndex > p.blocks.length) p.blocks.push(block);
+  else p.blocks.splice(atIndex, 0, block);
+  renderStack(); updateOutputs();
+  const ed = stack.querySelector('.block-editor[data-id="' + block.id + '"]');
+  if (ed) ed.focus();
+}
+function removeBlock(id) {
+  const p = activeProduct(); if (!p) return;
+  const i = p.blocks.findIndex(b => b.id === id);
+  if (i < 0) return;
+  p.blocks.splice(i, 1);
+  if (activeEditor && activeEditor.dataset.id === id) activeEditor = null;
+  renderStack(); updateOutputs();
+}
+function moveBlock(id, toIndex) {
+  const p = activeProduct(); if (!p) return;
+  const from = p.blocks.findIndex(b => b.id === id);
+  if (from < 0) return;
+  const [item] = p.blocks.splice(from, 1);
+  let t = from < toIndex ? toIndex - 1 : toIndex;
+  if (t < 0) t = 0; if (t > p.blocks.length) t = p.blocks.length;
+  p.blocks.splice(t, 0, item);
+  renderStack(); updateOutputs();
+}
+function updateBlockHtml(editor) {
+  const p = activeProduct(); if (!p) return;
+  const b = p.blocks.find(x => x.id === editor.dataset.id);
+  if (b) { b.html = getHTML(editor); updateOutputs(); }
+}
+
+/* ---- Drag-and-drop position handling ---------------------------------- */
+function getDropIndex(clientY) {
+  const cards = Array.from(stack.querySelectorAll('.block-card'));
+  for (let i = 0; i < cards.length; i++) {
+    const r = cards[i].getBoundingClientRect();
+    if (clientY < r.top + r.height / 2) return i;
+  }
+  return cards.length;
+}
+function showIndicator(index) {
+  if (!indicator) { indicator = document.createElement('div'); indicator.className = 'drop-indicator'; }
+  const cards = Array.from(stack.querySelectorAll('.block-card'));
+  if (index >= cards.length) stack.appendChild(indicator);
+  else stack.insertBefore(indicator, cards[index]);
+}
+function clearIndicator() { if (indicator && indicator.parentNode) indicator.parentNode.removeChild(indicator); }
+
+stack.addEventListener('dragover', e => {
+  if (!dragState) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = dragState.kind === 'palette' ? 'copy' : 'move';
+  showIndicator(getDropIndex(e.clientY));
+});
+stack.addEventListener('dragleave', e => { if (!stack.contains(e.relatedTarget)) clearIndicator(); });
+stack.addEventListener('drop', e => {
+  if (!dragState) return;
+  e.preventDefault();
+  const idx = getDropIndex(e.clientY);
+  const state = dragState;
+  clearIndicator(); dragState = null;
+  if (state.kind === 'palette') addBlock(state.type, idx);
+  else moveBlock(state.id, idx);
+});
+
+/* ---- Shared toolbar --------------------------------------------------- */
+stack.addEventListener('focusin', e => {
+  const ed = e.target.closest('.block-editor');
+  if (ed) { activeEditor = ed; syncToolbarState(); }
+});
+toolbar.addEventListener('mousedown', e => {
+  const btn = e.target.closest('button[data-cmd]');
+  if (!btn) return;
+  e.preventDefault();
+  if (!activeEditor) return;
+  activeEditor.focus();
+  document.execCommand(btn.dataset.cmd, false, null);
+  updateBlockHtml(activeEditor);
+  syncToolbarState();
+});
+formatSelect.addEventListener('change', () => {
+  if (!activeEditor) return;
+  activeEditor.focus();
+  document.execCommand('formatBlock', false, formatSelect.value);
+  updateBlockHtml(activeEditor);
+});
+document.getElementById('linkBtn').addEventListener('mousedown', e => {
+  e.preventDefault();
+  if (!activeEditor) return;
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) { alert('Select some text first, then click Link.'); return; }
+  const url = window.prompt('Enter URL:', 'https://');
+  if (url) { activeEditor.focus(); document.execCommand('createLink', false, url); updateBlockHtml(activeEditor); }
+});
+document.getElementById('blockquoteBtn').addEventListener('mousedown', e => {
+  e.preventDefault();
+  if (!activeEditor) return;
+  activeEditor.focus();
+  document.execCommand('formatBlock', false, 'blockquote');
+  updateBlockHtml(activeEditor);
+});
+
+function handleEditorKeydown(e, editor) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const node = sel.getRangeAt(0).startContainer;
+    const ctx = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    const headingEl = ctx.closest('h1,h2,h3');
+    if (!headingEl || !editor.contains(headingEl)) return;
+    e.preventDefault();
+    const range = sel.getRangeAt(0);
+    const atEnd = range.endOffset === (range.endContainer.length ?? 0) && !range.endContainer.nextSibling?.nodeValue;
+    if (atEnd) {
+      const para = document.createElement('p');
+      para.innerHTML = '<br>';
+      headingEl.insertAdjacentElement('afterend', para);
+      const nr = document.createRange();
+      nr.setStart(para, 0); nr.collapse(true);
+      sel.removeAllRanges(); sel.addRange(nr);
+    } else {
+      document.execCommand('insertParagraph', false, null);
+      document.execCommand('formatBlock', false, 'p');
+    }
+    updateBlockHtml(editor);
+  } else if (e.key === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '<br>');
+    updateBlockHtml(editor);
+  }
+}
+
+const stateCmds = ['bold','italic','underline','strikeThrough','subscript','superscript',
+  'insertOrderedList','insertUnorderedList','justifyLeft','justifyCenter','justifyRight','justifyFull'];
+function syncToolbarState() {
+  document.querySelectorAll('.toolbar button[data-cmd]').forEach(btn => {
+    const cmd = btn.dataset.cmd;
+    if (stateCmds.includes(cmd)) {
+      try { btn.classList.toggle('active', document.queryCommandState(cmd)); } catch (e) {}
+    }
+  });
+  try {
+    const block = (document.queryCommandValue('formatBlock') || '').toLowerCase();
+    const match = ['p','h1','h2','h3'].find(t => t === block);
+    formatSelect.value = match || 'p';
+  } catch (e) {}
+}
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || !activeEditor) return;
+  if (!activeEditor.contains(sel.getRangeAt(0).commonAncestorContainer)) return;
+  syncToolbarState();
+});
+
+/* ---- Import-file output ----------------------------------------------- */
+function productCopy(p) {
+  return p.blocks.map(b => b.html).filter(h => h && h.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
+}
+function langOrder() {
+  const base = project.baseLang;
+  const ordered = [base];
+  for (const L of VALID_LOCALES) if (L !== base && project.targets.includes(L)) ordered.push(L);
+  return ordered;
+}
+function buildImportRows() {
+  const rows = [['SKU', 'LANG', 'TITLE', 'COPY']];
+  const langs = langOrder();
+  for (const p of project.products) {
+    const copy = productCopy(p);
+    for (const L of langs) {
+      if (L === project.baseLang) rows.push([p.sku || '', L, p.title || '', copy]);
+      else rows.push([p.sku || '', L, TITLE_PH, COPY_PH]);
+    }
+  }
+  return rows;
+}
+function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+function toCSV(rows) { return rows.map(r => r.map(csvCell).join(',')).join('\r\n'); }
+
+function updateOutputs() {
+  const p = activeProduct();
+  preview.innerHTML = p ? productCopy(p) : '';
+  outputEl.value = toCSV(buildImportRows());
+
+  // status / warnings
+  const langs = langOrder();
+  const incomplete = project.products.filter(p => !p.sku || !p.title || !productCopy(p));
+  let status = project.products.length + ' product(s) × ' + langs.length + ' locale(s) — base ' + project.baseLang +
+               ', translate into ' + langs.filter(L => L !== project.baseLang).join(', ');
+  if (incomplete.length) status += '  ·  <span class="warn">' + incomplete.length + ' missing SKU / title / copy</span>';
+  outStatus.innerHTML = status;
+
+  save(STORAGE_KEY, project);
+}
+
+/* ---- Controls --------------------------------------------------------- */
+function flash(btn, text) {
+  const original = btn.textContent;
+  btn.textContent = text; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1600);
+}
+function download(filename, text, mime) {
+  const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  download('phoenix-copy-import.csv', toCSV(buildImportRows()), 'text/csv;charset=utf-8;');
+});
+document.getElementById('downloadXlsxBtn').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') { alert('Spreadsheet library failed to load — check your connection, or use Download CSV instead.'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(buildImportRows());
+  XLSX.utils.book_append_sheet(wb, ws, 'Import');
+  XLSX.writeFile(wb, 'phoenix-copy-import.xlsx');
+});
+document.getElementById('copyCsvBtn').addEventListener('click', () => {
+  navigator.clipboard.writeText(outputEl.value)
+    .then(() => flash(document.getElementById('copyCsvBtn'), '✓ Copied!'));
+});
+document.getElementById('exportBtn').addEventListener('click', () => {
+  navigator.clipboard.writeText(JSON.stringify(project, null, 2))
+    .then(() => flash(document.getElementById('exportBtn'), '✓ Copied JSON!'));
+});
+document.getElementById('importBtn').addEventListener('click', () => {
+  const raw = window.prompt('Paste a previously exported Copy Block Builder project (JSON):');
+  if (!raw) return;
+  try {
+    project = sanitizeProject(JSON.parse(raw));
+    activeEditor = null;
+    renderAll();
+  } catch (err) { alert('Could not import — that does not look like valid project JSON.'); }
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (!confirm('Clear ALL products and start fresh? This cannot be undone.')) return;
+  const fresh = { id: newId(), sku: '', title: '', blocks: [] };
+  project = { baseLang: project.baseLang, targets: project.targets, products: [fresh], activeId: fresh.id };
+  activeEditor = null;
+  renderAll();
+});
+
+/* ---- Init ------------------------------------------------------------- */
+function renderAll() {
+  renderLangControls();
+  renderProducts();
+  renderProductFields();
+  renderStack();
+  updateOutputs();
+}
+renderPalette();
+renderAll();
+</script>
+</body>
+</html>
