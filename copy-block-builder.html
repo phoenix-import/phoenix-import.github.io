@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phoenix Import – Copy Block Builder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -202,7 +203,8 @@
   <span class="ctrl-label">Translate into</span>
   <span id="targetLangs" class="targets"></span>
   <span class="ctrl-spacer"></span>
-  <button class="secondary" id="downloadBtn">Download import file</button>
+  <button class="secondary" id="downloadBtn">Download CSV</button>
+  <button class="secondary" id="downloadXlsxBtn">Download XLSX</button>
   <button class="secondary" id="copyCsvBtn">Copy import file</button>
   <button class="ghost" id="exportBtn">Export project</button>
   <button class="ghost" id="importBtn">Import project</button>
@@ -856,6 +858,13 @@ function download(filename, text, mime) {
 
 document.getElementById('downloadBtn').addEventListener('click', () => {
   download('phoenix-copy-import.csv', toCSV(buildImportRows()), 'text/csv;charset=utf-8;');
+});
+document.getElementById('downloadXlsxBtn').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') { alert('Spreadsheet library failed to load — check your connection, or use Download CSV instead.'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(buildImportRows());
+  XLSX.utils.book_append_sheet(wb, ws, 'Import');
+  XLSX.writeFile(wb, 'phoenix-copy-import.xlsx');
 });
 document.getElementById('copyCsvBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(outputEl.value)
