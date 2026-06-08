@@ -40,6 +40,7 @@
     }
 
     .controls .ctrl-label { font-size: 12px; color: #6b7280; font-weight: 600; }
+    .controls .ctrl-note { font-size: 12px; color: #9ca3af; }
     .controls label.ctrl-inline { font-size: 12px; color: #374151; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
     .controls select {
       height: 30px; padding: 0 8px; border: 1px solid #d1d5db; border-radius: 6px;
@@ -128,6 +129,8 @@
       padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; color: #1a1a2e; outline: none;
     }
     .pf:focus { border-color: #68437B; }
+    select.pf { background: #fff; cursor: pointer; }
+    #typeInput { width: 150px; flex-shrink: 0; }
     #skuInput { width: 110px; flex-shrink: 0; font-family: "Menlo", "Consolas", monospace; font-size: 12px; }
     #titleInput { flex: 1; min-width: 0; }
 
@@ -199,16 +202,13 @@
   <label class="ctrl-inline">Base language
     <select id="baseLang"></select>
   </label>
-  <span class="ctrl-sep"></span>
-  <span class="ctrl-label">Translate into</span>
-  <span id="targetLangs" class="targets"></span>
+  <span class="ctrl-note" id="translateNote"></span>
   <span class="ctrl-spacer"></span>
-  <button class="secondary" id="downloadBtn">Download CSV</button>
-  <button class="secondary" id="downloadXlsxBtn">Download XLSX</button>
-  <button class="secondary" id="copyCsvBtn">Copy import file</button>
-  <button class="ghost" id="exportBtn">Export project</button>
-  <button class="ghost" id="importBtn">Import project</button>
-  <button class="ghost" id="clearBtn">Clear all</button>
+  <button class="secondary" id="downloadBtn" title="Save the import file (SKU/LANG/TITLE/COPY) as a .csv">Download CSV</button>
+  <button class="secondary" id="downloadXlsxBtn" title="Save the import file as a .xlsx spreadsheet for manual review">Download XLSX</button>
+  <button class="ghost" id="exportBtn" title="Copy the whole project (all products) as JSON — a portable save/backup">Export project</button>
+  <button class="ghost" id="importBtn" title="Restore a project from exported JSON">Import project</button>
+  <button class="ghost" id="clearBtn" title="Remove all products and start fresh">Clear all</button>
 </div>
 
 <div class="workspace">
@@ -238,6 +238,7 @@
     </div>
 
     <div class="product-fields">
+      <select id="typeInput" class="pf pf-type" title="Product type — sets the default blocks"></select>
       <input id="skuInput" class="pf" placeholder="SKU">
       <input id="titleInput" class="pf pf-title" placeholder="Product title  —  use  --  for handle specs, e.g.  Singing Bowl -- 10cm Brass">
     </div>
@@ -321,28 +322,97 @@ const LEGACY_KEY = 'copyBlockBuilder.doc';
 // Locales mirror the Pipeline Generator (shopify-consoleimport.html). NL is Shopify's
 // default and is mandatory there, so it is always present as a row.
 const VALID_LOCALES = ['NL', 'EN', 'DE', 'FR', 'IT', 'ES'];
-const LANG_LABEL = { NL: '🇳🇱 NL', EN: '🇬🇧 EN', DE: '🇩🇪 DE', FR: '🇫🇷 FR', IT: '🇮🇹 IT', ES: '🇪🇸 ES' };
+const LANG_NAME = { NL: 'Nederlands', EN: 'English', DE: 'Deutsch', FR: 'Français', IT: 'Italiano', ES: 'Español' };
 const TITLE_PH = '[[TRANSLATE_TITLE]]';
 const COPY_PH  = '[[TRANSLATE_COPY]]';
 
-/* ---- Block-type palette config ---------------------------------------- */
+/* ---- Block-type palette config (the copy segments, in spreadsheet order) -- */
 const BLOCK_TYPES = {
-  product_type:  { label: "Product type",           seed: "text" },
-  practical:     { label: "Practical description",   seed: "text" },
-  evocative:     { label: "Evocative description",   seed: "text" },
-  sku:           { label: "SKU / price",             seed: "text" },
-  content_list:  { label: "Content list (set)",      seed: "list" },
-  ingredients:   { label: "Ingredients",             seed: "list" },
-  esoteric:      { label: "Esoteric significance",   seed: "text" },
-  how_to_use:    { label: "How to use",              seed: "text" },
-  safety:        { label: "Safety guidelines",       seed: "text" },
-  brand_line:    { label: "Brand / line info",       seed: "text" },
-  commercial:    { label: "Commercial boilerplate",  seed: "text" },
-  symbolism:     { label: "Symbolism boilerplate",   seed: "text" }
+  factual:      { label: "Factual description",              seed: "text" },
+  evocative:    { label: "Evocative description",            seed: "text" },
+  sku:          { label: "SKU (price / sold per … pcs.)",    seed: "text" },
+  reach:        { label: "REACH snippet",                    seed: "text" },
+  weight_size:  { label: "Weight / size disclaimer",         seed: "text" },
+  natural_disc: { label: "Natural product disclaimer",       seed: "text" },
+  dye_disc:     { label: "Dye bath disclaimer",              seed: "text" },
+  medical_disc: { label: "Medical disclaimer",               seed: "text" },
+  content_list: { label: "Content list (set)",               seed: "list" },
+  ingredients:  { label: "Ingredients",                      seed: "list" },
+  composition:  { label: "Composition",                      seed: "text" },
+  technical:    { label: "Technical details",                seed: "text" },
+  esoteric:     { label: "Esoteric significance",            seed: "text" },
+  how_to_use:   { label: "How to use",                       seed: "text" },
+  safety:       { label: "Safety guidelines",                seed: "text" },
+  brand_line:   { label: "Brand / line info",                seed: "text" },
+  commercial:   { label: "Commercial boilerplate",           seed: "text" },
+  symbolism:    { label: "Symbolism / spiritual boilerplate", seed: "text" }
+};
+
+// Legacy block keys from earlier iterations → current keys (null = drop).
+const LEGACY_BLOCK_KEYS = { practical: 'factual', product_type: null };
+
+// Product types → the default set of blocks loaded when the type is chosen.
+// Each `blocks` entry is a key of BLOCK_TYPES, in order. Generated from the
+// product-types spreadsheet (copy_types.xlsx, columns B–S marked per type).
+const PRODUCT_TYPES = {
+  generic: { label: "— Blank (no template)", blocks: [] },
+  statue: { label: "Statue", blocks: ["factual","esoteric"] },
+  home_scent_product: { label: "Home Scent product", blocks: ["evocative","sku","ingredients","how_to_use","safety","brand_line"] },
+  aroma_diffuser_electric: { label: "Aroma diffuser (electric)", blocks: ["factual","technical","how_to_use","safety","commercial"] },
+  oil_diffuser: { label: "Oil diffuser", blocks: ["factual","medical_disc","content_list","how_to_use","safety"] },
+  essential_oil: { label: "Essential oil", blocks: ["evocative","sku","medical_disc","ingredients","esoteric","how_to_use","safety","brand_line"] },
+  body_candles: { label: "Body candles", blocks: ["factual"] },
+  tea: { label: "Tea", blocks: ["evocative","sku","ingredients","how_to_use","brand_line"] },
+  tea_accessories: { label: "Tea accessories", blocks: ["factual","sku","content_list","technical","how_to_use","safety"] },
+  water_vitalisation: { label: "Water vitalisation", blocks: ["factual","medical_disc","technical","how_to_use","safety"] },
+  feng_shui_products: { label: "Feng shui products", blocks: ["evocative","sku","natural_disc","medical_disc","esoteric","commercial"] },
+  feng_shui_crystals: { label: "Feng shui crystals", blocks: ["factual","sku","medical_disc","esoteric","commercial"] },
+  indoor_fountains: { label: "Indoor fountains", blocks: ["factual","content_list","technical","how_to_use","safety","commercial"] },
+  small_furniture_and_home_decor: { label: "Small furniture and home decor", blocks: ["symbolism"] },
+  window_stickers: { label: "Window stickers", blocks: ["evocative","sku","commercial"] },
+  jewellery_boxes: { label: "Jewellery boxes", blocks: ["factual","technical"] },
+  garden_outdoor: { label: "Garden & outdoor", blocks: ["factual","natural_disc","technical","how_to_use","safety"] },
+  salt_mineral_lamp: { label: "Salt/mineral lamp", blocks: ["factual","natural_disc","content_list","technical","commercial"] },
+  candle: { label: "Candle", blocks: ["factual","sku","composition","how_to_use","safety"] },
+  candle_holder_lantern: { label: "Candle holder / lantern", blocks: ["factual","sku","technical","how_to_use","safety"] },
+  metal_singing_bowl: { label: "Metal singing bowl", blocks: ["evocative","weight_size","medical_disc","composition","technical","commercial"] },
+  crystal_singing_bowl: { label: "Crystal singing bowl", blocks: ["evocative","medical_disc","content_list","composition","technical","commercial"] },
+  tuning_fork_pipe: { label: "Tuning fork / pipe", blocks: ["evocative","medical_disc","content_list","composition","technical","commercial"] },
+  wind_chime: { label: "Wind chime", blocks: ["evocative","medical_disc","content_list","composition","technical"] },
+  instrument_other: { label: "Instrument (other)", blocks: ["factual","content_list","technical","how_to_use"] },
+  body_care: { label: "Body care", blocks: ["evocative","sku","ingredients","how_to_use","brand_line","commercial"] },
+  nose_throat_mouth_care: { label: "Nose/throat/mouth care", blocks: ["factual","sku","medical_disc","content_list","composition","how_to_use","safety"] },
+  massage_tool: { label: "Massage tool", blocks: ["factual","sku","medical_disc","technical","how_to_use","safety"] },
+  meditation_cushion: { label: "Meditation cushion", blocks: ["factual","dye_disc","composition","symbolism"] },
+  mineral_gemstone: { label: "Mineral / gemstone", blocks: ["evocative","natural_disc","medical_disc","esoteric"] },
+  orgonite_product: { label: "Orgonite product", blocks: ["evocative","medical_disc","composition"] },
+  mineral_decoration_product: { label: "Mineral decoration product", blocks: ["factual","sku","natural_disc","technical"] },
+  jewellery_metal: { label: "Jewellery (metal)", blocks: ["factual","sku","reach","medical_disc","esoteric","symbolism"] },
+  jewellery_other: { label: "Jewellery (other)", blocks: ["factual","sku","natural_disc","medical_disc","esoteric","symbolism"] },
+  protection_pendants: { label: "Protection pendants", blocks: ["evocative","sku","medical_disc","esoteric","how_to_use","symbolism"] },
+  biotensor_dowsing_rod: { label: "Biotensor / dowsing rod", blocks: ["factual","medical_disc","composition","technical","esoteric"] },
+  kathag_door_cloth: { label: "Kathag / door cloth", blocks: ["factual","dye_disc","composition","technical"] },
+  mala: { label: "Mala", blocks: ["factual","sku","natural_disc","esoteric","symbolism"] },
+  pendulum: { label: "Pendulum", blocks: ["factual","medical_disc","composition","technical","esoteric","symbolism"] },
+  chakra_product: { label: "Chakra product", blocks: ["evocative","sku","medical_disc","esoteric","symbolism"] },
+  stationery_journal_postcard: { label: "Stationery / journal / postcard", blocks: ["factual","sku","content_list","technical","commercial"] },
+  packaging: { label: "Packaging", blocks: ["factual","sku","content_list","technical"] },
+  textiles: { label: "Textiles", blocks: ["factual","dye_disc","composition"] },
+  incense: { label: "Incense", blocks: ["evocative","sku","ingredients","esoteric","how_to_use","safety","brand_line"] },
+  incense_burner: { label: "Incense burner", blocks: ["factual","sku","technical","how_to_use","safety"] },
+  loose_grain_incense: { label: "Loose grain incense", blocks: ["factual","esoteric","how_to_use","safety"] },
+  smudge: { label: "Smudge", blocks: ["evocative","esoteric","how_to_use","safety","symbolism"] },
+  yoga_bolster_mat: { label: "Yoga bolster / mat", blocks: ["factual","dye_disc","composition","symbolism"] },
+  other: { label: "Other", blocks: [] }
 };
 
 function seedHtml(type) {
   return BLOCK_TYPES[type] && BLOCK_TYPES[type].seed === 'list' ? '<ul><li><br></li></ul>' : '';
+}
+function blocksForType(typeKey) {
+  const t = PRODUCT_TYPES[typeKey];
+  if (!t) return [];
+  return t.blocks.filter(bt => BLOCK_TYPES[bt]).map(bt => ({ id: newId(), type: bt, html: seedHtml(bt) }));
 }
 function newId() { return 'id_' + Math.random().toString(36).slice(2, 9); }
 
@@ -402,39 +472,42 @@ let indicator = null;
 
 function sanitizeBlocks(arr) {
   if (!Array.isArray(arr)) return [];
-  return arr.filter(b => b && BLOCK_TYPES[b.type])
-            .map(b => ({ id: b.id || newId(), type: b.type, html: typeof b.html === 'string' ? b.html : '' }));
+  return arr.map(b => {
+    if (!b) return null;
+    const type = (b.type in LEGACY_BLOCK_KEYS) ? LEGACY_BLOCK_KEYS[b.type] : b.type;
+    if (!type || !BLOCK_TYPES[type]) return null;
+    return { id: b.id || newId(), type, html: typeof b.html === 'string' ? b.html : '' };
+  }).filter(Boolean);
 }
 function sanitizeProject(pr) {
   const baseLang = VALID_LOCALES.includes(pr.baseLang) ? pr.baseLang : 'NL';
-  let targets = Array.isArray(pr.targets) ? pr.targets.filter(L => VALID_LOCALES.includes(L)) : [...VALID_LOCALES];
-  if (!targets.includes(baseLang)) targets.push(baseLang);
-  if (!targets.includes('NL')) targets.push('NL');
   let products = Array.isArray(pr.products) ? pr.products.map(p => ({
     id: p.id || newId(),
+    type: PRODUCT_TYPES[p.type] ? p.type : 'generic',
     sku: typeof p.sku === 'string' ? p.sku : '',
     title: typeof p.title === 'string' ? p.title : '',
     blocks: sanitizeBlocks(p.blocks)
   })) : [];
-  if (!products.length) products = [{ id: newId(), sku: '', title: '', blocks: [] }];
+  if (!products.length) products = [{ id: newId(), type: 'generic', sku: '', title: '', blocks: [] }];
   const activeId = products.some(p => p.id === pr.activeId) ? pr.activeId : products[0].id;
-  return { baseLang, targets, products, activeId };
+  return { baseLang, products, activeId };
 }
 function loadProject() {
   const pr = load(STORAGE_KEY, null);
   if (pr && pr.products) return sanitizeProject(pr);
   // Migrate a v1 single-document project, if present.
   const legacy = load(LEGACY_KEY, null);
-  const prod = { id: newId(), sku: '', title: '', blocks: sanitizeBlocks(legacy) };
-  return { baseLang: 'NL', targets: [...VALID_LOCALES], products: [prod], activeId: prod.id };
+  const prod = { id: newId(), type: 'generic', sku: '', title: '', blocks: sanitizeBlocks(legacy) };
+  return { baseLang: 'NL', products: [prod], activeId: prod.id };
 }
 function activeProduct() { return project.products.find(p => p.id === project.activeId) || null; }
 
 /* ---- DOM refs --------------------------------------------------------- */
 const baseLangSel  = document.getElementById('baseLang');
-const targetLangs  = document.getElementById('targetLangs');
+const translateNote = document.getElementById('translateNote');
 const productList  = document.getElementById('productList');
 const palette      = document.getElementById('palette');
+const typeInput    = document.getElementById('typeInput');
 const skuInput     = document.getElementById('skuInput');
 const titleInput   = document.getElementById('titleInput');
 const editorPaneTitle = document.getElementById('editorPaneTitle');
@@ -451,43 +524,18 @@ function renderLangControls() {
   baseLangSel.innerHTML = '';
   VALID_LOCALES.forEach(L => {
     const o = document.createElement('option');
-    o.value = L; o.textContent = LANG_LABEL[L];
+    o.value = L; o.textContent = L + ' — ' + LANG_NAME[L];
     if (L === project.baseLang) o.selected = true;
     baseLangSel.appendChild(o);
   });
-
-  targetLangs.innerHTML = '';
-  VALID_LOCALES.forEach(L => {
-    const isBase = L === project.baseLang;
-    const forced = isBase || L === 'NL'; // NL row is mandatory for the Pipeline Generator
-    const lab = document.createElement('label');
-    if (isBase) lab.className = 'base';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.lang = L;
-    cb.checked = project.targets.includes(L) || forced;
-    cb.disabled = forced;
-    lab.appendChild(cb);
-    lab.appendChild(document.createTextNode(' ' + LANG_LABEL[L] + (isBase ? ' (base)' : '')));
-    targetLangs.appendChild(lab);
-  });
+  const others = VALID_LOCALES.filter(L => L !== project.baseLang);
+  translateNote.textContent = '→ Claude /translate fills ' + others.join(', ');
 }
 
 baseLangSel.addEventListener('change', () => {
   project.baseLang = baseLangSel.value;
-  if (!project.targets.includes(project.baseLang)) project.targets.push(project.baseLang);
-  if (!project.targets.includes('NL')) project.targets.push('NL');
   renderLangControls();
   renderProducts();
-  updateOutputs();
-});
-
-targetLangs.addEventListener('change', e => {
-  const cb = e.target.closest('input[data-lang]');
-  if (!cb) return;
-  const L = cb.dataset.lang;
-  if (cb.checked) { if (!project.targets.includes(L)) project.targets.push(L); }
-  else { project.targets = project.targets.filter(x => x !== L); }
   updateOutputs();
 });
 
@@ -515,12 +563,12 @@ productList.addEventListener('click', e => {
 });
 
 document.getElementById('newProductBtn').addEventListener('click', () => {
-  const np = { id: newId(), sku: '', title: '', blocks: [] };
+  const np = { id: newId(), type: 'generic', sku: '', title: '', blocks: [] };
   project.products.push(np);
   project.activeId = np.id;
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
-  skuInput.focus();
+  typeInput.focus();
 });
 
 function selectProduct(id) {
@@ -536,19 +584,46 @@ function removeProduct(id) {
   if (!confirm('Remove product "' + productLabel(p) + '"? This cannot be undone.')) return;
   const idx = project.products.findIndex(x => x.id === id);
   project.products.splice(idx, 1);
-  if (!project.products.length) project.products.push({ id: newId(), sku: '', title: '', blocks: [] });
+  if (!project.products.length) project.products.push({ id: newId(), type: 'generic', sku: '', title: '', blocks: [] });
   if (project.activeId === id) project.activeId = project.products[Math.max(0, idx - 1)].id;
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
 }
 
+function renderTypeOptions() {
+  typeInput.innerHTML = '';
+  Object.entries(PRODUCT_TYPES).forEach(([key, t]) => {
+    const o = document.createElement('option');
+    o.value = key; o.textContent = t.label;
+    typeInput.appendChild(o);
+  });
+}
+
 function renderProductFields() {
   const p = activeProduct();
+  typeInput.value = p && PRODUCT_TYPES[p.type] ? p.type : 'generic';
   skuInput.value = p ? p.sku : '';
   titleInput.value = p ? p.title : '';
-  skuInput.disabled = titleInput.disabled = !p;
+  typeInput.disabled = skuInput.disabled = titleInput.disabled = !p;
   editorPaneTitle.textContent = p ? ('Blocks · ' + (p.sku || 'new product')) : 'Blocks';
 }
+
+// Choosing a type loads its default blocks (the template). Existing blocks are
+// replaced only after confirmation; afterwards blocks remain freely editable.
+typeInput.addEventListener('change', () => {
+  const p = activeProduct(); if (!p) return;
+  const key = typeInput.value;
+  const t = PRODUCT_TYPES[key];
+  if (key === 'generic' || !t || !t.blocks.length) { p.type = key; updateOutputs(); return; }
+  if (p.blocks.length && !confirm('Apply the "' + t.label + '" template? This replaces the current blocks for this product.')) {
+    typeInput.value = p.type || 'generic'; // revert
+    return;
+  }
+  p.type = key;
+  p.blocks = blocksForType(key);
+  activeEditor = null;
+  renderStack(); updateOutputs();
+});
 
 skuInput.addEventListener('input', () => {
   const p = activeProduct(); if (!p) return;
@@ -805,10 +880,10 @@ function productCopy(p) {
   return p.blocks.map(b => b.html).filter(h => h && h.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
 }
 function langOrder() {
+  // Every product always gets a row for all locales: the base is filled,
+  // the rest are placeholders for the /translate step.
   const base = project.baseLang;
-  const ordered = [base];
-  for (const L of VALID_LOCALES) if (L !== base && project.targets.includes(L)) ordered.push(L);
-  return ordered;
+  return [base, ...VALID_LOCALES.filter(L => L !== base)];
 }
 function buildImportRows() {
   const rows = [['SKU', 'LANG', 'TITLE', 'COPY']];
@@ -866,10 +941,6 @@ document.getElementById('downloadXlsxBtn').addEventListener('click', () => {
   XLSX.utils.book_append_sheet(wb, ws, 'Import');
   XLSX.writeFile(wb, 'phoenix-copy-import.xlsx');
 });
-document.getElementById('copyCsvBtn').addEventListener('click', () => {
-  navigator.clipboard.writeText(outputEl.value)
-    .then(() => flash(document.getElementById('copyCsvBtn'), '✓ Copied!'));
-});
 document.getElementById('exportBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(JSON.stringify(project, null, 2))
     .then(() => flash(document.getElementById('exportBtn'), '✓ Copied JSON!'));
@@ -885,8 +956,8 @@ document.getElementById('importBtn').addEventListener('click', () => {
 });
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (!confirm('Clear ALL products and start fresh? This cannot be undone.')) return;
-  const fresh = { id: newId(), sku: '', title: '', blocks: [] };
-  project = { baseLang: project.baseLang, targets: project.targets, products: [fresh], activeId: fresh.id };
+  const fresh = { id: newId(), type: 'generic', sku: '', title: '', blocks: [] };
+  project = { baseLang: project.baseLang, products: [fresh], activeId: fresh.id };
   activeEditor = null;
   renderAll();
 });
@@ -900,6 +971,7 @@ function renderAll() {
   updateOutputs();
 }
 renderPalette();
+renderTypeOptions();
 renderAll();
 </script>
 </body>
