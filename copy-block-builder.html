@@ -412,7 +412,62 @@ const PRODUCT_TYPES = {
   other: { label: "Other", blocks: [] }
 };
 
+// Standardized disclaimer / snippet text (from standardized_disclaimers.xlsx).
+// These blocks auto-fill with the base-language text; the canonical per-language
+// versions are kept so the future /translate step uses them verbatim rather than
+// machine-translating. Dye-bath disclaimer has no standard text yet (free-text).
+const SNIPPETS = {
+  reach: {
+    NL: "*Het product is nikkel-, lood- en cadmiumvrij. Dat wil zeggen dat deze metalen er niet inzitten, of in de geringe hoeveelheden die vallen binnen de geldende Europese normen voor productveiligheid (REACH).",
+    EN: "*This product is nickel, lead and cadmium free; meaning therefore that such elements are not present or in the limited quantities allowed within the European product safety standards (REACH).",
+    DE: "*Dieses Produkt ist frei von Nickel, Blei und Cadmium. Dies bedeutet, dass solche Metalle nicht Bestandteil sind oder lediglich in den begrenzten Mengen, die innerhalb der europäischen Produktsicherheitsnormen zulässig sind (REACH).",
+    FR: "*Ce produit est sans nickel, sans plomb et sans cadmium; ce qui signifie donc que ces éléments ne sont pas présents ou dans les quantités limitées autorisées dans les normes européennes de sécurité des produits (REACH).",
+    IT: "*Questo prodotto è privo di nichel, piombo e cadmio, il che significa che tali elementi non sono presenti o nelle quantità limitate consentite dagli standard europei di sicurezza dei prodotti (REACH).",
+    ES: "*Este producto no contiene níquel, plomo ni cadmio, lo que significa que estos elementos no están presentes o en las cantidades limitadas permitidas por las normas europeas de seguridad de los productos (REACH)."
+  },
+  weight_size: {
+    NL: "Let op: Al onze handgemaakte klankschalen zijn gesorteerd op gewicht. De genoemde diameter is bedoeld als eerste indicatie, zodat je een indruk krijgt van de doorsnee van de schaal.",
+    EN: "Please note: All our handmade singing bowls are sorted by weight. The diameter mentioned is an approximate indication, so that you have a general idea of the width of the bowl.",
+    DE: "Der angegebene Durchmesser ist indikativ. Die Schalen werden manuell hergestellt und der Durchmesser kann darum etwas abweichen.",
+    FR: "Attention : tous nos bols chantants faits à la main sont triés par poids. Le diamètre mentionné est une indication approximative, afin que vous ayez une idée générale de la largeur du bol.",
+    IT: "Nota bene: tutte le nostre campane fatte a mano sono classificate per peso. Il diametro segnato è un'indicazione approssimativa, in modo da avere un'idea generale della larghezza della campana.",
+    ES: "Nota: Todos nuestros cuencos tibetanos hechos a mano se clasifican por peso. El diámetro mencionado es una indicación aproximada, para que tenga una idea general de la anchura del cuenco."
+  },
+  natural_disc: {
+    NL: "Dit is een natuurproduct, dus kleur, vorm en grootte kunnen variëren en afwijken van de getoonde afbeelding.",
+    EN: "This is a natural product so colour, shape and size may vary and differ from the picture shown.",
+    DE: "Dies ist ein Naturprodukt, daher können Farbe, Form und Größe vom gezeigten Bild abweichen.",
+    FR: "C'est un produit naturel, donc la couleur, la forme et la taille peuvent varier et différer de l'image montrée.",
+    IT: "Si tratta di un prodotto naturale, quindi il colore, la forma e le dimensioni possono variare e differire dall'immagine mostrata.",
+    ES: "Este es un producto natural, por lo que el color, la forma y el tamaño pueden variar y diferir de la imagen que se muestra."
+  },
+  medical_disc: {
+    NL: "De kenmerken van dit product zijn niet wetenschappelijk bewezen; ze zijn gebaseerd op ervaringen van eindgebruikers en holistisch therapeuten. Eventueel geschetste heilzame eigenschappen zijn op geen enkele wijze bedoeld om de diagnose of behandeling door een gekwalificeerde therapeut of arts te vervangen. Als u twijfelt over uw gezondheid, raadpleeg dan een arts.",
+    EN: "The properties of this product have not been scientifically proven; they are based on the experiences of end users and holistic practitioners. Any beneficial effects described are in no way intended to replace diagnosis or treatment by a qualified therapist or medical doctor. If you have concerns about your health, consult a physician.",
+    DE: "Die Eigenschaften dieses Produkts sind wissenschaftlich nicht nachgewiesen; sie beruhen auf den Erfahrungen von Endverbrauchern und ganzheitlich arbeitenden Therapeuten. Eventuell beschriebene positive Wirkungen sind keinesfalls dazu bestimmt, die Diagnose oder Behandlung durch einen qualifizierten Therapeuten oder Arzt zu ersetzen. Wenn Sie Zweifel bezüglich Ihrer Gesundheit haben, konsultieren Sie bitte einen Arzt.",
+    FR: "Les propriétés de ce produit ne sont pas scientifiquement prouvées ; elles reposent sur les expériences d’utilisateurs finaux et de thérapeutes holistiques. Les éventuels effets bénéfiques décrits ne visent en aucun cas à remplacer le diagnostic ou le traitement d’un thérapeute qualifié ou d’un médecin. En cas de doute concernant votre santé, consultez un médecin.",
+    IT: "Le proprietà di questo prodotto non sono state scientificamente dimostrate; si basano sulle esperienze degli utilizzatori finali e dei terapeuti olistici. Gli eventuali effetti benefici descritti non intendono in alcun modo sostituire la diagnosi o il trattamento da parte di un terapeuta qualificato o di un medico. In caso di dubbi sul proprio stato di salute, consultare un medico.",
+    ES: "Las propiedades de este producto no han sido demostradas científicamente; se basan en las experiencias de usuarios finales y terapeutas holísticos. Los posibles efectos beneficiosos descritos no pretenden en ningún caso sustituir el diagnóstico o tratamiento por parte de un terapeuta cualificado o un médico. Si tiene dudas sobre su salud, consulte a un médico."
+  }
+};
+
+function snippetHtml(type, lang) {
+  const t = SNIPPETS[type] && (SNIPPETS[type][lang] || SNIPPETS[type].NL);
+  return t ? '<p>' + escText(t) + '</p>' : '';
+}
+// Has this block's html been left as one of the canonical (unedited) snippet texts?
+function isUneditedSnippet(type, html) {
+  return SNIPPETS[type] && VALID_LOCALES.some(L => SNIPPETS[type][L] && html === '<p>' + escText(SNIPPETS[type][L]) + '</p>');
+}
+// Refresh unedited snippet blocks to the current base language (after a base change).
+function reseedSnippets() {
+  for (const p of project.products)
+    for (const b of p.blocks)
+      if (isUneditedSnippet(b.type, b.html)) b.html = snippetHtml(b.type, project.baseLang);
+}
+
 function seedHtml(type) {
+  if (SNIPPETS[type]) return snippetHtml(type, project.baseLang);
   return BLOCK_TYPES[type] && BLOCK_TYPES[type].seed === 'list' ? '<ul><li><br></li></ul>' : '';
 }
 function blocksForType(typeKey) {
@@ -540,8 +595,10 @@ function renderLangControls() {
 
 baseLangSel.addEventListener('change', () => {
   project.baseLang = baseLangSel.value;
+  reseedSnippets(); // refresh untouched disclaimer/REACH blocks to the new base language
   renderLangControls();
   renderProducts();
+  renderStack();
   updateOutputs();
 });
 
