@@ -846,11 +846,9 @@ function handleEditorKeydown(e, editor) {
       document.execCommand('formatBlock', false, 'p');
     }
     updateBlockHtml(editor);
-  } else if (e.key === 'Enter' && e.shiftKey) {
-    e.preventDefault();
-    document.execCommand('insertHTML', false, '<br>');
-    updateBlockHtml(editor);
   }
+  // Shift+Enter is left to the browser's native line-break handling (a clean
+  // <br> with correct caret placement); the editor's input listener re-serializes.
 }
 
 const stateCmds = ['bold','italic','underline','strikeThrough','subscript','superscript',
