@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phoenix Import – Copy Block Builder</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -190,13 +191,27 @@
     }
     .legend { font-size: 11px; color: #6b7280; padding: 8px 14px; background: #fff; border-top: 1px solid #e5e7eb; line-height: 1.5; flex-shrink: 0; }
     .legend code { background: #f4f4f5; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+    /* Finalize section */
+    .finalize { border-top: 3px solid #68437B; background: #fff; padding: 16px 24px 28px; }
+    .fin-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+    .fin-head h2 { font-size: 15px; color: #68437B; margin: 0; }
+    .fin-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .fin-script {
+      width: 100%; min-height: 220px; margin-top: 12px; border: 1px solid #d1d5db; border-radius: 8px;
+      padding: 12px; font-family: "Menlo", "Consolas", monospace; font-size: 12px; line-height: 1.6;
+      color: #1a1a2e; background: #f9fafb; resize: vertical; outline: none;
+    }
+    .fin-note { font-size: 11px; color: #9ca3af; margin-top: 8px; line-height: 1.5; }
+    .fin-note code { background: #f4f4f5; padding: 1px 5px; border-radius: 4px; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
 <header>
   <h1>Phoenix Import — Copy Block Builder</h1>
-  <span class="tag">Build product copy in blocks · export a translation-ready import file</span>
+  <span class="tag">Build copy in blocks · translate the round-trip file · push to Shopify</span>
   <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import" style="height:36px;"></a>
 </header>
 
@@ -206,8 +221,11 @@
   </label>
   <span class="ctrl-note" id="translateNote"></span>
   <span class="ctrl-spacer"></span>
-  <button class="secondary" id="downloadBtn" title="Save the import file (SKU/LANG/TITLE/COPY) as a .csv">Download CSV</button>
-  <button class="secondary" id="downloadXlsxBtn" title="Save the import file as a .xlsx spreadsheet for manual review">Download XLSX</button>
+  <button class="secondary" id="exportTransCsvBtn" title="Export the per-segment translation file (base language filled, others marked [[TR]]) as CSV">Export for translation (CSV)</button>
+  <button class="secondary" id="exportTransXlsxBtn" title="Same translation file as an .xlsx grid">XLSX</button>
+  <button class="secondary" id="importTransBtn" title="Import the filled translation file back in">Import translations</button>
+  <input type="file" id="transFile" accept=".csv,.xlsx,.xls" style="display:none">
+  <span class="ctrl-sep"></span>
   <button class="ghost" id="exportBtn" title="Copy the whole project (all products) as JSON — a portable save/backup">Export project</button>
   <button class="ghost" id="importBtn" title="Restore a project from exported JSON">Import project</button>
   <button class="ghost" id="clearBtn" title="Remove all products and start fresh">Clear all</button>
@@ -310,11 +328,30 @@
     <div class="out-status" id="outStatus"></div>
     <textarea id="output" readonly spellcheck="false"></textarea>
     <div class="legend">
-      One row per product &times; language. The <strong>base-language</strong> row is filled; other locales carry
-      <code>[[TRANSLATE_TITLE]]</code> / <code>[[TRANSLATE_COPY]]</code> placeholders for the AI translation step
-      (the <code>LANG</code> column is the target). Once filled, this file feeds the Pipeline Generator.
+      The assembled <strong>final</strong> import file: one row per product &times; language, segments joined,
+      <strong>disclaimers injected per language</strong>. Non-base languages fill in as you <em>Import translations</em>.
+      Finalize at the bottom of the page.
     </div>
   </div>
+</div>
+
+<!-- Finalize: assemble + push to Shopify (embedded Pipeline Generator) -->
+<div class="finalize" id="finalize">
+  <div class="fin-head">
+    <h2>Finalize → Shopify</h2>
+    <span class="hint" id="finStatus"></span>
+  </div>
+  <div class="fin-row">
+    <button class="secondary" id="finalCsvBtn" title="Download the assembled SKU/LANG/TITLE/COPY import file as CSV">Download final CSV</button>
+    <button class="secondary" id="finalXlsxBtn" title="Download the assembled import file as XLSX">Download final XLSX</button>
+    <span class="ctrl-sep"></span>
+    <button class="secondary" id="genScriptBtn" title="Generate the Shopify console-script (NL + translations)">Generate console-script</button>
+    <button class="ghost" id="copyScriptBtn" title="Copy the console-script" disabled>Copy script</button>
+    <button class="ghost" id="prgProductBtn" title="Paragon product import (status=Active)">PRG_product_import.xlsx</button>
+    <button class="ghost" id="prgAssocBtn" title="Paragon associations import">PRG_associated_import.xlsx</button>
+  </div>
+  <textarea id="scriptOut" class="fin-script" readonly spellcheck="false" placeholder="Console-script appears here — paste it into the Shopify storefront console and run."></textarea>
+  <p class="fin-note">Run the console-script on the <code>*.myshopify.com</code> storefront domain. For Paragon, import the product file first, then associations. Every SKU needs an NL title.</p>
 </div>
 
 <script>
@@ -328,8 +365,7 @@ const LEGACY_KEY = 'copyBlockBuilder.doc';
 // default and is mandatory there, so it is always present as a row.
 const VALID_LOCALES = ['NL', 'EN', 'DE', 'FR', 'IT', 'ES'];
 const LANG_NAME = { NL: 'Nederlands', EN: 'English', DE: 'Deutsch', FR: 'Français', IT: 'Italiano', ES: 'Español' };
-const TITLE_PH = '[[TRANSLATE_TITLE]]';
-const COPY_PH  = '[[TRANSLATE_COPY]]';
+const TR_PH = '[[TR]]'; // sentinel marking an untranslated cell in the translation file
 
 /* ---- Block-type palette config (the copy segments, in spreadsheet order) -- */
 const BLOCK_TYPES = {
@@ -531,24 +567,37 @@ let activeEditor = null;
 let dragState = null;
 let indicator = null;
 
+// Per-language translation map { EN:'…', DE:'…' } — only valid, non-empty strings.
+function sanitizeTrans(o) {
+  if (!o || typeof o !== 'object') return undefined;
+  const r = {};
+  for (const L of VALID_LOCALES) if (typeof o[L] === 'string' && o[L]) r[L] = o[L];
+  return Object.keys(r).length ? r : undefined;
+}
 function sanitizeBlocks(arr) {
   if (!Array.isArray(arr)) return [];
   return arr.map(b => {
     if (!b) return null;
     const type = (b.type in LEGACY_BLOCK_KEYS) ? LEGACY_BLOCK_KEYS[b.type] : b.type;
     if (!type || !BLOCK_TYPES[type]) return null;
-    return { id: b.id || newId(), type, html: typeof b.html === 'string' ? b.html : '' };
+    const block = { id: b.id || newId(), type, html: typeof b.html === 'string' ? b.html : '' };
+    const t = sanitizeTrans(b.t); if (t) block.t = t;
+    return block;
   }).filter(Boolean);
 }
 function sanitizeProject(pr) {
   const baseLang = VALID_LOCALES.includes(pr.baseLang) ? pr.baseLang : 'NL';
-  let products = Array.isArray(pr.products) ? pr.products.map(p => ({
-    id: p.id || newId(),
-    type: PRODUCT_TYPES[p.type] ? p.type : 'generic',
-    sku: typeof p.sku === 'string' ? p.sku : '',
-    title: typeof p.title === 'string' ? p.title : '',
-    blocks: sanitizeBlocks(p.blocks)
-  })) : [];
+  let products = Array.isArray(pr.products) ? pr.products.map(p => {
+    const prod = {
+      id: p.id || newId(),
+      type: PRODUCT_TYPES[p.type] ? p.type : 'generic',
+      sku: typeof p.sku === 'string' ? p.sku : '',
+      title: typeof p.title === 'string' ? p.title : '',
+      blocks: sanitizeBlocks(p.blocks)
+    };
+    const tt = sanitizeTrans(p.titleT); if (tt) prod.titleT = tt;
+    return prod;
+  }) : [];
   if (!products.length) products = [{ id: newId(), type: 'generic', sku: '', title: '', blocks: [] }];
   const activeId = products.some(p => p.id === pr.activeId) ? pr.activeId : products[0].id;
   return { baseLang, products, activeId };
@@ -579,6 +628,9 @@ const outStatus    = document.getElementById('outStatus');
 const outputEl     = document.getElementById('output');
 const toolbar      = document.getElementById('toolbar');
 const formatSelect = document.getElementById('formatSelect');
+const finStatus    = document.getElementById('finStatus');
+const scriptOut    = document.getElementById('scriptOut');
+const transFile    = document.getElementById('transFile');
 
 /* ---- Language controls ------------------------------------------------ */
 function renderLangControls() {
@@ -641,8 +693,9 @@ document.getElementById('cloneProductBtn').addEventListener('click', () => {
     type: p.type,
     sku: p.sku,
     title: p.title,
-    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html }))
+    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html, ...(b.t ? { t: { ...b.t } } : {}) }))
   };
+  if (p.titleT) copy.titleT = { ...p.titleT };
   const idx = project.products.findIndex(x => x.id === p.id);
   project.products.splice(idx + 1, 0, copy); // place right after the original
   project.activeId = copy.id;
@@ -969,37 +1022,104 @@ function langOrder() {
   const base = project.baseLang;
   return [base, ...VALID_LOCALES.filter(L => L !== base)];
 }
-function buildImportRows() {
+const isSnippet = type => !!SNIPPETS[type];
+
+// Title for a given language: base = the typed title, others = imported translation.
+function titleForLang(p, L) {
+  return L === project.baseLang ? (p.title || '') : ((p.titleT && p.titleT[L]) || '');
+}
+// A block's text for a language. Disclaimer/snippet blocks use the canonical text
+// for that language (never machine-translated); other blocks use base html or the
+// imported translation.
+function blockTextForLang(b, L) {
+  if (isSnippet(b.type)) {
+    if (L === project.baseLang) return (b.html || '').trim();
+    return snippetHtml(b.type, L); // canonical, verbatim
+  }
+  const html = L === project.baseLang ? (b.html || '') : ((b.t && b.t[L]) || '');
+  return html.replace(/\n{2,}/g, '\n').trim();
+}
+// Assemble one product's COPY for a language (segments joined with <br>).
+function assembleCopy(p, L) {
+  return p.blocks.map(b => blockTextForLang(b, L)).filter(h => h).join('\n<br>\n').trim();
+}
+
+// Final Shopify import rows (all 6 locales, disclaimers injected per language).
+function buildFinalRows() {
   const rows = [['SKU', 'LANG', 'TITLE', 'COPY']];
-  const langs = langOrder();
+  for (const p of project.products)
+    for (const L of langOrder())
+      rows.push([p.sku || '', L, titleForLang(p, L), assembleCopy(p, L)]);
+  return rows;
+}
+
+// Translation file: one row per translatable unit (title + non-disclaimer blocks),
+// base column filled, other locales = existing translation or the [[TR]] sentinel.
+// Disclaimer blocks are excluded entirely (they are canonical, not translated).
+function buildTranslationRows() {
+  const header = ['SKU', 'BLOCK_ID', 'SEGMENT', ...VALID_LOCALES];
+  const rows = [header];
+  const base = project.baseLang;
+  const cell = (srcLang, L, src, existing) => (L === base ? src : (existing || TR_PH));
   for (const p of project.products) {
-    const copy = productCopy(p);
-    for (const L of langs) {
-      if (L === project.baseLang) rows.push([p.sku || '', L, p.title || '', copy]);
-      else rows.push([p.sku || '', L, TITLE_PH, COPY_PH]);
+    if (p.title && p.title.trim()) {
+      rows.push([p.sku || '', 'title', '(title)',
+        ...VALID_LOCALES.map(L => cell(base, L, p.title, p.titleT && p.titleT[L]))]);
+    }
+    for (const b of p.blocks) {
+      if (isSnippet(b.type)) continue;             // canonical, not translated
+      if (!(b.html || '').trim()) continue;        // nothing to translate
+      rows.push([p.sku || '', b.id, BLOCK_TYPES[b.type].label,
+        ...VALID_LOCALES.map(L => cell(base, L, b.html, b.t && b.t[L]))]);
     }
   }
   return rows;
 }
+
 function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
 function toCSV(rows) { return rows.map(r => r.map(csvCell).join(',')).join('\r\n'); }
+
+// How many (product × non-base locale) pairs still need translation.
+function translationPending() {
+  const base = project.baseLang;
+  let n = 0;
+  for (const p of project.products) {
+    const needTitle = !!(p.title && p.title.trim());
+    const blocks = p.blocks.filter(b => !isSnippet(b.type) && (b.html || '').trim());
+    for (const L of VALID_LOCALES) {
+      if (L === base) continue;
+      let pend = (needTitle && !(p.titleT && p.titleT[L]));
+      if (!pend) for (const b of blocks) if (!(b.t && b.t[L])) { pend = true; break; }
+      if (pend) n++;
+    }
+  }
+  return n;
+}
 
 function updateOutputs() {
   const p = activeProduct();
   preview.innerHTML = p ? productCopy(p) : '';
-  outputEl.value = toCSV(buildImportRows());
+  outputEl.value = toCSV(buildFinalRows());
 
   // status / warnings
   const langs = langOrder();
   const incomplete = project.products.filter(p => !p.sku || !p.title || !productCopy(p));
   const skus = project.products.map(p => (p.sku || '').trim()).filter(Boolean);
   const dups = [...new Set(skus.filter((s, i) => skus.indexOf(s) !== i))];
-  let status = project.products.length + ' product(s) × ' + langs.length + ' locale(s) — base ' + project.baseLang +
-               ', translate into ' + langs.filter(L => L !== project.baseLang).join(', ');
-  if (incomplete.length) status += '  ·  <span class="warn">' + incomplete.length + ' missing SKU / title / copy</span>';
+  const pending = translationPending();
+  let status = project.products.length + ' product(s) × ' + langs.length + ' locale(s) — base ' + project.baseLang;
+  status += pending ? '  ·  <span class="warn">translation pending: ' + pending + ' product-locale(s)</span>'
+                    : (project.products.length ? '  ·  translations complete' : '');
+  if (incomplete.length) status += '  ·  <span class="warn">' + incomplete.length + ' missing SKU / title / copy (base)</span>';
   if (dups.length) status += '  ·  <span class="warn">duplicate SKU: ' + dups.join(', ') + '</span>';
   outStatus.innerHTML = status;
 
+  if (finStatus) {
+    const parsed = buildParsed();
+    const noNL = parsed.skus.filter(s => !parsed.byKey[s + '|NL'] || !parsed.byKey[s + '|NL'].title);
+    finStatus.innerHTML = parsed.skus.length + ' SKU(s) · ' + Object.keys(parsed.byKey).length + ' locale-row(s) with content' +
+      (noNL.length ? '  ·  <span class="warn">' + noNL.length + ' without NL title</span>' : '');
+  }
   save(STORAGE_KEY, project);
 }
 
@@ -1018,15 +1138,387 @@ function download(filename, text, mime) {
   URL.revokeObjectURL(url);
 }
 
-document.getElementById('downloadBtn').addEventListener('click', () => {
-  download('phoenix-copy-import.csv', toCSV(buildImportRows()), 'text/csv;charset=utf-8;');
-});
-document.getElementById('downloadXlsxBtn').addEventListener('click', () => {
-  if (typeof XLSX === 'undefined') { alert('Spreadsheet library failed to load — check your connection, or use Download CSV instead.'); return; }
+function needXLSX() {
+  if (typeof XLSX === 'undefined') { alert('Spreadsheet library failed to load — check your connection, or use a CSV instead.'); return false; }
+  return true;
+}
+function downloadXlsx(rows, sheet, filename) {
+  if (!needXLSX()) return;
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(buildImportRows());
-  XLSX.utils.book_append_sheet(wb, ws, 'Import');
-  XLSX.writeFile(wb, 'phoenix-copy-import.xlsx');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheet);
+  XLSX.writeFile(wb, filename);
+}
+
+/* ---- Translation round-trip ------------------------------------------- */
+document.getElementById('exportTransCsvBtn').addEventListener('click', () => {
+  download('phoenix-translate.csv', toCSV(buildTranslationRows()), 'text/csv;charset=utf-8;');
+});
+document.getElementById('exportTransXlsxBtn').addEventListener('click', () => {
+  downloadXlsx(buildTranslationRows(), 'Translate', 'phoenix-translate.xlsx');
+});
+document.getElementById('importTransBtn').addEventListener('click', () => transFile.click());
+transFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const rows = await readRows(file);
+    const res = importTranslations(rows);
+    renderAll();
+    alert('Imported ' + res.filled + ' translated cell(s).' +
+      (res.unmatched ? '\n' + res.unmatched + ' row(s) had no matching SKU/block (were blocks rebuilt after export?).' : ''));
+  } catch (err) { alert('Could not read that file: ' + (err && err.message || err)); }
+  e.target.value = '';
+});
+
+function readRows(file) {
+  return new Promise((resolve, reject) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'csv') {
+      Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => resolve(r.data), error: reject });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+          resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }));
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    } else reject(new Error('Unsupported file type: ' + ext));
+  });
+}
+
+// Match rows back to products/blocks by SKU + BLOCK_ID; store non-base cells.
+function importTranslations(rows) {
+  const bySku = {};
+  for (const p of project.products) bySku[(p.sku || '').trim()] = p;
+  const base = project.baseLang;
+  let filled = 0, unmatched = 0;
+  for (const r of rows) {
+    const sku = String(r.SKU != null ? r.SKU : (r.sku || '')).trim();
+    const bid = String(r.BLOCK_ID != null ? r.BLOCK_ID : (r.block_id || '')).trim();
+    if (!sku || !bid) continue;
+    const p = bySku[sku];
+    const target = p && (bid === 'title' ? p : p.blocks.find(b => b.id === bid));
+    if (!target) { unmatched++; continue; }
+    for (const L of VALID_LOCALES) {
+      if (L === base) continue;
+      let val = r[L];
+      if (val == null) continue;
+      val = String(val);
+      if (!val.trim() || val.indexOf('[[TR') === 0) continue; // skip blank / sentinel
+      if (bid === 'title') (p.titleT = p.titleT || {})[L] = val;
+      else (target.t = target.t || {})[L] = val;
+      filled++;
+    }
+  }
+  return { filled, unmatched };
+}
+
+/* ---- Embedded Pipeline Generator (from shopify-consoleimport.html) ----- */
+const NON_NL_LOCALES = ['EN', 'DE', 'FR', 'IT', 'ES'];
+const accentMap = {
+  'á':'a','à':'a','ä':'a','â':'a','å':'a','ã':'a','ą':'a','ā':'a',
+  'é':'e','è':'e','ë':'e','ê':'e','ę':'e','ē':'e','ė':'e',
+  'í':'i','ì':'i','ï':'i','î':'i','į':'i','ī':'i',
+  'ó':'o','ò':'o','ö':'o','ô':'o','õ':'o','ø':'o','ō':'o',
+  'ú':'u','ù':'u','ü':'u','û':'u','ū':'u','ų':'u',
+  'ý':'y','ÿ':'y','ñ':'n','ń':'n',
+  'ç':'c','ć':'c','č':'c',
+  'ş':'s','š':'s','ś':'s',
+  'ž':'z','ź':'z','ż':'z','ł':'l',
+  'ß':'ss','æ':'ae','œ':'oe'
+};
+const localePreMap = { DE: { 'ä':'ae','ö':'oe','ü':'ue','Ä':'Ae','Ö':'Oe','Ü':'Ue' } };
+function normalizeText(text, locale) {
+  let r = text;
+  const pre = locale && localePreMap[locale];
+  if (pre) for (const [a, p] of Object.entries(pre)) r = r.replaceAll(a, p);
+  r = r.toLowerCase();
+  for (const [a, p] of Object.entries(accentMap)) r = r.replaceAll(a, p);
+  return r;
+}
+function titleToHandle(title, locale) {
+  let h = normalizeText(title, locale);
+  h = h.replace(/[^a-z0-9\s-]/g, '');
+  h = h.replace(/[\s-]+/g, '-');
+  h = h.replace(/^-+|-+$/g, '');
+  return h;
+}
+function normalizeSpec(spec, locale) {
+  let s = normalizeText(spec, locale);
+  s = s.replace(/[^a-z0-9\s-]/g, '');
+  s = s.replace(/\s+/g, '-').trim();
+  s = s.replace(/-+/g, '-');
+  s = s.replace(/^-+|-+$/g, '');
+  return s;
+}
+function buildHandle(titleSpecs, locale) {
+  let baseTitle = titleSpecs, spec = '';
+  if (titleSpecs.includes('--')) {
+    const parts = titleSpecs.split('--');
+    baseTitle = parts[0].trim();
+    spec = parts.slice(1).join('--').trim();
+  }
+  const baseHandle = titleToHandle(baseTitle, locale);
+  const ns = spec ? normalizeSpec(spec, locale) : '';
+  return ns ? baseHandle + '-' + ns : baseHandle;
+}
+
+// Assemble the Pipeline's {skus, byKey} from the final rows (skipping empty locales).
+function buildParsed() {
+  const rows = buildFinalRows().slice(1);
+  const byKey = {}; const skuSet = new Set();
+  for (const [sku, lang, title, copy] of rows) {
+    if (!sku) continue;
+    if (!String(title).trim()) continue; // a locale needs a translated title to be pushed
+    byKey[sku + '|' + lang] = { sku, lang, title, copy };
+    skuSet.add(sku);
+  }
+  return { skus: [...skuSet], byKey };
+}
+function buildDataBySku(parsed) {
+  const dataBySku = {};
+  for (const sku of parsed.skus) {
+    dataBySku[sku] = {};
+    for (const L of VALID_LOCALES) {
+      const r = parsed.byKey[sku + '|' + L];
+      if (!r) continue;
+      dataBySku[sku][L] = {
+        title: titleNoSpecs(r.title),
+        title_specs: r.title,
+        handle: buildHandle(r.title, L),
+        body_html: r.copy
+      };
+    }
+  }
+  return dataBySku;
+}
+function buildScript(parsed) {
+  const dataBySku = buildDataBySku(parsed);
+  const localesPresent = ['NL', ...NON_NL_LOCALES.filter(L => parsed.skus.some(s => parsed.byKey[s+'|'+L]))];
+  const dataJson = JSON.stringify(dataBySku, null, 2);
+  const localesJson = JSON.stringify(localesPresent);
+
+  return `// Phoenix Import — full push (NL + translations) console-script
+// Run on Shopify storefront domain (manibhadra-phoeniximport.myshopify.com), NOT admin or www.phoeniximport.com.
+// Generated ${new Date().toISOString()} for ${parsed.skus.length} SKU(s) across ${localesPresent.length} locale(s).
+
+(async () => {
+  const TOKEN = prompt('Shopify Admin API token (shpat_...):');
+  if (!TOKEN || !TOKEN.startsWith('shpat_')) { console.error('No valid token. Aborting.'); return; }
+  if (!location.hostname.endsWith('.myshopify.com')) {
+    console.error('Wrong origin: ' + location.hostname + '. Navigate to https://manibhadra-phoeniximport.myshopify.com/products.json (or another deep .myshopify.com path) and re-paste.');
+    return;
+  }
+
+  const ENDPOINT = '/admin/api/2024-01/graphql.json';
+  const DATA = ${dataJson};
+  const LOCALES_PRESENT = ${localesJson};
+  const NON_NL = LOCALES_PRESENT.filter(l => l !== 'NL');
+
+  const log = (...a) => console.log('[push]', ...a);
+  const skus = Object.keys(DATA);
+  log('Loaded', skus.length, 'SKUs across locales:', LOCALES_PRESENT.join(','));
+
+  const gql = async (query, variables) => {
+    const r = await fetch(ENDPOINT, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-Shopify-Access-Token': TOKEN },
+      body: JSON.stringify({ query, variables })
+    });
+    return r.json();
+  };
+
+  log('[1/4] Resolving SKUs to GIDs...');
+  const skuToGid = {};
+  for (let i = 0; i < skus.length; i += 50) {
+    const batch = skus.slice(i, i + 50);
+    const queryStr = batch.map(s => 'sku:' + s).join(' OR ');
+    const q = '{ products(first:250, query:"' + queryStr + '") { edges { node { id legacyResourceId variants(first:1){ edges{ node{ sku } } } } } } }';
+    const j = await gql(q);
+    if (j.errors) { console.error('Lookup errors:', j.errors); continue; }
+    for (const e of j.data.products.edges) {
+      const sku = e.node.variants.edges[0]?.node.sku;
+      if (sku && DATA[sku]) {
+        if (skuToGid[sku] && BigInt(e.node.legacyResourceId) <= BigInt(skuToGid[sku])) continue;
+        skuToGid[sku] = e.node.legacyResourceId;
+      }
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+  const matched = Object.keys(skuToGid);
+  const missing = skus.filter(s => !skuToGid[s]);
+  if (missing.length) console.warn('Missing GIDs:', missing);
+  log('Resolved', matched.length, '/', skus.length, 'SKUs.');
+
+  log('[2/4] Pushing NL via productUpdate...');
+  const nlResults = { success: [], failed: [] };
+  const nlUpdates = matched.map(sku => ({
+    sku,
+    gid: 'gid://shopify/Product/' + skuToGid[sku],
+    input: {
+      id: 'gid://shopify/Product/' + skuToGid[sku],
+      title: DATA[sku].NL.title,
+      descriptionHtml: DATA[sku].NL.body_html,
+      handle: DATA[sku].NL.handle,
+      seo: { title: DATA[sku].NL.title_specs, description: DATA[sku].NL.title_specs }
+    }
+  }));
+  for (let i = 0; i < nlUpdates.length; i += 25) {
+    const batch = nlUpdates.slice(i, i + 25);
+    const aliases = batch.map((u, idx) => 'm' + idx + ': productUpdate(input: $i' + idx + ') { product { id handle } userErrors { field message } }').join('\\n  ');
+    const varDefs = batch.map((_, idx) => '$i' + idx + ': ProductInput!').join(', ');
+    const mutation = 'mutation push(' + varDefs + ') {\\n  ' + aliases + '\\n}';
+    const variables = {};
+    batch.forEach((u, idx) => { variables['i' + idx] = u.input; });
+    const j = await gql(mutation, variables);
+    if (j.errors) {
+      console.error('NL batch errors:', j.errors);
+      for (const u of batch) nlResults.failed.push({ sku: u.sku, errors: j.errors });
+    } else {
+      batch.forEach((u, idx) => {
+        const res = j.data?.['m' + idx];
+        if (res?.userErrors?.length) nlResults.failed.push({ sku: u.sku, errors: res.userErrors });
+        else if (res?.product) nlResults.success.push({ sku: u.sku, handle: res.product.handle });
+        else nlResults.failed.push({ sku: u.sku, errors: [{ message: 'Empty response' }] });
+      });
+    }
+    log('  NL batch', Math.floor(i/25)+1, 'done.', nlResults.success.length, 'ok,', nlResults.failed.length, 'failed.');
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  if (NON_NL.length === 0) {
+    log('No non-NL locales. Skipping translations.');
+  } else {
+    log('[3/4] Fetching digests for', matched.length, 'products...');
+    const digestsBySku = {};
+    for (let i = 0; i < matched.length; i += 25) {
+      const batch = matched.slice(i, i + 25);
+      const aliases = batch.map((sku, idx) => 'r' + idx + ': translatableResource(resourceId: "gid://shopify/Product/' + skuToGid[sku] + '") { translatableContent { key digest } }').join('\\n  ');
+      const j = await gql('{ ' + aliases + ' }');
+      if (j.errors) { console.error('Digest errors:', j.errors); continue; }
+      batch.forEach((sku, idx) => {
+        const tr = j.data?.['r' + idx];
+        if (tr?.translatableContent) {
+          digestsBySku[sku] = Object.fromEntries(tr.translatableContent.map(c => [c.key, c.digest]));
+        }
+      });
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    log('[4/4] Pushing translations for', NON_NL.length, 'locale(s)...');
+    const trResults = { success: [], failed: [] };
+    const fieldMap = {
+      title:            (loc) => loc.title,
+      body_html:        (loc) => loc.body_html,
+      handle:           (loc) => loc.handle,
+      meta_title:       (loc) => loc.title_specs,
+      meta_description: (loc) => loc.title_specs
+    };
+    const products = matched.filter(sku => digestsBySku[sku]);
+    for (let i = 0; i < products.length; i += 10) {
+      const batch = products.slice(i, i + 10);
+      const aliasParts = []; const varDefs = []; const variables = {};
+      batch.forEach((sku, pi) => {
+        const translations = [];
+        for (const L of NON_NL) {
+          const loc = DATA[sku][L];
+          if (!loc) continue;
+          for (const [key, getter] of Object.entries(fieldMap)) {
+            const digest = digestsBySku[sku][key];
+            const value = getter(loc);
+            if (!digest || value == null || value === '') continue;
+            if (key === 'handle' && value === DATA[sku].NL.handle) continue;
+            translations.push({ locale: L.toLowerCase(), key, value, translatableContentDigest: digest });
+          }
+        }
+        if (!translations.length) return;
+        const r = '$r' + pi; const t = '$t' + pi;
+        aliasParts.push('m' + pi + ': translationsRegister(resourceId: ' + r + ', translations: ' + t + ') { userErrors { field message code } translations { key locale } }');
+        varDefs.push(r + ': ID!', t + ': [TranslationInput!]!');
+        variables['r' + pi] = 'gid://shopify/Product/' + skuToGid[sku];
+        variables['t' + pi] = translations;
+      });
+      if (!aliasParts.length) continue;
+      const mutation = 'mutation push(' + varDefs.join(', ') + ') {\\n  ' + aliasParts.join('\\n  ') + '\\n}';
+      const j = await gql(mutation, variables);
+      if (j.errors) {
+        console.error('TR batch errors:', j.errors);
+        batch.forEach(sku => trResults.failed.push({ sku, errors: j.errors }));
+      } else {
+        batch.forEach((sku, pi) => {
+          const res = j.data?.['m' + pi];
+          if (!res) return;
+          if (res.userErrors?.length) trResults.failed.push({ sku, errors: res.userErrors });
+          else trResults.success.push({ sku, count: res.translations?.length || 0 });
+        });
+      }
+      log('  TR batch', Math.floor(i/10)+1, 'done.', trResults.success.length, 'ok,', trResults.failed.length, 'failed.');
+      await new Promise(r => setTimeout(r, 500));
+    }
+    log('Translations:', trResults.success.length, 'ok,', trResults.failed.length, 'failed.');
+    if (trResults.failed.length) console.log('TR failures:', trResults.failed);
+    window._trResults = trResults;
+  }
+
+  log('=== Done ===');
+  log('NL ok:', nlResults.success.length, '| NL failed:', nlResults.failed.length, '| missing GID:', missing.length);
+  if (nlResults.failed.length) console.log('NL failures:', nlResults.failed);
+  window._consoleResults = { skuToGid, nlResults, missing };
+
+  const csvLines = ['sku,gid'];
+  for (const sku of skus) if (skuToGid[sku]) csvLines.push(sku + ',gid://shopify/Product/' + skuToGid[sku]);
+  const blob = new Blob([csvLines.join('\\r\\n') + '\\r\\n'], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sku-gid.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+  log('Downloaded sku-gid.csv.');
+})();
+`;
+}
+
+/* ---- Finalize controls ------------------------------------------------ */
+document.getElementById('finalCsvBtn').addEventListener('click', () => {
+  download('phoenix-shopify-import.csv', toCSV(buildFinalRows()), 'text/csv;charset=utf-8;');
+});
+document.getElementById('finalXlsxBtn').addEventListener('click', () => {
+  downloadXlsx(buildFinalRows(), 'Import', 'phoenix-shopify-import.xlsx');
+});
+document.getElementById('genScriptBtn').addEventListener('click', () => {
+  const parsed = buildParsed();
+  if (!parsed.skus.length) { alert('No products with content yet.'); return; }
+  const noNL = parsed.skus.filter(s => !parsed.byKey[s + '|NL'] || !parsed.byKey[s + '|NL'].title);
+  if (noNL.length) { alert('Every SKU needs an NL title before generating (Shopify default).\nMissing NL: ' + noNL.join(', ')); return; }
+  scriptOut.value = buildScript(parsed);
+  document.getElementById('copyScriptBtn').disabled = false;
+});
+document.getElementById('copyScriptBtn').addEventListener('click', () => {
+  if (!scriptOut.value) return;
+  navigator.clipboard.writeText(scriptOut.value).then(() => flash(document.getElementById('copyScriptBtn'), '✓ Copied!'));
+});
+document.getElementById('prgProductBtn').addEventListener('click', () => {
+  const parsed = buildParsed();
+  const rows = [['productID', 'status', 'artikelomschrijving', 'omschrijving', 'englishDescription']];
+  for (const sku of parsed.skus) {
+    const nl = parsed.byKey[sku + '|NL']; const en = parsed.byKey[sku + '|EN'];
+    rows.push([sku, 'Active', nl ? nl.title : '', nl ? nl.title : '', en ? en.title : '']);
+  }
+  downloadXlsx(rows, 'Blad1', 'PRG_product_import.xlsx');
+});
+document.getElementById('prgAssocBtn').addEventListener('click', () => {
+  const parsed = buildParsed();
+  const rows = [['from', 'fromID', 'to', 'toID', 'ordinal', 'associationType', 'language', 'artikelomschrijving', 'lineNumber']];
+  for (const sku of parsed.skus)
+    for (const L of VALID_LOCALES) {
+      const r = parsed.byKey[sku + '|' + L];
+      if (!r) continue;
+      rows.push(['product', sku, 'product', sku, '', 'Vertaling', L, r.title, '']);
+    }
+  downloadXlsx(rows, 'Blad1', 'PRG_associated_import.xlsx');
 });
 document.getElementById('exportBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(JSON.stringify(project, null, 2))
