@@ -204,7 +204,6 @@
   <span class="ctrl-spacer"></span>
   <button class="secondary" id="downloadBtn" title="Save the import file (SKU/LANG/TITLE/COPY) as a .csv">Download CSV</button>
   <button class="secondary" id="downloadXlsxBtn" title="Save the import file as a .xlsx spreadsheet for manual review">Download XLSX</button>
-  <button class="secondary" id="copyCsvBtn" title="Copy the import-file text to the clipboard">Copy import file</button>
   <button class="ghost" id="exportBtn" title="Copy the whole project (all products) as JSON — a portable save/backup">Export project</button>
   <button class="ghost" id="importBtn" title="Restore a project from exported JSON">Import project</button>
   <button class="ghost" id="clearBtn" title="Remove all products and start fresh">Clear all</button>
@@ -836,10 +835,6 @@ document.getElementById('downloadXlsxBtn').addEventListener('click', () => {
   const ws = XLSX.utils.aoa_to_sheet(buildImportRows());
   XLSX.utils.book_append_sheet(wb, ws, 'Import');
   XLSX.writeFile(wb, 'phoenix-copy-import.xlsx');
-});
-document.getElementById('copyCsvBtn').addEventListener('click', () => {
-  navigator.clipboard.writeText(outputEl.value)
-    .then(() => flash(document.getElementById('copyCsvBtn'), '✓ Copied!'));
 });
 document.getElementById('exportBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(JSON.stringify(project, null, 2))
