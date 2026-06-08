@@ -129,6 +129,8 @@
       padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; color: #1a1a2e; outline: none;
     }
     .pf:focus { border-color: #68437B; }
+    select.pf { background: #fff; cursor: pointer; }
+    #typeInput { width: 150px; flex-shrink: 0; }
     #skuInput { width: 110px; flex-shrink: 0; font-family: "Menlo", "Consolas", monospace; font-size: 12px; }
     #titleInput { flex: 1; min-width: 0; }
 
@@ -236,6 +238,7 @@
     </div>
 
     <div class="product-fields">
+      <select id="typeInput" class="pf pf-type" title="Product type — sets the default blocks"></select>
       <input id="skuInput" class="pf" placeholder="SKU">
       <input id="titleInput" class="pf pf-title" placeholder="Product title  —  use  --  for handle specs, e.g.  Singing Bowl -- 10cm Brass">
     </div>
@@ -339,8 +342,25 @@ const BLOCK_TYPES = {
   symbolism:     { label: "Symbolism boilerplate",   seed: "text" }
 };
 
+// Product types → the default set of blocks loaded when the type is chosen.
+// Each `blocks` entry must be a key of BLOCK_TYPES, in the order they appear.
+// PLACEHOLDER set — to be replaced/extended from the product-types spreadsheet.
+const PRODUCT_TYPES = {
+  generic:      { label: "— Blank (no template)", blocks: [] },
+  incense:      { label: "Incense",       blocks: ["product_type","practical","evocative","esoteric","how_to_use","safety","brand_line","commercial","symbolism"] },
+  singing_bowl: { label: "Singing bowl",  blocks: ["product_type","practical","evocative","sku","esoteric","how_to_use","brand_line","commercial","symbolism"] },
+  gemstone:     { label: "Gemstone / mineral", blocks: ["product_type","practical","evocative","esoteric","brand_line","commercial","symbolism"] },
+  candle:       { label: "Candle",        blocks: ["product_type","practical","evocative","ingredients","how_to_use","safety","brand_line","commercial"] },
+  jewellery:    { label: "Jewellery",     blocks: ["product_type","practical","evocative","content_list","esoteric","brand_line","commercial","symbolism"] }
+};
+
 function seedHtml(type) {
   return BLOCK_TYPES[type] && BLOCK_TYPES[type].seed === 'list' ? '<ul><li><br></li></ul>' : '';
+}
+function blocksForType(typeKey) {
+  const t = PRODUCT_TYPES[typeKey];
+  if (!t) return [];
+  return t.blocks.filter(bt => BLOCK_TYPES[bt]).map(bt => ({ id: newId(), type: bt, html: seedHtml(bt) }));
 }
 function newId() { return 'id_' + Math.random().toString(36).slice(2, 9); }
 
@@ -407,11 +427,12 @@ function sanitizeProject(pr) {
   const baseLang = VALID_LOCALES.includes(pr.baseLang) ? pr.baseLang : 'NL';
   let products = Array.isArray(pr.products) ? pr.products.map(p => ({
     id: p.id || newId(),
+    type: PRODUCT_TYPES[p.type] ? p.type : 'generic',
     sku: typeof p.sku === 'string' ? p.sku : '',
     title: typeof p.title === 'string' ? p.title : '',
     blocks: sanitizeBlocks(p.blocks)
   })) : [];
-  if (!products.length) products = [{ id: newId(), sku: '', title: '', blocks: [] }];
+  if (!products.length) products = [{ id: newId(), type: 'generic', sku: '', title: '', blocks: [] }];
   const activeId = products.some(p => p.id === pr.activeId) ? pr.activeId : products[0].id;
   return { baseLang, products, activeId };
 }
@@ -420,7 +441,7 @@ function loadProject() {
   if (pr && pr.products) return sanitizeProject(pr);
   // Migrate a v1 single-document project, if present.
   const legacy = load(LEGACY_KEY, null);
-  const prod = { id: newId(), sku: '', title: '', blocks: sanitizeBlocks(legacy) };
+  const prod = { id: newId(), type: 'generic', sku: '', title: '', blocks: sanitizeBlocks(legacy) };
   return { baseLang: 'NL', products: [prod], activeId: prod.id };
 }
 function activeProduct() { return project.products.find(p => p.id === project.activeId) || null; }
@@ -430,6 +451,7 @@ const baseLangSel  = document.getElementById('baseLang');
 const translateNote = document.getElementById('translateNote');
 const productList  = document.getElementById('productList');
 const palette      = document.getElementById('palette');
+const typeInput    = document.getElementById('typeInput');
 const skuInput     = document.getElementById('skuInput');
 const titleInput   = document.getElementById('titleInput');
 const editorPaneTitle = document.getElementById('editorPaneTitle');
@@ -485,12 +507,12 @@ productList.addEventListener('click', e => {
 });
 
 document.getElementById('newProductBtn').addEventListener('click', () => {
-  const np = { id: newId(), sku: '', title: '', blocks: [] };
+  const np = { id: newId(), type: 'generic', sku: '', title: '', blocks: [] };
   project.products.push(np);
   project.activeId = np.id;
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
-  skuInput.focus();
+  typeInput.focus();
 });
 
 function selectProduct(id) {
@@ -506,19 +528,46 @@ function removeProduct(id) {
   if (!confirm('Remove product "' + productLabel(p) + '"? This cannot be undone.')) return;
   const idx = project.products.findIndex(x => x.id === id);
   project.products.splice(idx, 1);
-  if (!project.products.length) project.products.push({ id: newId(), sku: '', title: '', blocks: [] });
+  if (!project.products.length) project.products.push({ id: newId(), type: 'generic', sku: '', title: '', blocks: [] });
   if (project.activeId === id) project.activeId = project.products[Math.max(0, idx - 1)].id;
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
 }
 
+function renderTypeOptions() {
+  typeInput.innerHTML = '';
+  Object.entries(PRODUCT_TYPES).forEach(([key, t]) => {
+    const o = document.createElement('option');
+    o.value = key; o.textContent = t.label;
+    typeInput.appendChild(o);
+  });
+}
+
 function renderProductFields() {
   const p = activeProduct();
+  typeInput.value = p && PRODUCT_TYPES[p.type] ? p.type : 'generic';
   skuInput.value = p ? p.sku : '';
   titleInput.value = p ? p.title : '';
-  skuInput.disabled = titleInput.disabled = !p;
+  typeInput.disabled = skuInput.disabled = titleInput.disabled = !p;
   editorPaneTitle.textContent = p ? ('Blocks · ' + (p.sku || 'new product')) : 'Blocks';
 }
+
+// Choosing a type loads its default blocks (the template). Existing blocks are
+// replaced only after confirmation; afterwards blocks remain freely editable.
+typeInput.addEventListener('change', () => {
+  const p = activeProduct(); if (!p) return;
+  const key = typeInput.value;
+  const t = PRODUCT_TYPES[key];
+  if (key === 'generic' || !t || !t.blocks.length) { p.type = key; updateOutputs(); return; }
+  if (p.blocks.length && !confirm('Apply the "' + t.label + '" template? This replaces the current blocks for this product.')) {
+    typeInput.value = p.type || 'generic'; // revert
+    return;
+  }
+  p.type = key;
+  p.blocks = blocksForType(key);
+  activeEditor = null;
+  renderStack(); updateOutputs();
+});
 
 skuInput.addEventListener('input', () => {
   const p = activeProduct(); if (!p) return;
@@ -851,7 +900,7 @@ document.getElementById('importBtn').addEventListener('click', () => {
 });
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (!confirm('Clear ALL products and start fresh? This cannot be undone.')) return;
-  const fresh = { id: newId(), sku: '', title: '', blocks: [] };
+  const fresh = { id: newId(), type: 'generic', sku: '', title: '', blocks: [] };
   project = { baseLang: project.baseLang, products: [fresh], activeId: fresh.id };
   activeEditor = null;
   renderAll();
@@ -866,6 +915,7 @@ function renderAll() {
   updateOutputs();
 }
 renderPalette();
+renderTypeOptions();
 renderAll();
 </script>
 </body>
