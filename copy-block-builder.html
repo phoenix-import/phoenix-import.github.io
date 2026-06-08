@@ -205,6 +205,16 @@
     .fin-note { font-size: 11px; color: #9ca3af; margin-top: 8px; line-height: 1.5; }
     .fin-note code { background: #f4f4f5; padding: 1px 5px; border-radius: 4px; }
     button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Paste-to-import modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,26,46,0.45); z-index: 50; align-items: center; justify-content: center; padding: 24px; }
+    .modal { background: #fff; border-radius: 12px; width: 100%; max-width: 640px; padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+    .modal h3 { font-size: 16px; color: #68437B; margin: 0 0 4px; }
+    .modal-sub { font-size: 12px; color: #6b7280; margin: 0 0 12px; line-height: 1.5; }
+    .modal-sub code { background: #f4f4f5; padding: 1px 5px; border-radius: 4px; }
+    #pasteArea { width: 100%; min-height: 200px; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; font-family: "Menlo","Consolas",monospace; font-size: 12px; line-height: 1.5; outline: none; resize: vertical; }
+    #pasteArea:focus { border-color: #68437B; }
+    .modal-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
   </style>
 </head>
 <body>
@@ -221,9 +231,11 @@
   </label>
   <span class="ctrl-note" id="translateNote"></span>
   <span class="ctrl-spacer"></span>
-  <button class="secondary" id="exportTransCsvBtn" title="Export the per-segment translation file (base language filled, others marked [[TR]]) as CSV">Export for translation (CSV)</button>
-  <button class="secondary" id="exportTransXlsxBtn" title="Same translation file as an .xlsx grid">XLSX</button>
-  <button class="secondary" id="importTransBtn" title="Import the filled translation file back in">Import translations</button>
+  <span class="ctrl-label">Translate</span>
+  <button class="secondary" id="copyTransJsonBtn" title="Copy the translation JSON to paste into a Claude chat (/translate)">Copy JSON</button>
+  <button class="ghost" id="exportTransCsvBtn" title="Download the translation file as CSV (for manual review)">CSV</button>
+  <button class="ghost" id="exportTransXlsxBtn" title="Download the translation file as XLSX (for manual review)">XLSX</button>
+  <button class="secondary" id="importTransBtn" title="Paste the filled translation JSON back in (or choose a CSV/XLSX file)">Import translations</button>
   <input type="file" id="transFile" accept=".csv,.xlsx,.xls" style="display:none">
   <span class="ctrl-sep"></span>
   <button class="ghost" id="exportBtn" title="Copy the whole project (all products) as JSON — a portable save/backup">Export project</button>
@@ -352,6 +364,21 @@
   </div>
   <textarea id="scriptOut" class="fin-script" readonly spellcheck="false" placeholder="Console-script appears here — paste it into the Shopify storefront console and run."></textarea>
   <p class="fin-note">Run the console-script on the <code>*.myshopify.com</code> storefront domain. For Paragon, import the product file first, then associations. Every SKU needs an NL title.</p>
+</div>
+
+<!-- Paste-to-import translations modal -->
+<div class="modal-overlay" id="pasteModal">
+  <div class="modal">
+    <h3>Import translations</h3>
+    <p class="modal-sub">Paste the filled translation JSON returned by <code>/translate</code>, then Import. Or choose a CSV/XLSX file.</p>
+    <textarea id="pasteArea" spellcheck="false" placeholder='Paste the JSON here, e.g.  {"base":"NL","targets":[...],"items":[...]}'></textarea>
+    <div class="modal-row">
+      <button class="ghost" id="pasteFileBtn">Choose file…</button>
+      <span class="ctrl-spacer"></span>
+      <button class="ghost" id="pasteCancel">Cancel</button>
+      <button class="secondary" id="pasteImport">Import</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1150,25 +1177,80 @@ function downloadXlsx(rows, sheet, filename) {
 }
 
 /* ---- Translation round-trip ------------------------------------------- */
+// Chat-friendly JSON: items with base-language `source` + target fields = [[TR]].
+function buildTranslationJson() {
+  const base = project.baseLang;
+  const targets = VALID_LOCALES.filter(L => L !== base);
+  const items = [];
+  const add = (sku, id, segment, source, existing) => {
+    const it = { sku: sku || '', id, segment, source };
+    for (const L of targets) it[L] = (existing && existing[L]) || TR_PH;
+    items.push(it);
+  };
+  for (const p of project.products) {
+    if (p.title && p.title.trim()) add(p.sku, 'title', '(title)', p.title, p.titleT);
+    for (const b of p.blocks) {
+      if (isSnippet(b.type) || !(b.html || '').trim()) continue; // disclaimers excluded
+      add(p.sku, b.id, BLOCK_TYPES[b.type].label, b.html, b.t);
+    }
+  }
+  return { base, targets, count: items.length, items };
+}
+
+document.getElementById('copyTransJsonBtn').addEventListener('click', () => {
+  const data = buildTranslationJson();
+  if (!data.count) { alert('Nothing to translate yet — add some copy first.'); return; }
+  navigator.clipboard.writeText(JSON.stringify(data))
+    .then(() => flash(document.getElementById('copyTransJsonBtn'), '✓ Copied — paste into /translate'));
+});
 document.getElementById('exportTransCsvBtn').addEventListener('click', () => {
   download('phoenix-translate.csv', toCSV(buildTranslationRows()), 'text/csv;charset=utf-8;');
 });
 document.getElementById('exportTransXlsxBtn').addEventListener('click', () => {
   downloadXlsx(buildTranslationRows(), 'Translate', 'phoenix-translate.xlsx');
 });
-document.getElementById('importTransBtn').addEventListener('click', () => transFile.click());
+
+// Import: paste the filled JSON (chat) or choose a CSV/XLSX file.
+document.getElementById('importTransBtn').addEventListener('click', openPasteModal);
+document.getElementById('pasteCancel').addEventListener('click', closePasteModal);
+document.getElementById('pasteFileBtn').addEventListener('click', () => transFile.click());
+document.getElementById('pasteImport').addEventListener('click', () => {
+  const text = document.getElementById('pasteArea').value.trim();
+  if (!text) { closePasteModal(); return; }
+  try { const res = importTranslationsJson(text); closePasteModal(); finishImport(res); }
+  catch (err) { alert('Could not import JSON: ' + (err && err.message || err)); }
+});
 transFile.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
   try {
     const rows = await readRows(file);
-    const res = importTranslations(rows);
-    renderAll();
-    alert('Imported ' + res.filled + ' translated cell(s).' +
-      (res.unmatched ? '\n' + res.unmatched + ' row(s) had no matching SKU/block (were blocks rebuilt after export?).' : ''));
+    const recs = rows.map(r => ({ sku: r.SKU != null ? r.SKU : r.sku, bid: r.BLOCK_ID != null ? r.BLOCK_ID : r.block_id, vals: r }));
+    closePasteModal();
+    finishImport(applyTranslations(recs));
   } catch (err) { alert('Could not read that file: ' + (err && err.message || err)); }
   e.target.value = '';
 });
+
+function openPasteModal() {
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('pasteModal').style.display = 'flex';
+  document.getElementById('pasteArea').focus();
+}
+function closePasteModal() { document.getElementById('pasteModal').style.display = 'none'; }
+
+function finishImport(res) {
+  renderAll();
+  alert('Imported ' + res.filled + ' translated value(s).' +
+    (res.unmatched ? '\n' + res.unmatched + ' entry(ies) had no matching SKU/block (were blocks rebuilt after export?).' : ''));
+}
+
+function importTranslationsJson(text) {
+  const obj = JSON.parse(text);
+  const items = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.items) ? obj.items : null);
+  if (!items) throw new Error('expected a translation JSON with an "items" array');
+  return applyTranslations(items.map(it => ({ sku: it.sku, bid: it.id, vals: it })));
+}
 
 function readRows(file) {
   return new Promise((resolve, reject) => {
@@ -1189,22 +1271,22 @@ function readRows(file) {
   });
 }
 
-// Match rows back to products/blocks by SKU + BLOCK_ID; store non-base cells.
-function importTranslations(rows) {
+// Match records back to products/blocks by SKU + block id; store non-base values.
+function applyTranslations(records) {
   const bySku = {};
   for (const p of project.products) bySku[(p.sku || '').trim()] = p;
   const base = project.baseLang;
   let filled = 0, unmatched = 0;
-  for (const r of rows) {
-    const sku = String(r.SKU != null ? r.SKU : (r.sku || '')).trim();
-    const bid = String(r.BLOCK_ID != null ? r.BLOCK_ID : (r.block_id || '')).trim();
+  for (const rec of records) {
+    const sku = String(rec.sku == null ? '' : rec.sku).trim();
+    const bid = String(rec.bid == null ? '' : rec.bid).trim();
     if (!sku || !bid) continue;
     const p = bySku[sku];
     const target = p && (bid === 'title' ? p : p.blocks.find(b => b.id === bid));
     if (!target) { unmatched++; continue; }
     for (const L of VALID_LOCALES) {
       if (L === base) continue;
-      let val = r[L];
+      let val = rec.vals[L];
       if (val == null) continue;
       val = String(val);
       if (!val.trim() || val.indexOf('[[TR') === 0) continue; // skip blank / sentinel
