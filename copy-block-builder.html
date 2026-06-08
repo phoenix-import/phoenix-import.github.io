@@ -40,6 +40,7 @@
     }
 
     .controls .ctrl-label { font-size: 12px; color: #6b7280; font-weight: 600; }
+    .controls .ctrl-note { font-size: 12px; color: #9ca3af; }
     .controls label.ctrl-inline { font-size: 12px; color: #374151; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
     .controls select {
       height: 30px; padding: 0 8px; border: 1px solid #d1d5db; border-radius: 6px;
@@ -199,16 +200,14 @@
   <label class="ctrl-inline">Base language
     <select id="baseLang"></select>
   </label>
-  <span class="ctrl-sep"></span>
-  <span class="ctrl-label">Translate into</span>
-  <span id="targetLangs" class="targets"></span>
+  <span class="ctrl-note" id="translateNote"></span>
   <span class="ctrl-spacer"></span>
-  <button class="secondary" id="downloadBtn">Download CSV</button>
-  <button class="secondary" id="downloadXlsxBtn">Download XLSX</button>
-  <button class="secondary" id="copyCsvBtn">Copy import file</button>
-  <button class="ghost" id="exportBtn">Export project</button>
-  <button class="ghost" id="importBtn">Import project</button>
-  <button class="ghost" id="clearBtn">Clear all</button>
+  <button class="secondary" id="downloadBtn" title="Save the import file (SKU/LANG/TITLE/COPY) as a .csv">Download CSV</button>
+  <button class="secondary" id="downloadXlsxBtn" title="Save the import file as a .xlsx spreadsheet for manual review">Download XLSX</button>
+  <button class="secondary" id="copyCsvBtn" title="Copy the import-file text to the clipboard">Copy import file</button>
+  <button class="ghost" id="exportBtn" title="Copy the whole project (all products) as JSON — a portable save/backup">Export project</button>
+  <button class="ghost" id="importBtn" title="Restore a project from exported JSON">Import project</button>
+  <button class="ghost" id="clearBtn" title="Remove all products and start fresh">Clear all</button>
 </div>
 
 <div class="workspace">
@@ -321,7 +320,7 @@ const LEGACY_KEY = 'copyBlockBuilder.doc';
 // Locales mirror the Pipeline Generator (shopify-consoleimport.html). NL is Shopify's
 // default and is mandatory there, so it is always present as a row.
 const VALID_LOCALES = ['NL', 'EN', 'DE', 'FR', 'IT', 'ES'];
-const LANG_LABEL = { NL: '🇳🇱 NL', EN: '🇬🇧 EN', DE: '🇩🇪 DE', FR: '🇫🇷 FR', IT: '🇮🇹 IT', ES: '🇪🇸 ES' };
+const LANG_NAME = { NL: 'Nederlands', EN: 'English', DE: 'Deutsch', FR: 'Français', IT: 'Italiano', ES: 'Español' };
 const TITLE_PH = '[[TRANSLATE_TITLE]]';
 const COPY_PH  = '[[TRANSLATE_COPY]]';
 
@@ -407,9 +406,6 @@ function sanitizeBlocks(arr) {
 }
 function sanitizeProject(pr) {
   const baseLang = VALID_LOCALES.includes(pr.baseLang) ? pr.baseLang : 'NL';
-  let targets = Array.isArray(pr.targets) ? pr.targets.filter(L => VALID_LOCALES.includes(L)) : [...VALID_LOCALES];
-  if (!targets.includes(baseLang)) targets.push(baseLang);
-  if (!targets.includes('NL')) targets.push('NL');
   let products = Array.isArray(pr.products) ? pr.products.map(p => ({
     id: p.id || newId(),
     sku: typeof p.sku === 'string' ? p.sku : '',
@@ -418,7 +414,7 @@ function sanitizeProject(pr) {
   })) : [];
   if (!products.length) products = [{ id: newId(), sku: '', title: '', blocks: [] }];
   const activeId = products.some(p => p.id === pr.activeId) ? pr.activeId : products[0].id;
-  return { baseLang, targets, products, activeId };
+  return { baseLang, products, activeId };
 }
 function loadProject() {
   const pr = load(STORAGE_KEY, null);
@@ -426,13 +422,13 @@ function loadProject() {
   // Migrate a v1 single-document project, if present.
   const legacy = load(LEGACY_KEY, null);
   const prod = { id: newId(), sku: '', title: '', blocks: sanitizeBlocks(legacy) };
-  return { baseLang: 'NL', targets: [...VALID_LOCALES], products: [prod], activeId: prod.id };
+  return { baseLang: 'NL', products: [prod], activeId: prod.id };
 }
 function activeProduct() { return project.products.find(p => p.id === project.activeId) || null; }
 
 /* ---- DOM refs --------------------------------------------------------- */
 const baseLangSel  = document.getElementById('baseLang');
-const targetLangs  = document.getElementById('targetLangs');
+const translateNote = document.getElementById('translateNote');
 const productList  = document.getElementById('productList');
 const palette      = document.getElementById('palette');
 const skuInput     = document.getElementById('skuInput');
@@ -451,43 +447,18 @@ function renderLangControls() {
   baseLangSel.innerHTML = '';
   VALID_LOCALES.forEach(L => {
     const o = document.createElement('option');
-    o.value = L; o.textContent = LANG_LABEL[L];
+    o.value = L; o.textContent = L + ' — ' + LANG_NAME[L];
     if (L === project.baseLang) o.selected = true;
     baseLangSel.appendChild(o);
   });
-
-  targetLangs.innerHTML = '';
-  VALID_LOCALES.forEach(L => {
-    const isBase = L === project.baseLang;
-    const forced = isBase || L === 'NL'; // NL row is mandatory for the Pipeline Generator
-    const lab = document.createElement('label');
-    if (isBase) lab.className = 'base';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.lang = L;
-    cb.checked = project.targets.includes(L) || forced;
-    cb.disabled = forced;
-    lab.appendChild(cb);
-    lab.appendChild(document.createTextNode(' ' + LANG_LABEL[L] + (isBase ? ' (base)' : '')));
-    targetLangs.appendChild(lab);
-  });
+  const others = VALID_LOCALES.filter(L => L !== project.baseLang);
+  translateNote.textContent = '→ Claude /translate fills ' + others.join(', ');
 }
 
 baseLangSel.addEventListener('change', () => {
   project.baseLang = baseLangSel.value;
-  if (!project.targets.includes(project.baseLang)) project.targets.push(project.baseLang);
-  if (!project.targets.includes('NL')) project.targets.push('NL');
   renderLangControls();
   renderProducts();
-  updateOutputs();
-});
-
-targetLangs.addEventListener('change', e => {
-  const cb = e.target.closest('input[data-lang]');
-  if (!cb) return;
-  const L = cb.dataset.lang;
-  if (cb.checked) { if (!project.targets.includes(L)) project.targets.push(L); }
-  else { project.targets = project.targets.filter(x => x !== L); }
   updateOutputs();
 });
 
@@ -805,10 +776,10 @@ function productCopy(p) {
   return p.blocks.map(b => b.html).filter(h => h && h.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
 }
 function langOrder() {
+  // Every product always gets a row for all locales: the base is filled,
+  // the rest are placeholders for the /translate step.
   const base = project.baseLang;
-  const ordered = [base];
-  for (const L of VALID_LOCALES) if (L !== base && project.targets.includes(L)) ordered.push(L);
-  return ordered;
+  return [base, ...VALID_LOCALES.filter(L => L !== base)];
 }
 function buildImportRows() {
   const rows = [['SKU', 'LANG', 'TITLE', 'COPY']];
@@ -886,7 +857,7 @@ document.getElementById('importBtn').addEventListener('click', () => {
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (!confirm('Clear ALL products and start fresh? This cannot be undone.')) return;
   const fresh = { id: newId(), sku: '', title: '', blocks: [] };
-  project = { baseLang: project.baseLang, targets: project.targets, products: [fresh], activeId: fresh.id };
+  project = { baseLang: project.baseLang, products: [fresh], activeId: fresh.id };
   activeEditor = null;
   renderAll();
 });
