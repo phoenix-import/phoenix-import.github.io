@@ -877,7 +877,13 @@ document.addEventListener('selectionchange', () => {
 
 /* ---- Import-file output ----------------------------------------------- */
 function productCopy(p) {
-  return p.blocks.map(b => b.html).filter(h => h && h.trim()).join('\n').replace(/\n{2,}/g, '\n').trim();
+  // Each segment is separated by a <br> so the rendered copy has white space
+  // between segments rather than running together.
+  return p.blocks
+    .map(b => (b.html || '').replace(/\n{2,}/g, '\n').trim())
+    .filter(h => h)
+    .join('\n<br>\n')
+    .trim();
 }
 function langOrder() {
   // Every product always gets a row for all locales: the base is filled,
