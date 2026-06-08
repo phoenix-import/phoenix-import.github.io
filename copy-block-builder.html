@@ -100,6 +100,8 @@
     .mini-btn:hover { background: #fce4f0; }
 
     /* Products list */
+    .product-actions { display: flex; gap: 6px; padding: 8px 8px 0; }
+    .product-actions .mini-btn { flex: 1; text-align: center; }
     .product-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .product-item {
       display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #fff;
@@ -216,7 +218,10 @@
   <div class="pane">
     <div class="pane-header">
       <h2>Products</h2>
-      <button class="mini-btn" id="newProductBtn">＋ New</button>
+    </div>
+    <div class="product-actions">
+      <button class="mini-btn" id="newProductBtn" title="Add a new blank product">＋ New</button>
+      <button class="mini-btn" id="cloneProductBtn" title="Duplicate the selected product, then edit the copy">⧉ Clone</button>
     </div>
     <div class="product-list" id="productList"></div>
   </div>
@@ -330,6 +335,7 @@ const COPY_PH  = '[[TRANSLATE_COPY]]';
 const BLOCK_TYPES = {
   factual:      { label: "Factual description",              seed: "text" },
   evocative:    { label: "Evocative description",            seed: "text" },
+  variant:      { label: "Variant (scent, colour, …)",       seed: "text" },
   sku:          { label: "SKU (price / sold per … pcs.)",    seed: "text" },
   reach:        { label: "REACH snippet",                    seed: "text" },
   weight_size:  { label: "Weight / size disclaimer",         seed: "text" },
@@ -569,6 +575,23 @@ document.getElementById('newProductBtn').addEventListener('click', () => {
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
   typeInput.focus();
+});
+
+document.getElementById('cloneProductBtn').addEventListener('click', () => {
+  const p = activeProduct(); if (!p) return;
+  const copy = {
+    id: newId(),
+    type: p.type,
+    sku: p.sku,
+    title: p.title,
+    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html }))
+  };
+  const idx = project.products.findIndex(x => x.id === p.id);
+  project.products.splice(idx + 1, 0, copy); // place right after the original
+  project.activeId = copy.id;
+  activeEditor = null;
+  renderProducts(); renderProductFields(); renderStack(); updateOutputs();
+  skuInput.focus(); skuInput.select(); // SKU must be unique — prompt an edit
 });
 
 function selectProduct(id) {
@@ -912,9 +935,12 @@ function updateOutputs() {
   // status / warnings
   const langs = langOrder();
   const incomplete = project.products.filter(p => !p.sku || !p.title || !productCopy(p));
+  const skus = project.products.map(p => (p.sku || '').trim()).filter(Boolean);
+  const dups = [...new Set(skus.filter((s, i) => skus.indexOf(s) !== i))];
   let status = project.products.length + ' product(s) × ' + langs.length + ' locale(s) — base ' + project.baseLang +
                ', translate into ' + langs.filter(L => L !== project.baseLang).join(', ');
   if (incomplete.length) status += '  ·  <span class="warn">' + incomplete.length + ' missing SKU / title / copy</span>';
+  if (dups.length) status += '  ·  <span class="warn">duplicate SKU: ' + dups.join(', ') + '</span>';
   outStatus.innerHTML = status;
 
   save(STORAGE_KEY, project);
