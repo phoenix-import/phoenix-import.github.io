@@ -488,29 +488,115 @@ const SNIPPETS = {
   }
 };
 
-function snippetHtml(type, lang) {
-  const t = SNIPPETS[type] && (SNIPPETS[type][lang] || SNIPPETS[type].NL);
-  return t ? '<p>' + escText(t) + '</p>' : '';
+const TYPE_SNIPPETS = {
+  incense: {
+    how_to_use: {
+      NL: "<strong>Gebruiksaanwijzing</strong><br>Steek de wierook aan<br>Doof de vlam als het stokje gloeit<br>Plaats in een geschikte wierookbrander",
+      EN: "<strong>Instructions for use</strong><br /> Light the incense<br /> Blow out the flame when the stick glows<br /> Place on an&nbsp;incense burner",
+      DE: "<strong>Anwendung</strong><br /> Z&uuml;nden Sie den Weihrauch an<br /> Die Flamme ausblasen, wenn das St&auml;bchen gl&uuml;ht<br /> Auf ein R&auml;uchergef&auml;&szlig; legen",
+      FR: "<p><strong>Mode d&#39;emploi</strong><br /> Allumez l&#39;encens<br /> &Eacute;teignez la flamme lorsque le b&acirc;ton braise<br /> Placer sur un br&ucirc;le-encens</p>",
+      IT: "<p><strong>Istruzioni per l&#39;uso</strong><br /> Accendere l&#39;incenso<br /> Spegnere la fiamma quando il bastoncino si illumina<br /> Mettere su un brucia incenso</p>",
+      ES: "<strong>Modo de empleo</strong><br /> Encender el incienso<br /> Apagar la llama cuando la varilla brille<br /> Colocar en un quemador de incienso"
+    },
+    safety: {
+      NL: "<strong>Waarschuwingen</strong><br>Laat brandende wierook nooit onbeheerd achter.<br>Houd uit de buurt van gordijnen en andere brandbare materialen.<br>Gebruik op een hittebestendig oppervlak.<br>Vermijd het direct inademen van de rook.<br>Buiten bereik van kinderen en huisdieren houden.<br>Ventileer na gebruik.",
+      EN: "<strong>Warnings</strong><br /> Never leave burning incense unattended.<br /> Keep away from drapes and any other flammable materials.<br /> Use&nbsp;on a heat resistant surface.<br /> Avoid inhaling the smoke directly.<br /> Keep out of the reach of children and pets.<br /> Ventilate after use.",
+      DE: "<strong>Achtung!</strong><br /> Lassen Sie brennenden Weihrauch niemals unbeaufsichtigt.<br /> Von Vorh&auml;ngen und anderen brennbaren Materialien fernhalten.<br /> Auf einer hitzebest&auml;ndigen Oberfl&auml;che verwenden.<br /> Vermeiden Sie das direkte Einatmen des Rauches.<br /> Au&szlig;erhalb der Reichweite von Kindern und Haustieren aufbewahren.<br /> Nach Gebrauch l&uuml;ften.",
+      FR: "<p><strong>Avertissements</strong><br /> Ne laissez jamais br&ucirc;ler de l&rsquo;encens sans surveillance.<br /> Tenir &agrave; l&#39;&eacute;cart des rideaux et de tout autre mat&eacute;riau inflammable.<br /> Utiliser sur une surface r&eacute;sistante &agrave; la chaleur.<br /> &Eacute;vitez d&#39;inhaler la fum&eacute;e directement.<br /> Tenir hors de la port&eacute;e des enfants et des animaux domestiques.<br /> A&eacute;rer apr&egrave;s utilisation.</p>",
+      IT: "<p><strong>Avvertenze</strong><br /> Non lasciare mai l&#39;incenso acceso incustodito.<br /> Tenere lontano da tende e altri materiali infiammabili.<br /> Utilizzare su una superficie resistente al calore.<br /> Evitare di inalare direttamente il fumo.<br /> Tenere fuori dalla portata di bambini e animali domestici.<br /> Ventilare dopo l&#39;uso.</p>",
+      ES: "<strong>Advertencias</strong><br /> No deje nunca el incienso encendido sin vigilancia.<br /> Mant&eacute;ngalo alejado de cortinas y otros materiales inflamables.<br /> Utilizar sobre una superficie resistente al calor.<br /> Evite inhalar el humo directamente.<br /> Mantener fuera del alcance de los ni&ntilde;os y los animales dom&eacute;sticos.<br /> Ventilar despu&eacute;s de usar.</p>"
+    }
+  },
+  candle: {
+    how_to_use: {
+      NL: "<strong>Gebruiksaanwijzing</strong><br>Brand per keer minstens één uur per centimeter kaarsdiameter om de beste brandefficiëntie te garanderen.<br>Brand niet langer dan 4 uur achtereen.<br>Trim het lont tot 0,5-1 cm elke keer voordat u de kaars aansteekt.<br>Stop het gebruik van de kaars wanneer er nog slechts ±1,3 cm was op de bodem over is.",
+      EN: "<strong>Instructions for use</strong><br>Burn the candle for at least one hour per centimetre of candle diameter each time to ensure optimal burning efficiency.<br>Do not burn for more than 4 hours at a time.<br>Trim the wick to 0.5-1 cm before each use.<br>Discontinue use when only ±1.3 cm of wax remains at the bottom of the candle.",
+      DE: "<strong>Gebrauchsanweisung</strong><br>Lassen Sie die Kerze bei jedem Gebrauch mindestens eine Stunde pro Zentimeter Kerzendurchmesser brennen, um eine optimale Brennleistung zu gewährleisten.<br>Die Kerze nicht länger als 4 Stunden am Stück brennen lassen.<br>Kürzen Sie den Docht vor jedem Anzünden auf 0,5-1 cm.<br>Verwenden Sie die Kerze nicht weiter, wenn nur noch ±1,3 cm Wachs am Boden verbleiben.",
+      FR: "<strong>Mode d’emploi</strong><br>Lors de chaque utilisation, laissez brûler la bougie au moins une heure par centimètre de diamètre afin de garantir une combustion optimale.<br>Ne pas laisser brûler plus de 4 heures consécutives.<br>Coupez la mèche à 0,5-1 cm avant chaque utilisation.<br>Cessez d’utiliser la bougie lorsqu’il ne reste plus que ±1,3 cm de cire au fond du récipient.",
+      IT: "<strong>Istruzioni per l’uso</strong><br>Ad ogni utilizzo, lasciare bruciare la candela per almeno un’ora per ogni centimetro di diametro, per garantire una combustione ottimale.<br>Non lasciare bruciare la candela per più di 4 ore consecutive.<br>Accorciare lo stoppino a 0,5-1 cm prima di ogni accensione.<br>Interrompere l’uso della candela quando sul fondo rimangono soltanto ±1,3 cm di cera.",
+      ES: "<strong>Instrucciones de uso</strong><br>En cada uso, deje que la vela arda durante al menos una hora por cada centímetro de diámetro para garantizar una combustión óptima.<br>No deje la vela encendida durante más de 4 horas seguidas.<br>Corte la mecha a 0,5-1 cm antes de cada uso.<br>Deje de utilizar la vela cuando solo queden ±1,3 cm de cera en el fondo."
+    },
+    safety: {
+      NL: "<strong>Attentie!</strong><br>Buiten bereik van kinderen en huisdieren plaatsen.<br>Niet op de tocht&nbsp;plaatsen, dat verkort de brandtijd.<br>Laat een brandende kaars&nbsp;niet onbeheerd achter.<br>Plaats op een hittebestendig oppervlak.</p>",
+      EN: "<strong>Attention!</strong><br>Place out of reach of children and pets.<br>Do not place in a drafty place, this will shorten the burning time.<br>Never leave a burning candle unattended.<br>Always place on a heat resistant surface.</p>",
+      DE: "<strong>Achtung!</strong><br>Au&szlig;erhalb der Reichweite von Kindern und Haustieren aufstellen.<br>Nicht an einem zugigen Ort aufstellen, da sich dadurch die Brenndauer verk&uuml;rzt.<br>Lassen Sie eine brennende Kerze nicht unbeaufsichtigt.<br>Immer auf eine hitzebest&auml;ndige Unterlage stellen.a</p>",
+      FR: "<strong>Attention!</strong><br>Placer hors de port&eacute;e des enfants et des animaux domestiques.<br>Ne placez pas dans un endroit avec des courants d'air, cela r&eacute;duirait le temps de combustion.<br>Ne laissez pas une bougie allum&eacute;e sans surveillance.<br>Placez-le toujours sur une surface r&eacute;sistante &agrave; la chaleur.</p>",
+      IT: "<strong>Attenzione!</strong><br>Posizionare fuori dalla portata di bambini e animali domestici.<br>Non collocare la candela in un luogo esposto a correnti d'aria, per non ridurre il tempo di combustione.<br>Non lasciare incustodita la candela accesa.<br>Posizionare su una superficie resistente al calore.</p>",
+      ES: "<strong>&nbsp;<br>Precauci&oacute;n</strong><br>Colocar fuera del alcance de los ni&ntilde;os y los animales dom&eacute;sticos.<br>No coloque la vela en un lugar expuesto a corrientes de aire, ya que se reducir&aacute; el tiempo de combusti&oacute;n.<br>No dejar la vela encendida sin vigilancia.<br>Col&oacute;cala sobre una superficie resistente al calor.</p>"
+    }
+  },
+  essential_oil: {
+    how_to_use: {
+      NL: "<p><strong>Gebruiksaanwijzing</strong><br> Vul het waterreservoir van de aromaverstuiver / olieverdamper.<br> Voeg ca. 5 tot 10 druppels etherische olie toe, afhankelijk van de grootte van de ruimte.<br> Zet de verstuiver aan of ontbrand het theelichtje.<br> Zodra het water in het reservoir verdampt is, zet de verstuiver uit / doof het theelichtje.",
+      EN: "<strong>How to use</strong><br>Fill the water reservoir of the aroma diffuser / oil burner.<br>Add approx. 5 to 10 drops of essential oil, depending on the size of the room.<br>Turn&nbsp;the diffuser on or ignite the tea light.<br>When the water in the reservoir has evaporated, switch off the diffuser&nbsp;/ extinguish the tea light.",
+      DE: "<strong>Anwendung</strong><br>Füllen Sie den Wasserbehälter des Aromadiffusors / Duftlampe.<br>Fügen Sie ca. 5 bis 10 Tropfen ätherisches Öl bei, je nach Raumgröße.<br>Schalten Sie den Diffusor ein oder zünden Sie das Teelicht an.<br>Wenn das Wasser im Vorratsbehälter verdunstet ist, schalten Sie den Diffusor aus / löschen Sie das Teelicht.",
+      FR: "<strong>Comment utiliser</strong><br /> Remplissez le r&eacute;servoir d&#39;eau du diffuseur d&#39;ar&ocirc;mes / br&ucirc;leur &agrave; huile<br /> Ajouter env. 5 &agrave; 10 gouttes d&#39;huile essentielle, selon la taille de la pi&egrave;ce.<br /> Allumez le diffuseur ou allumez la bougie chauffe-plat.<br /> Lorsque l&#39;eau du r&eacute;servoir s&#39;est &eacute;vapor&eacute;e, &eacute;teignez le diffuseur / &eacute;teignez la bougie chauffe-plat.</p>",
+      IT: "<strong>Come si usa</strong><br /> Riempire il serbatoio dell&#39;acqua del diffusore di aromi/brucia essenze.<br /> Aggiungi circa 5-10 gocce di olio essenziale, a seconda delle dimensioni della stanza.<br /> Accendere il diffusore o accendere il lumino.<br /> Quando l&#39;acqua nel serbatoio &egrave; evaporata, spegnere il diffusore/lumino.</p>",
+      ES: "<p><strong>C&oacute;mo utilizarlo</strong><br /> Llene el dep&oacute;sito de agua del difusor de aromas / quemador de aceite.<br /> A&ntilde;ade aproximadamente de 5 a 10 gotas de aceite esencial, dependiendo del tama&ntilde;o de la habitaci&oacute;n.<br /> Encienda el difusor o encienda la vela de t&eacute;.<br /> Cuando el agua del dep&oacute;sito se haya evaporado, apague el difusor o la vela de t&eacute;.</p>"
+    },
+    safety: {
+      NL: "<p><strong>Let op</strong><br>Niet voor inwendig gebruik<br>Altijd verdunnen voor gebruik op de huid<br>Direct contact met de ogen vermijden<br>Buiten bereik van kinderen en huisdieren houden<br>Bij irritatie het gebruik staken</p>",
+      EN: "<p><strong>Warning</strong><br>Not for internal use<br>Always dilute before applying to the skin<br>Avoid direct contact with eyes<br>Keep out of reach of children and pets<br>Discontinue use if irritation occurs</p>",
+      DE: "<p><strong>Achtung</strong><br>Nicht zur innerlichen Anwendung<br>Vor der Anwendung auf der Haut stets verdünnen<br>Direkten Augenkontakt vermeiden<br>Außer Reichweite von Kindern und Haustieren aufbewahren<br>Bei Hautreizungen die Anwendung abbrechen</p>",
+      FR: "<p><strong>Attention</strong><br>Ne pas ingérer<br>Toujours diluer avant application sur la peau<br>Éviter tout contact direct avec les yeux<br>Tenir hors de portée des enfants et des animaux domestiques<br>En cas d’irritation, cesser l’utilisation</p>",
+      IT: "<p><strong>Attenzione</strong><br>Non per uso interno<br>Diluire sempre prima dell’applicazione sulla pelle<br>Evitare il contatto diretto con gli occhi<br>Tenere fuori dalla portata dei bambini e degli animali domestici<br>Interrompere l’uso in caso di irritazione</p>",
+      ES: "<p><strong>Atención</strong><br>No apto para uso interno<br>Diluir siempre antes de aplicar sobre la piel<br>Evitar el contacto directo con los ojos<br>Mantener fuera del alcance de los niños y las mascotas<br>Suspender su uso en caso de irritación</p>"
+    }
+  },
+  incense_burner: {
+    how_to_use: {
+      NL: "<p><strong>Hoe te gebruiken</strong><br>Vul de wierookbrander voor 2/3 met fijn zand of kiezels.<br>Leg hierop een smeulend houtskooltablet en besprenkel met losse korrelwierook.<br>Als de wierook goed smeult, het deksel sluiten.</p>",
+      EN: "<p><strong>How to use</strong><br>Fill the incense burner to 2/3 with fine sand or small pebbles.<br>Place a glowing charcoal tablet on top and sprinkle with loose incense resin.<br>Once the incense is smouldering properly, close the lid.</p>",
+      DE: "<p><strong>Anwendung</strong><br>Füllen Sie den Räucherbrenner zu 2/3 mit feinem Sand oder kleinen Kieselsteinen.<br>Legen Sie darauf eine glühende Räucherkohle und streuen Sie loses Weihrauchharz darüber.<br>Sobald der Weihrauch gut glimmt, den Deckel schließen.</p>",
+      FR: "<p><strong>Mode d’emploi</strong><br>Remplissez le brûleur d’encens aux 2/3 avec du sable fin ou de petits galets.<br>Placez dessus un charbon ardent et saupoudrez d’encens en grains.<br>Lorsque l’encens se consume correctement, fermez le couvercle.</p>",
+      IT: "<p><strong>Modalità d’uso</strong><br>Riempire il brucia-incenso per 2/3 con sabbia fine o piccoli ciottoli.<br>Posizionare sopra una pastiglia di carbone ardente e cospargere con incenso in grani.<br>Quando l’incenso brucia correttamente, chiudere il coperchio.</p>",
+      ES: "<p><strong>Modo de uso</strong><br>Llene el quemador de incienso hasta 2/3 con arena fina o pequeñas piedras.<br>Coloque encima una pastilla de carbón encendida y espolvoree incienso en grano.<br>Cuando el incienso esté humeando correctamente, cierre la tapa.</p>"
+    },
+    safety: {
+      NL: "<p><strong>Let op!</strong><br>Laat brandende wierook nooit onbeheerd achter.<br>Buiten bereik van kinderen en huisdieren plaatsen.<br>Niet in de buurt van brandbare voorwerpen of tocht plaatsen.</p>",
+      EN: "<p><strong>Warning!</strong><br>Never leave burning incense unattended.<br>Keep out of reach of children and pets.<br>Do not place near flammable objects or in draughty areas.</p>",
+      DE: "<p><strong>Achtung!</strong><br>Brennenden Weihrauch niemals unbeaufsichtigt lassen.<br>Außer Reichweite von Kindern und Haustieren aufstellen.<br>Nicht in der Nähe von brennbaren Gegenständen oder Zugluft platzieren.</p>",
+      FR: "<p><strong>Attention&nbsp;!</strong><br>Ne jamais laisser de l’encens allumé sans surveillance.<br>Tenir hors de portée des enfants et des animaux domestiques.<br>Ne pas placer à proximité d’objets inflammables ou dans un courant d’air.</p>",
+      IT: "<p><strong>Attenzione!</strong><br>Non lasciare mai l’incenso acceso incustodito.<br>Tenere fuori dalla portata dei bambini e degli animali domestici.<br>Non posizionare vicino a materiali infiammabili o in presenza di correnti d’aria.</p>",
+      ES: "<p><strong>¡Atención!</strong><br>No deje nunca el incienso encendido sin vigilancia.<br>Mantener fuera del alcance de los niños y las mascotas.<br>No colocar cerca de objetos inflamables ni en zonas con corrientes de aire.</p>"
+    }
+  }
+};
+
+// Canonical HTML for a block given its product type + language, or null if the
+// block is free-text (not standardized). Universal SNIPPETS first, then per-type.
+function canonicalText(blockType, productType, lang) {
+  if (SNIPPETS[blockType]) {
+    const t = SNIPPETS[blockType][lang] || SNIPPETS[blockType].NL;
+    return t ? '<p>' + escText(t) + '</p>' : '';
+  }
+  const ts = TYPE_SNIPPETS[productType];
+  if (ts && ts[blockType]) return ts[blockType][lang] || ts[blockType].NL || '';
+  return null;
 }
-// Has this block's html been left as one of the canonical (unedited) snippet texts?
-function isUneditedSnippet(type, html) {
-  return SNIPPETS[type] && VALID_LOCALES.some(L => SNIPPETS[type][L] && html === '<p>' + escText(SNIPPETS[type][L]) + '</p>');
+function isCanonical(blockType, productType) {
+  return !!SNIPPETS[blockType] || !!(TYPE_SNIPPETS[productType] && TYPE_SNIPPETS[productType][blockType]);
 }
-// Refresh unedited snippet blocks to the current base language (after a base change).
+// Is the block still holding its canonical text (any language) — i.e. unedited?
+function isUneditedCanonical(b, productType) {
+  return VALID_LOCALES.some(L => { const c = canonicalText(b.type, productType, L); return c && b.html === c; });
+}
+// Refresh unedited canonical blocks to the current base language (after a base change).
 function reseedSnippets() {
   for (const p of project.products)
     for (const b of p.blocks)
-      if (isUneditedSnippet(b.type, b.html)) b.html = snippetHtml(b.type, project.baseLang);
+      if (isUneditedCanonical(b, p.type)) b.html = canonicalText(b.type, p.type, project.baseLang);
 }
 
-function seedHtml(type) {
-  if (SNIPPETS[type]) return snippetHtml(type, project.baseLang);
-  return BLOCK_TYPES[type] && BLOCK_TYPES[type].seed === 'list' ? '<ul><li><br></li></ul>' : '';
+function seedHtml(blockType, productType) {
+  const c = canonicalText(blockType, productType, project.baseLang);
+  if (c) return c;
+  return BLOCK_TYPES[blockType] && BLOCK_TYPES[blockType].seed === 'list' ? '<ul><li><br></li></ul>' : '';
 }
 function blocksForType(typeKey) {
   const t = PRODUCT_TYPES[typeKey];
   if (!t) return [];
-  return t.blocks.filter(bt => BLOCK_TYPES[bt]).map(bt => ({ id: newId(), type: bt, html: seedHtml(bt) }));
+  return t.blocks.filter(bt => BLOCK_TYPES[bt]).map(bt => ({ id: newId(), type: bt, html: seedHtml(bt, typeKey) }));
 }
 function newId() { return 'id_' + Math.random().toString(36).slice(2, 9); }
 
@@ -855,7 +941,7 @@ function wireBlock(card, editor, block) {
 function addBlock(type, atIndex) {
   const p = activeProduct();
   if (!p || !BLOCK_TYPES[type]) return;
-  const block = { id: newId(), type, html: seedHtml(type) };
+  const block = { id: newId(), type, html: seedHtml(type, p.type) };
   if (atIndex == null || atIndex > p.blocks.length) p.blocks.push(block);
   else p.blocks.splice(atIndex, 0, block);
   renderStack(); updateOutputs();
@@ -1023,26 +1109,22 @@ function langOrder() {
   const base = project.baseLang;
   return [base, ...VALID_LOCALES.filter(L => L !== base)];
 }
-const isSnippet = type => !!SNIPPETS[type];
-
 // Title for a given language: base = the typed title, others = imported translation.
 function titleForLang(p, L) {
   return L === project.baseLang ? (p.title || '') : ((p.titleT && p.titleT[L]) || '');
 }
-// A block's text for a language. Disclaimer/snippet blocks use the canonical text
-// for that language (never machine-translated); other blocks use base html or the
-// imported translation.
-function blockTextForLang(b, L) {
-  if (isSnippet(b.type)) {
-    if (L === project.baseLang) return (b.html || '').trim();
-    return snippetHtml(b.type, L); // canonical, verbatim
-  }
+// A block's text for a language. Standardized blocks (disclaimers + per-type
+// How-to-use / Safety) use the canonical text for that language (never machine-
+// translated); other blocks use the base html or the imported translation.
+function blockTextForLang(b, L, productType) {
+  const c = canonicalText(b.type, productType, L);
+  if (c) return L === project.baseLang ? (b.html || '').trim() : c;
   const html = L === project.baseLang ? (b.html || '') : ((b.t && b.t[L]) || '');
   return html.replace(/\n{2,}/g, '\n').trim();
 }
 // Assemble one product's COPY for a language (segments joined with <br>).
 function assembleCopy(p, L) {
-  return p.blocks.map(b => blockTextForLang(b, L)).filter(h => h).join('\n<br>\n').trim();
+  return p.blocks.map(b => blockTextForLang(b, L, p.type)).filter(h => h).join('\n<br>\n').trim();
 }
 
 // Final Shopify import rows (all 6 locales, disclaimers injected per language).
@@ -1068,7 +1150,7 @@ function buildTranslationRows() {
         ...VALID_LOCALES.map(L => cell(base, L, p.title, p.titleT && p.titleT[L]))]);
     }
     for (const b of p.blocks) {
-      if (isSnippet(b.type)) continue;             // canonical, not translated
+      if (isCanonical(b.type, p.type)) continue;   // standardized, not translated
       if (!(b.html || '').trim()) continue;        // nothing to translate
       rows.push([p.sku || '', b.id, BLOCK_TYPES[b.type].label,
         ...VALID_LOCALES.map(L => cell(base, L, b.html, b.t && b.t[L]))]);
@@ -1086,7 +1168,7 @@ function translationPending() {
   let n = 0;
   for (const p of project.products) {
     const needTitle = !!(p.title && p.title.trim());
-    const blocks = p.blocks.filter(b => !isSnippet(b.type) && (b.html || '').trim());
+    const blocks = p.blocks.filter(b => !isCanonical(b.type, p.type) && (b.html || '').trim());
     for (const L of VALID_LOCALES) {
       if (L === base) continue;
       let pend = (needTitle && !(p.titleT && p.titleT[L]));

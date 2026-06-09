@@ -90,10 +90,17 @@ blocks, in column order). Picking a type loads its template into the product
 These are the standardized starting points (Statue, Incense, Metal singing bowl,
 Essential oil, …).
 
-## Standardized snippets — `SNIPPETS` (disclaimers + REACH)
+## Standardized snippets — `SNIPPETS` + `TYPE_SNIPPETS`
 
-From `standardized_disclaimers.xlsx`: canonical text in all 6 languages for
-`reach`, `weight_size`, `natural_disc`, `medical_disc` (no `dye_disc` text yet).
+Two layers of canonical (never-translated) text, resolved by `canonicalText(blockType, productType, lang)`:
+- **`SNIPPETS`** (universal, per block type) — from `standardized_disclaimers.xlsx`:
+  canonical text in all 6 languages for `reach`, `weight_size`, `natural_disc`,
+  `medical_disc` (no `dye_disc` text yet).
+- **`TYPE_SNIPPETS`** (per product type → per block) — from
+  `warnings_and_how_to_use.xlsx`: `how_to_use` + `safety` text in all 6 languages
+  for `incense`, `candle`, `essential_oil`, `incense_burner`. So those blocks are
+  standardized *only* for those types; the same block type stays free-text for
+  other product types (`isCanonical(blockType, productType)` decides).
 - Those blocks **auto-fill** with the base-language canonical text when added.
 - Switching base language refreshes *unedited* snippet blocks (`isUneditedSnippet`).
 - **Crucially**, these are NEVER machine-translated. They are excluded from the
