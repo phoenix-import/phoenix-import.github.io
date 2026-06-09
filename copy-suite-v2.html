@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phoenix Import – Copy Suite</title>
+  <title>Phoenix Import – Copy Suite V2</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
@@ -214,8 +214,8 @@
 <body>
 
 <header>
-  <h1>Phoenix Import — Copy Suite</h1>
-  <span class="tag">Build copy in blocks · translate the round-trip file · push to Shopify</span>
+  <h1>Phoenix Import — Copy Suite V2</h1>
+  <span class="tag">V2 sandbox · point of departure for what's next (not linked in the index)</span>
   <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import" style="height:36px;"></a>
 </header>
 
@@ -363,7 +363,7 @@
 // Use <p> as default block separator (Chrome wraps in <div> otherwise)
 try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
 
-const STORAGE_KEY = 'copyBlockBuilder.project';
+const STORAGE_KEY = 'copySuiteV2.project';
 const LEGACY_KEY = 'copyBlockBuilder.doc';
 
 // Locales mirror the Pipeline Generator (shopify-consoleimport.html). NL is Shopify's
@@ -877,6 +877,9 @@ function sanitizeProject(pr) {
 function loadProject() {
   const pr = load(STORAGE_KEY, null);
   if (pr && pr.products) return sanitizeProject(pr);
+  // V2 sandbox: seed once from the live Copy Suite (V1) project, if present.
+  const v1 = load('copyBlockBuilder.project', null);
+  if (v1 && v1.products) return sanitizeProject(v1);
   // Migrate a v1 single-document project, if present.
   const legacy = load(LEGACY_KEY, null);
   const prod = { id: newId(), type: 'generic', sku: '', title: '', blocks: sanitizeBlocks(legacy) };
