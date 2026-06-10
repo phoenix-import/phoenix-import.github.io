@@ -169,6 +169,12 @@
     .lib-label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
     .lib-select { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid #d8b4fe; border-radius: 6px; font-size: 12.5px; font-family: inherit; color: #4c1d95; background: #fff; cursor: pointer; outline: none; }
     .lib-select:focus { border-color: #68437B; }
+    .sku-row { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .sku-field { font-size: 13px; color: #374151; display: flex; align-items: center; gap: 6px; }
+    .sku-qty { width: 80px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
+    .sku-qty:focus { border-color: #68437B; }
+    .sku-preview { font-size: 14px; line-height: 1.6; color: #1a1a2e; }
+    .sku-hint { color: #c4c4cc; }
 
     /* Editor (contenteditable) + preview typography */
     .editor { outline: none; font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.7; color: #1a1a2e; background: #fff; }
@@ -883,9 +889,24 @@ const BLOCK_LIBRARIES = {
 function libEntry(b) {
   return b && b.lib && BLOCK_LIBRARIES[b.type] ? BLOCK_LIBRARIES[b.type][b.lib] : null;
 }
+// SKU block: a fixed bilingual sentence with just the quantity filled in.
+const SKU_TEMPLATE = {
+  NL: "Prijs per stuk, verkocht per {n} stuks",
+  EN: "Price per piece, sold per {n} pcs",
+  DE: "Preis pro Stück, verkauft pro {n} Stück",
+  FR: "Prix à la pièce, vendu par {n} pièces",
+  IT: "Prezzo al pezzo, venduto per {n} pezzi",
+  ES: "Precio por pieza, vendido por {n} piezas"
+};
+
 // Canonical HTML for a block (instance) + product type + language, or null if the
-// block is free-text. Universal SNIPPETS, then per-type snippets, then per-block library.
+// block is free-text. SKU template, then universal SNIPPETS, then per-type snippets,
+// then per-block library.
 function canonicalText(b, productType, lang) {
+  if (b.type === 'sku') {
+    const n = (b.qty == null ? '' : String(b.qty)).trim();
+    return n ? '<p>' + escText((SKU_TEMPLATE[lang] || SKU_TEMPLATE.NL).replace('{n}', n)) + '</p>' : '';
+  }
   if (SNIPPETS[b.type]) {
     const t = SNIPPETS[b.type][lang] || SNIPPETS[b.type].NL;
     return t ? '<p><em>' + escText(t) + '</em></p>' : '';
@@ -897,7 +918,7 @@ function canonicalText(b, productType, lang) {
   return null;
 }
 function isCanonical(b, productType) {
-  return !!SNIPPETS[b.type] || !!(TYPE_SNIPPETS[productType] && TYPE_SNIPPETS[productType][b.type]) || !!libEntry(b);
+  return b.type === 'sku' || !!SNIPPETS[b.type] || !!(TYPE_SNIPPETS[productType] && TYPE_SNIPPETS[productType][b.type]) || !!libEntry(b);
 }
 // Is the block still holding its canonical text (any language) — i.e. unedited?
 function isUneditedCanonical(b, productType) {
@@ -990,6 +1011,7 @@ function sanitizeBlocks(arr) {
     const type = (b.type in LEGACY_BLOCK_KEYS) ? LEGACY_BLOCK_KEYS[b.type] : b.type;
     if (!type || !BLOCK_TYPES[type]) return null;
     const block = { id: b.id || newId(), type, html: typeof b.html === 'string' ? b.html : '' };
+    if (type === 'sku' && b.qty != null && String(b.qty).trim()) block.qty = String(b.qty).trim();
     if (b.lib && BLOCK_LIBRARIES[type] && BLOCK_LIBRARIES[type][b.lib]) block.lib = b.lib;
     const t = sanitizeTrans(b.t); if (t) block.t = t;
     return block;
@@ -1103,7 +1125,7 @@ document.getElementById('cloneProductBtn').addEventListener('click', () => {
     type: p.type,
     sku: p.sku,
     title: p.title,
-    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html, ...(b.lib ? { lib: b.lib } : {}), ...(b.t ? { t: { ...b.t } } : {}) }))
+    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html, ...(b.qty ? { qty: b.qty } : {}), ...(b.lib ? { lib: b.lib } : {}), ...(b.t ? { t: { ...b.t } } : {}) }))
   };
   if (p.titleT) copy.titleT = { ...p.titleT };
   const idx = project.products.findIndex(x => x.id === p.id);
@@ -1220,18 +1242,50 @@ function renderStack() {
     head.className = 'block-head';
     head.innerHTML = '<span class="drag-handle" title="Drag to reorder">⠿</span><span class="block-label"></span><button class="block-remove" title="Remove block">×</button>';
     head.querySelector('.block-label').textContent = cfg.label;
-    const editor = document.createElement('div');
-    editor.className = 'editor block-editor';
-    editor.contentEditable = 'true';
-    editor.dataset.id = block.id;
-    editor.setAttribute('data-placeholder', cfg.label + '…');
-    editor.innerHTML = block.html || '';
     card.appendChild(head);
     if (BLOCK_LIBRARIES[block.type]) card.appendChild(buildLibRow(block));
-    card.appendChild(editor);
+    let editor = null;
+    if (block.type === 'sku') {
+      card.appendChild(buildSkuRow(card, block));
+    } else {
+      editor = document.createElement('div');
+      editor.className = 'editor block-editor';
+      editor.contentEditable = 'true';
+      editor.dataset.id = block.id;
+      editor.setAttribute('data-placeholder', cfg.label + '…');
+      editor.innerHTML = block.html || '';
+      card.appendChild(editor);
+    }
     stack.appendChild(card);
     wireBlock(card, editor, block);
   });
+}
+
+// SKU block: a number-only input that emits the fixed per-language price/quantity line.
+function buildSkuRow(card, block) {
+  const row = document.createElement('div');
+  row.className = 'sku-row';
+  const field = document.createElement('label');
+  field.className = 'sku-field';
+  field.append('Sold per ');
+  const input = document.createElement('input');
+  input.type = 'number'; input.min = '1'; input.className = 'sku-qty';
+  input.placeholder = '…';
+  input.value = block.qty != null ? block.qty : '';
+  field.appendChild(input);
+  field.append(' pcs');
+  const preview = document.createElement('div');
+  preview.className = 'sku-preview';
+  const refresh = () => {
+    block.html = canonicalText(block, (activeProduct() || {}).type, project.baseLang);
+    preview.innerHTML = block.html || '<span class="sku-hint">enter a quantity →</span>';
+  };
+  input.addEventListener('mousedown', () => { card.draggable = false; });
+  input.addEventListener('input', () => { block.qty = input.value.trim(); refresh(); updateOutputs(); });
+  refresh();
+  row.appendChild(field);
+  row.appendChild(preview);
+  return row;
 }
 
 // A boilerplate-library picker for blocks that have a library (e.g. Symbolism).
@@ -1276,6 +1330,7 @@ function onLibChange(block, key) {
 }
 
 function wireBlock(card, editor, block) {
+  if (editor) {
   editor.addEventListener('input', () => updateBlockHtml(editor));
   editor.addEventListener('keydown', e => handleEditorKeydown(e, editor));
   editor.addEventListener('mousedown', () => { card.draggable = false; });
@@ -1284,6 +1339,7 @@ function wireBlock(card, editor, block) {
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
     document.execCommand('insertText', false, text);
   });
+  }
   const handle = card.querySelector('.drag-handle');
   handle.addEventListener('mousedown', () => { card.draggable = true; });
   handle.addEventListener('mouseup', () => { card.draggable = false; });
