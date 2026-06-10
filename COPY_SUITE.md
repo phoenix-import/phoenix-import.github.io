@@ -90,9 +90,9 @@ blocks, in column order). Picking a type loads its template into the product
 These are the standardized starting points (Statue, Incense, Metal singing bowl,
 Essential oil, …).
 
-## Standardized snippets — `SNIPPETS` + `TYPE_SNIPPETS`
+## Standardized snippets — `SNIPPETS` + `TYPE_SNIPPETS` + `BLOCK_LIBRARIES`
 
-Two layers of canonical (never-translated) text, resolved by `canonicalText(blockType, productType, lang)`:
+Three layers of canonical (never-translated) text, resolved by `canonicalText(block, productType, lang)`:
 - **`SNIPPETS`** (universal, per block type) — from `standardized_disclaimers.xlsx`:
   canonical text in all 6 languages for `reach`, `weight_size`, `natural_disc`,
   `medical_disc` (no `dye_disc` text yet).
@@ -100,7 +100,15 @@ Two layers of canonical (never-translated) text, resolved by `canonicalText(bloc
   `warnings_and_how_to_use.xlsx`: `how_to_use` + `safety` text in all 6 languages
   for `incense`, `candle`, `essential_oil`, `incense_burner`. So those blocks are
   standardized *only* for those types; the same block type stays free-text for
-  other product types (`isCanonical(blockType, productType)` decides).
+  other product types.
+- **`BLOCK_LIBRARIES`** (per block type → named entries, chosen per block via a
+  dropdown) — `symbolism` (22 entries incl. Feng Shui, from `symbolism_boilerplate.xlsx`)
+  and `commercial` (14 entries, from `Commercial_boilerplate.xlsx`). The block
+  stores the chosen entry in `block.lib`; "Other" = free-text. Adding a block type
+  to `BLOCK_LIBRARIES` automatically gives its cards a picker. `isCanonical(block,
+  productType)` decides; resolution order is SNIPPETS → TYPE_SNIPPETS → library.
+  (Note: `feng_shui_products`/`feng_shui_crystals` templates use `symbolism`, not
+  `commercial` — their Feng Shui boilerplate lives in the symbolism library.)
 - Those blocks **auto-fill** with the base-language canonical text when added.
 - Switching base language refreshes *unedited* snippet blocks (`isUneditedSnippet`).
 - **Crucially**, these are NEVER machine-translated. They are excluded from the
