@@ -880,7 +880,7 @@ function libEntry(b) {
 function canonicalText(b, productType, lang) {
   if (SNIPPETS[b.type]) {
     const t = SNIPPETS[b.type][lang] || SNIPPETS[b.type].NL;
-    return t ? '<p>' + escText(t) + '</p>' : '';
+    return t ? '<p><em>' + escText(t) + '</em></p>' : '';
   }
   const ts = TYPE_SNIPPETS[productType];
   if (ts && ts[b.type]) return ts[b.type][lang] || ts[b.type].NL || '';
