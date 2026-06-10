@@ -95,7 +95,7 @@ Essential oil, …).
 Three layers of canonical (never-translated) text, resolved by `canonicalText(block, productType, lang)`:
 - **`SNIPPETS`** (universal, per block type) — from `standardized_disclaimers.xlsx`:
   canonical text in all 6 languages for `reach`, `weight_size`, `natural_disc`,
-  `medical_disc` (no `dye_disc` text yet).
+  `dye_disc`, `medical_disc`.
 - **`TYPE_SNIPPETS`** (per product type → per block) — from
   `warnings_and_how_to_use.xlsx`: `how_to_use` + `safety` text in all 6 languages
   for `incense`, `candle`, `essential_oil`, `incense_burner`. So those blocks are
