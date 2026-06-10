@@ -218,16 +218,29 @@ These are the parts most likely to transplant into a sibling tool:
 5. **Embedded Pipeline Generator** — `buildParsed` → `buildDataBySku` →
    `buildScript` / Paragon, fed from in-memory rows instead of a file upload.
 
-## Open threads / where V2 could go
+## Open threads / backlog
 
-- `dye_disc` has no standard wording yet (free-text).
-- Snippet library could expand beyond disclaimers (brand/line boilerplate,
-  commercial boilerplate variants) — same `SNIPPETS` pattern, with a picker.
+Status: **V1 is approaching testing.** All universal disclaimers (incl. `dye_disc`),
+the per-type How-to/Safety, the symbolism (22) and commercial (15) libraries, and the
+number-only SKU field are in. Remaining / planned:
+
+- **Excel product/title batch import + normalizer** (planned). Copy Suite already
+  reads XLSX (SheetJS) and has the normalizer muscle from the snippet cleaning. Idea:
+  one product per row (SKU + title), with a normalizer stripping *purchasing
+  artefacts* (supplier prefixes, bracketed codes, "NIEUW", pack quantities, casing).
+  Crux = defining the artefact rules; needs a sample of raw purchasing titles.
+- **`grouptool` integration** (consider). Separate tool for product groupings. Decide
+  by what it emits: if groupings feed the Shopify push (collections / Paragon
+  associations) fold it into the pipeline; if not, just link it from the index.
+- 3 commercial entries (Selenite / Gemstone trees / Salt lamps) keep real `<ol>/<ul>`
+  lists rather than inline `<br>` — left as lists pending the user's call.
+- Pre-existing saved blocks don't retroactively pick up format changes (e.g. the
+  disclaimer italics) until re-picked or a base-language toggle; fresh builds are fine.
 - Optgroup grouping for the 48-item type dropdown (by category) if it feels long.
-- Larger translation batches: chunking story for `/translate` is noted but
-  untested at scale.
-- The user has **other, similar tools planned** — V2 is the clean point of
-  departure. The reusable patterns above are the intended starting kit.
+- Larger translation batches: chunking story for `/translate` noted but untested at scale.
+- **V2 = independent AI writing tool** (next, left to Claude's judgement). Reuses this
+  whole skeleton (block model, canonical-injection layer, segment round-trip, embedded
+  pipeline). Start from this doc + `copy-suite-v2.html`.
 
 ## How to run / verify
 
