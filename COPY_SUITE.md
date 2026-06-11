@@ -68,13 +68,15 @@ the Pipeline Generator (every SKU needs an NL row).
 
 ---
 
-## Block types (the copy "segments") — `BLOCK_TYPES`, 18 of them
+## Block types (the copy "segments") — `BLOCK_TYPES`, 19 of them
 
 In spreadsheet order (from `copy_types.xlsx`, columns B–S):
 factual, evocative, **variant** (scent/colour — not in any template, added by
 hand), sku, reach, weight_size, natural_disc, dye_disc, medical_disc,
 content_list (list seed), ingredients (list seed), composition, technical,
-esoteric, how_to_use, safety, brand_line, commercial, symbolism.
+esoteric, how_to_use, safety, brand_line, commercial, symbolism, **material**
+(multi-select gemstone/natural library — see below; not in any template, added
+by hand).
 
 - Each block is a rich-text mini-editor; the toolbar + clean-HTML serializer are
   lifted from `copy-to-html-writer.html` (`escText`/`serializeNode`/`getHTML`).
@@ -109,6 +111,23 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
   productType)` decides; resolution order is SNIPPETS → TYPE_SNIPPETS → library.
   (Note: `feng_shui_products`/`feng_shui_crystals` templates use `symbolism`, not
   `commercial` — their Feng Shui boilerplate lives in the symbolism library.)
+- **`material` block** (the gemstone/natural library) — a *fourth* canonical layer,
+  but multi-select instead of single-pick. Data lives in `const MATERIALS` (148
+  id-keyed entries: `name, ess` essence, `bel` beliefs, `ch/el/zo/pl`
+  correspondences, `cat`). The block stores `block.mats` (ordered array of ids),
+  `block.matMode` (`'short'` = name + essence line; `'full'` = also the beliefs
+  paragraph), `block.matAssoc` (show the `Chakra: … | Element: … | Zodiac: … |
+  Planet: …` line, default on). `renderMaterials(b, lang)` builds the canonical
+  HTML — one `<p>` per material — and `canonicalText` returns it (so `isCanonical`
+  is true and it is injected per language, excluded from the translation file).
+  `buildMaterialRow(card, block)` is the card UI (mirrors `buildSkuRow`): a
+  short/full select + correspondences checkbox, an ordered **drag-reorder** list of
+  the picked materials, a **search box + collapsible checklist** grouped by
+  category, and a live preview. `block.html` is kept synced to the base-language
+  render, like SKU. **Content is English-only for now** (built "format first");
+  each translatable field is a flat string that a later pass turns into a
+  `{NL,EN,…}` object — `matPick()` already reads either shape, and the 4
+  correspondence *labels* (`MAT_LABELS`) are localised for all six locales now.
 - Those blocks **auto-fill** with the base-language canonical text when added.
 - Switching base language refreshes *unedited* snippet blocks (`isUneditedSnippet`).
 - **Crucially**, these are NEVER machine-translated. They are excluded from the
@@ -117,6 +136,59 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
   byte-perfect.
 
 ---
+
+## Adding content (cookbook)
+
+All of these are **data edits** — find the `const` near the top of the
+`<script>` and add an entry.
+
+> **V1/V2 sync — read this.** *While V2 is still a synced clone of V1 (the
+> current state)*, apply every change to **both** files; they should stay
+> identical except V2's 4 sandbox lines (title, header, `STORAGE_KEY`,
+> `loadProject` seed). Shortcut: edit V1, then `cp copy-block-builder.html
+> copy-suite-v2.html` and re-apply those 4 patches. **The moment V2 forks into
+> the independent AI-writing tool, this convention ENDS:** maintain the two
+> independently — never `cp` V1 over V2, and never propagate a change either
+> direction. *How to tell which phase you're in:* `diff copy-block-builder.html
+> copy-suite-v2.html` — if it's just the ~11 sandbox lines, V2 is still a clone
+> (mirror edits); anything more means V2 has diverged (treat them as separate
+> tools, edit only the one you mean).
+
+After any edit, syntax-check with the Node `vm` pattern (see Verification).
+
+When the user pastes raw HTML, **normalize it** first: decode entities to real
+UTF-8 **but keep `&amp;`** (literal `&`, e.g. "Yogi & Yogini"), `<br />`→`<br>`,
+strip Word/MSO `<span style>`/`class="MsoNormal"`, `<div>`→`<p>`, drop empty
+`<p>`. If only NL is given, translate the other five (keep brand/product names,
+`Chi`/`yin`/`yang`, etc.). All entries need all 6 of `NL,EN,DE,FR,IT,ES`.
+
+| To add… | Edit | Shape | Notes |
+|---|---|---|---|
+| **Boilerplate dropdown entry** (symbolism/commercial) | `BLOCK_LIBRARIES.<blocktype>` | `key: { label: "Name", text: {NL,…,ES} }` (values = full HTML) | Most common. Quote keys that start with a digit (`"108"`, `"432_hz"`). |
+| **Universal disclaimer** | `SNIPPETS` | `key: {NL,…,ES}` (values = **plain text**) | Auto-wrapped in `<p><em>…</em></p>` (italic). `key` must also be a `BLOCK_TYPES` key. |
+| **Per-type how-to/safety** | `TYPE_SNIPPETS.<type>.<block>` | `{NL,…,ES}` (full HTML) | Canonical only for that product type; free-text elsewhere. |
+| **Product type** | `PRODUCT_TYPES` | `key: { label: "Name", blocks: ["factual","sku",…] }` | `blocks` are `BLOCK_TYPES` keys, in display order. |
+| **Block type** (new segment) | `BLOCK_TYPES` | `key: { label: "Name", seed: "text"\|"list" }` | Add a palette item automatically. |
+| **SKU phrasing** | `SKU_TEMPLATE` | `{NL: "… {n} …", …}` | `{n}` = the quantity the user types. |
+| **Material library entry** | `MATERIALS` | `{id, cat, name, ess, bel, ch, el, zo, pl}` | `id` unique; `cat` ∈ `MAT_CATS`. Fields are flat English strings now → a `{NL,…}` object once translated (`matPick` reads both). Empty correspondence = `""` (skipped in output). |
+
+### Sorting / order (where things appear)
+- **Boilerplate dropdowns** (symbolism, commercial): sorted **alphabetically by
+  `label`** at render (`buildLibRow`), with **"Other (manual entry)" pinned
+  first**. Data order doesn't matter.
+- **Product-type dropdown**: **registry/insertion order** of `PRODUCT_TYPES` (not
+  sorted) — `generic` first, `other` last by convention.
+- **Block palette**: **insertion order** of `BLOCK_TYPES`.
+- **Languages**: `VALID_LOCALES` order (`NL,EN,DE,FR,IT,ES`).
+
+### After adding
+- A library entry → its block type's cards already show the picker (any block
+  type present in `BLOCK_LIBRARIES` gets one). Canonical = excluded from the
+  translation file, injected per language at assembly.
+- If a product type should *carry* a new block by default, also add that block
+  key to the type's `blocks` array in `PRODUCT_TYPES`.
+
+
 
 ## Segment translation round-trip + `/translate` skill
 
@@ -218,16 +290,41 @@ These are the parts most likely to transplant into a sibling tool:
 5. **Embedded Pipeline Generator** — `buildParsed` → `buildDataBySku` →
    `buildScript` / Paragon, fed from in-memory rows instead of a file upload.
 
-## Open threads / where V2 could go
+## Open threads / backlog
 
-- `dye_disc` has no standard wording yet (free-text).
-- Snippet library could expand beyond disclaimers (brand/line boilerplate,
-  commercial boilerplate variants) — same `SNIPPETS` pattern, with a picker.
+Status: **V1 is approaching testing.** All universal disclaimers (incl. `dye_disc`),
+the per-type How-to/Safety, the symbolism (22) and commercial (15) libraries, and the
+number-only SKU field are in. Remaining / planned:
+
+- **Excel product/title batch import + normalizer** (planned). Copy Suite already
+  reads XLSX (SheetJS) and has the normalizer muscle from the snippet cleaning. Idea:
+  one product per row (SKU + title), with a normalizer stripping *purchasing
+  artefacts* (supplier prefixes, bracketed codes, "NIEUW", pack quantities, casing).
+  Crux = defining the artefact rules; needs a sample of raw purchasing titles.
+- **`grouptool` integration** (consider). Separate tool for product groupings. Decide
+  by what it emits: if groupings feed the Shopify push (collections / Paragon
+  associations) fold it into the pipeline; if not, just link it from the index.
+- **Material block** — **built (English; translation pending).** `material` block
+  type + `MATERIALS` (148 entries) + `renderMaterials`/`buildMaterialRow`
+  (multi-select, search, collapsible category checklist, drag-reorder, short/full +
+  correspondences toggle). Canonical multi-select (no free-text fallback — the
+  148-entry searchable list replaced that need). **Remaining: the 6-language
+  translation pass** — turn each `name/ess/bel` and the `ch/el/zo/pl` *values* from
+  flat English strings into `{NL,EN,DE,FR,IT,ES}` objects in `MATERIALS` (labels in
+  `MAT_LABELS` already done). It is canonical, so this is a direct edit of the data
+  const, *not* a `/translate` round-trip. Big job (≈148 × ~7 fields × 6) — do it in
+  chunks by category. *Not added to any `PRODUCT_TYPES` template yet* — it's a
+  hand-added palette item; consider defaulting it onto gemstone/mala/chakra types.
+  Source content: `esoteric_materials_beliefs.xlsx` (the user's upload).
+- 3 commercial entries (Selenite / Gemstone trees / Salt lamps) keep real `<ol>/<ul>`
+  lists rather than inline `<br>` — left as lists pending the user's call.
+- Pre-existing saved blocks don't retroactively pick up format changes (e.g. the
+  disclaimer italics) until re-picked or a base-language toggle; fresh builds are fine.
 - Optgroup grouping for the 48-item type dropdown (by category) if it feels long.
-- Larger translation batches: chunking story for `/translate` is noted but
-  untested at scale.
-- The user has **other, similar tools planned** — V2 is the clean point of
-  departure. The reusable patterns above are the intended starting kit.
+- Larger translation batches: chunking story for `/translate` noted but untested at scale.
+- **V2 = independent AI writing tool** (next, left to Claude's judgement). Reuses this
+  whole skeleton (block model, canonical-injection layer, segment round-trip, embedded
+  pipeline). Start from this doc + `copy-suite-v2.html`.
 
 ## How to run / verify
 
