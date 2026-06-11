@@ -1128,21 +1128,26 @@ function matAssocLine(m, L) {
   return segs.join(' | ');
 }
 // Render the selected materials as canonical HTML for one language. One <p> per
-// material: bold name — essence[. then full beliefs] then the correspondence line.
+// material: "<strong>Name</strong> | text", where text is the essence (short) and/or
+// the beliefs paragraph (full), each an independent toggle, optionally followed by
+// the correspondence line.
 function renderMaterials(b, L) {
   const ids = Array.isArray(b.mats) ? b.mats : [];
   if (!ids.length) return '';
-  const full = b.matMode === 'full';
-  const assoc = b.matAssoc !== false; // default on
+  const full = b.matFull !== false;   // beliefs paragraph — default on
+  const short = b.matShort === true;  // essence line — default off
+  const assoc = b.matAssoc === true;  // correspondence line — default off
   const parts = [];
   for (const id of ids) {
     const m = MAT_BY_ID[id];
     if (!m) continue;
-    let head = '<strong>' + escText(matPick(m.name, L)) + '</strong>';
-    let ess = matPick(m.ess, L).trim();
-    if (ess) { if (!/[.!?…:]$/.test(ess)) ess += '.'; head += ' — ' + escText(ess); }
+    const body = [];
+    if (short) { let ess = matPick(m.ess, L).trim(); if (ess) { if (!/[.!?…:]$/.test(ess)) ess += '.'; body.push(ess); } }
+    if (full) { const bel = matPick(m.bel, L).trim(); if (bel) body.push(bel); }
+    const name = escText(matPick(m.name, L));
+    const txt = body.join(' ').trim();
+    const head = txt ? '<strong>' + name + '</strong> | ' + escText(txt) : '<strong>' + name + '</strong>';
     const lines = [head];
-    if (full) { const bel = matPick(m.bel, L).trim(); if (bel) lines.push(escText(bel)); }
     if (assoc) { const a = matAssocLine(m, L); if (a) lines.push(a); }
     parts.push('<p>' + lines.join('<br>') + '</p>');
   }
@@ -1550,8 +1555,9 @@ function buildSkuRow(card, block) {
 // base language exactly like the SKU block.
 function buildMaterialRow(card, block) {
   if (!Array.isArray(block.mats)) block.mats = [];
-  if (block.matMode !== 'full') block.matMode = 'short';
-  if (block.matAssoc == null) block.matAssoc = true;
+  if (block.matFull == null) block.matFull = true;    // beliefs — default on
+  if (block.matShort == null) block.matShort = false; // essence — default off
+  if (block.matAssoc == null) block.matAssoc = false; // correspondences — default off
 
   const row = document.createElement('div');
   row.className = 'mat-row';
@@ -1564,26 +1570,20 @@ function buildMaterialRow(card, block) {
     updateOutputs();
   };
 
-  /* --- controls: short/full + associations toggle --- */
+  /* --- controls: independent Full / Short / Correspondences toggles --- */
   const controls = document.createElement('div');
   controls.className = 'mat-controls';
-  const modeLabel = document.createElement('label');
-  modeLabel.append('Detail ');
-  const modeSel = document.createElement('select');
-  [['short', 'Short (essence)'], ['full', 'Full (with beliefs)']].forEach(([v, t]) => {
-    const o = document.createElement('option'); o.value = v; o.textContent = t; modeSel.appendChild(o);
-  });
-  modeSel.value = block.matMode;
-  modeSel.addEventListener('change', () => { block.matMode = modeSel.value; sync(); });
-  modeLabel.appendChild(modeSel);
-  const assocLabel = document.createElement('label');
-  const assocChk = document.createElement('input');
-  assocChk.type = 'checkbox'; assocChk.checked = block.matAssoc !== false;
-  assocChk.addEventListener('change', () => { block.matAssoc = assocChk.checked; sync(); });
-  assocLabel.appendChild(assocChk);
-  assocLabel.append('Show correspondences');
-  controls.appendChild(modeLabel);
-  controls.appendChild(assocLabel);
+  const mkChk = (label, get, set) => {
+    const l = document.createElement('label');
+    const c = document.createElement('input');
+    c.type = 'checkbox'; c.checked = get();
+    c.addEventListener('change', () => { set(c.checked); sync(); });
+    l.appendChild(c); l.append(label);
+    return l;
+  };
+  controls.appendChild(mkChk('Full version',    () => block.matFull  !== false, v => { block.matFull  = v; }));
+  controls.appendChild(mkChk('Short version',   () => block.matShort === true,  v => { block.matShort = v; }));
+  controls.appendChild(mkChk('Correspondences', () => block.matAssoc === true,  v => { block.matAssoc = v; }));
   row.appendChild(controls);
 
   /* --- selected list (ordered, drag to reorder) --- */

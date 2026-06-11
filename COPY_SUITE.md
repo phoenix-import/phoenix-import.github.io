@@ -114,16 +114,19 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
 - **`material` block** (the gemstone/natural library) — a *fourth* canonical layer,
   but multi-select instead of single-pick. Data lives in `const MATERIALS` (148
   id-keyed entries: `name, ess` essence, `bel` beliefs, `ch/el/zo/pl`
-  correspondences, `cat`). The block stores `block.mats` (ordered array of ids),
-  `block.matMode` (`'short'` = name + essence line; `'full'` = also the beliefs
-  paragraph), `block.matAssoc` (show the `Chakra: … | Element: … | Zodiac: … |
-  Planet: …` line, default on). `renderMaterials(b, lang)` builds the canonical
-  HTML — one `<p>` per material — and `canonicalText` returns it (so `isCanonical`
-  is true and it is injected per language, excluded from the translation file).
-  `buildMaterialRow(card, block)` is the card UI (mirrors `buildSkuRow`): a
-  short/full select + correspondences checkbox, an ordered **drag-reorder** list of
-  the picked materials, a **search box + collapsible checklist** grouped by
-  category, and a live preview. `block.html` is kept synced to the base-language
+  correspondences, `cat`). The block stores `block.mats` (ordered array of ids) and
+  three **independent checkbox** flags: `block.matFull` (the beliefs paragraph —
+  default **on**), `block.matShort` (the short essence line — default **off**), and
+  `block.matAssoc` (the `Chakra: … | Element: … | Zodiac: … | Planet: …` line —
+  default **off**). `renderMaterials(b, lang)` builds the canonical HTML — one `<p>`
+  per material as `<strong>Name</strong> | {essence and/or beliefs}` (a pipe, not a
+  colon or em-dash; the bold is the stone name *only*, inline, never a mini-header),
+  with the correspondence line on its own `<br>` row when enabled. `canonicalText`
+  returns it (so `isCanonical` is true and it is injected per language, excluded from
+  the translation file). `buildMaterialRow(card, block)` is the card UI (mirrors
+  `buildSkuRow`): the three Full/Short/Correspondences checkboxes, an ordered
+  **drag-reorder** list of the picked materials, a **search box + collapsible
+  checklist** grouped by category, and a live preview. `block.html` is kept synced to the base-language
   render, like SKU. **Content is English-only for now** (built "format first");
   each translatable field is a flat string that a later pass turns into a
   `{NL,EN,…}` object — `matPick()` already reads either shape, and the 4
