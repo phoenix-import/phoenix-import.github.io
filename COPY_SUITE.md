@@ -284,8 +284,8 @@ number-only SKU field are in. Remaining / planned:
 - **`grouptool` integration** (consider). Separate tool for product groupings. Decide
   by what it emits: if groupings feed the Shopify push (collections / Paragon
   associations) fold it into the pipeline; if not, just link it from the index.
-- **Metaphysical material block** (planned; content-gathering, likely in chat).
-  New multi-select block "Metaphysical material" (gemstones + naturals like seeds).
+- **Material block** (planned; content-gathering, likely in chat).
+  New multi-select block "Material" (gemstones + naturals like seeds).
   Needs a **MATERIALS library**: per material a localized **name** + **blurb** (×6).
   UI = collapsible **checklist** with **drag-reorder** of the selected ones.
   Output = one `<p>` of `<strong>Name</strong> blurb` lines joined by `<br>` (no
