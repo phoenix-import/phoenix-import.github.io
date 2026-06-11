@@ -1658,7 +1658,7 @@ function buildMaterialRow(card, block) {
       const h = document.createElement('span');
       h.className = 'mat-chip-handle'; h.textContent = '⠿'; h.title = 'Drag to reorder';
       const nm = document.createElement('span');
-      nm.className = 'mat-chip-name'; nm.textContent = m.name;
+      nm.className = 'mat-chip-name'; nm.textContent = matPick(m.name, project.baseLang);
       const cat = document.createElement('span');
       cat.className = 'mat-chip-cat'; cat.textContent = m.cat;
       const x = document.createElement('button');
@@ -1722,11 +1722,13 @@ function buildMaterialRow(card, block) {
 
   function renderBrowse() {
     const q = search.value.trim().toLowerCase();
+    // search across all language values of name/essence (so EN names match even when base is NL)
+    const hay = v => (typeof v === 'string' ? v : Object.values(v || {}).join(' ')).toLowerCase();
     browse.innerHTML = '';
     let shown = 0;
     for (const cat of MAT_CATS) {
       const items = MATERIALS.filter(m => m.cat === cat &&
-        (!q || m.name.toLowerCase().includes(q) || m.cat.toLowerCase().includes(q) || (m.ess || '').toLowerCase().includes(q)));
+        (!q || hay(m.name).includes(q) || m.cat.toLowerCase().includes(q) || hay(m.ess).includes(q)));
       if (!items.length) continue;
       const head = document.createElement('div');
       head.className = 'mat-cat-head'; head.textContent = cat + ' (' + items.length + ')';
@@ -1742,8 +1744,9 @@ function buildMaterialRow(card, block) {
           else block.mats = block.mats.filter(v => v !== m.id);
           sync();
         });
-        const nm = document.createElement('span'); nm.textContent = m.name;
-        const ess = document.createElement('span'); ess.className = 'mat-opt-ess'; ess.textContent = m.ess ? ' — ' + m.ess : '';
+        const nm = document.createElement('span'); nm.textContent = matPick(m.name, project.baseLang);
+        const essTxt = matPick(m.ess, project.baseLang);
+        const ess = document.createElement('span'); ess.className = 'mat-opt-ess'; ess.textContent = essTxt ? ' — ' + essTxt : '';
         opt.appendChild(cb); opt.appendChild(nm); opt.appendChild(ess);
         browse.appendChild(opt);
       });
