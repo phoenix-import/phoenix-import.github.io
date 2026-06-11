@@ -284,6 +284,17 @@ number-only SKU field are in. Remaining / planned:
 - **`grouptool` integration** (consider). Separate tool for product groupings. Decide
   by what it emits: if groupings feed the Shopify push (collections / Paragon
   associations) fold it into the pipeline; if not, just link it from the index.
+- **Metaphysical material block** (planned; content-gathering, likely in chat).
+  New multi-select block "Metaphysical material" (gemstones + naturals like seeds).
+  Needs a **MATERIALS library**: per material a localized **name** + **blurb** (×6).
+  UI = collapsible **checklist** with **drag-reorder** of the selected ones.
+  Output = one `<p>` of `<strong>Name</strong> blurb` lines joined by `<br>` (no
+  trailing `<br>`). **Hybrid block:** library materials are canonical (injected per
+  language); a **free-text fallback** line goes through the normal round-trip — so
+  this block both emits a translation row (its free-text, keyed by block id) *and*
+  injects canonical material lines. Build it new (doesn't fit the single-pick
+  `BLOCK_LIBRARIES` mechanism). Content: hand Claude a stone list + one blurb each,
+  it drafts the full localized library to review, then wire it in.
 - 3 commercial entries (Selenite / Gemstone trees / Salt lamps) keep real `<ol>/<ul>`
   lists rather than inline `<br>` — left as lists pending the user's call.
 - Pre-existing saved blocks don't retroactively pick up format changes (e.g. the
