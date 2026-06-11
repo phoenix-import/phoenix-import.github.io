@@ -118,6 +118,49 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
 
 ---
 
+## Adding content (cookbook)
+
+All of these are **data edits** — find the `const` near the top of the
+`<script>` and add an entry. **Apply every change to BOTH files** —
+`copy-block-builder.html` (V1) and `copy-suite-v2.html` (V2) — they must stay
+identical except V2's 4 sandbox lines (title, header, `STORAGE_KEY`,
+`loadProject` seed). Easiest: edit V1, then `cp copy-block-builder.html
+copy-suite-v2.html` and re-apply those 4 patches. After any edit, syntax-check
+with the Node `vm` pattern (see Verification).
+
+When the user pastes raw HTML, **normalize it** first: decode entities to real
+UTF-8 **but keep `&amp;`** (literal `&`, e.g. "Yogi & Yogini"), `<br />`→`<br>`,
+strip Word/MSO `<span style>`/`class="MsoNormal"`, `<div>`→`<p>`, drop empty
+`<p>`. If only NL is given, translate the other five (keep brand/product names,
+`Chi`/`yin`/`yang`, etc.). All entries need all 6 of `NL,EN,DE,FR,IT,ES`.
+
+| To add… | Edit | Shape | Notes |
+|---|---|---|---|
+| **Boilerplate dropdown entry** (symbolism/commercial) | `BLOCK_LIBRARIES.<blocktype>` | `key: { label: "Name", text: {NL,…,ES} }` (values = full HTML) | Most common. Quote keys that start with a digit (`"108"`, `"432_hz"`). |
+| **Universal disclaimer** | `SNIPPETS` | `key: {NL,…,ES}` (values = **plain text**) | Auto-wrapped in `<p><em>…</em></p>` (italic). `key` must also be a `BLOCK_TYPES` key. |
+| **Per-type how-to/safety** | `TYPE_SNIPPETS.<type>.<block>` | `{NL,…,ES}` (full HTML) | Canonical only for that product type; free-text elsewhere. |
+| **Product type** | `PRODUCT_TYPES` | `key: { label: "Name", blocks: ["factual","sku",…] }` | `blocks` are `BLOCK_TYPES` keys, in display order. |
+| **Block type** (new segment) | `BLOCK_TYPES` | `key: { label: "Name", seed: "text"\|"list" }` | Add a palette item automatically. |
+| **SKU phrasing** | `SKU_TEMPLATE` | `{NL: "… {n} …", …}` | `{n}` = the quantity the user types. |
+
+### Sorting / order (where things appear)
+- **Boilerplate dropdowns** (symbolism, commercial): sorted **alphabetically by
+  `label`** at render (`buildLibRow`), with **"Other (manual entry)" pinned
+  first**. Data order doesn't matter.
+- **Product-type dropdown**: **registry/insertion order** of `PRODUCT_TYPES` (not
+  sorted) — `generic` first, `other` last by convention.
+- **Block palette**: **insertion order** of `BLOCK_TYPES`.
+- **Languages**: `VALID_LOCALES` order (`NL,EN,DE,FR,IT,ES`).
+
+### After adding
+- A library entry → its block type's cards already show the picker (any block
+  type present in `BLOCK_LIBRARIES` gets one). Canonical = excluded from the
+  translation file, injected per language at assembly.
+- If a product type should *carry* a new block by default, also add that block
+  key to the type's `blocks` array in `PRODUCT_TYPES`.
+
+
+
 ## Segment translation round-trip + `/translate` skill
 
 **Why segment-level (not translate the final blob):** disclaimers become a
