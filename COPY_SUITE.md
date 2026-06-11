@@ -68,13 +68,15 @@ the Pipeline Generator (every SKU needs an NL row).
 
 ---
 
-## Block types (the copy "segments") — `BLOCK_TYPES`, 18 of them
+## Block types (the copy "segments") — `BLOCK_TYPES`, 19 of them
 
 In spreadsheet order (from `copy_types.xlsx`, columns B–S):
 factual, evocative, **variant** (scent/colour — not in any template, added by
 hand), sku, reach, weight_size, natural_disc, dye_disc, medical_disc,
 content_list (list seed), ingredients (list seed), composition, technical,
-esoteric, how_to_use, safety, brand_line, commercial, symbolism.
+esoteric, how_to_use, safety, brand_line, commercial, symbolism, **material**
+(multi-select gemstone/natural library — see below; not in any template, added
+by hand).
 
 - Each block is a rich-text mini-editor; the toolbar + clean-HTML serializer are
   lifted from `copy-to-html-writer.html` (`escText`/`serializeNode`/`getHTML`).
@@ -109,6 +111,23 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
   productType)` decides; resolution order is SNIPPETS → TYPE_SNIPPETS → library.
   (Note: `feng_shui_products`/`feng_shui_crystals` templates use `symbolism`, not
   `commercial` — their Feng Shui boilerplate lives in the symbolism library.)
+- **`material` block** (the gemstone/natural library) — a *fourth* canonical layer,
+  but multi-select instead of single-pick. Data lives in `const MATERIALS` (148
+  id-keyed entries: `name, ess` essence, `bel` beliefs, `ch/el/zo/pl`
+  correspondences, `cat`). The block stores `block.mats` (ordered array of ids),
+  `block.matMode` (`'short'` = name + essence line; `'full'` = also the beliefs
+  paragraph), `block.matAssoc` (show the `Chakra: … | Element: … | Zodiac: … |
+  Planet: …` line, default on). `renderMaterials(b, lang)` builds the canonical
+  HTML — one `<p>` per material — and `canonicalText` returns it (so `isCanonical`
+  is true and it is injected per language, excluded from the translation file).
+  `buildMaterialRow(card, block)` is the card UI (mirrors `buildSkuRow`): a
+  short/full select + correspondences checkbox, an ordered **drag-reorder** list of
+  the picked materials, a **search box + collapsible checklist** grouped by
+  category, and a live preview. `block.html` is kept synced to the base-language
+  render, like SKU. **Content is English-only for now** (built "format first");
+  each translatable field is a flat string that a later pass turns into a
+  `{NL,EN,…}` object — `matPick()` already reads either shape, and the 4
+  correspondence *labels* (`MAT_LABELS`) are localised for all six locales now.
 - Those blocks **auto-fill** with the base-language canonical text when added.
 - Switching base language refreshes *unedited* snippet blocks (`isUneditedSnippet`).
 - **Crucially**, these are NEVER machine-translated. They are excluded from the
@@ -151,6 +170,7 @@ strip Word/MSO `<span style>`/`class="MsoNormal"`, `<div>`→`<p>`, drop empty
 | **Product type** | `PRODUCT_TYPES` | `key: { label: "Name", blocks: ["factual","sku",…] }` | `blocks` are `BLOCK_TYPES` keys, in display order. |
 | **Block type** (new segment) | `BLOCK_TYPES` | `key: { label: "Name", seed: "text"\|"list" }` | Add a palette item automatically. |
 | **SKU phrasing** | `SKU_TEMPLATE` | `{NL: "… {n} …", …}` | `{n}` = the quantity the user types. |
+| **Material library entry** | `MATERIALS` | `{id, cat, name, ess, bel, ch, el, zo, pl}` | `id` unique; `cat` ∈ `MAT_CATS`. Fields are flat English strings now → a `{NL,…}` object once translated (`matPick` reads both). Empty correspondence = `""` (skipped in output). |
 
 ### Sorting / order (where things appear)
 - **Boilerplate dropdowns** (symbolism, commercial): sorted **alphabetically by
@@ -284,17 +304,18 @@ number-only SKU field are in. Remaining / planned:
 - **`grouptool` integration** (consider). Separate tool for product groupings. Decide
   by what it emits: if groupings feed the Shopify push (collections / Paragon
   associations) fold it into the pipeline; if not, just link it from the index.
-- **Material block** (planned; content-gathering, likely in chat).
-  New multi-select block "Material" (gemstones + naturals like seeds).
-  Needs a **MATERIALS library**: per material a localized **name** + **blurb** (×6).
-  UI = collapsible **checklist** with **drag-reorder** of the selected ones.
-  Output = one `<p>` of `<strong>Name</strong> blurb` lines joined by `<br>` (no
-  trailing `<br>`). **Hybrid block:** library materials are canonical (injected per
-  language); a **free-text fallback** line goes through the normal round-trip — so
-  this block both emits a translation row (its free-text, keyed by block id) *and*
-  injects canonical material lines. Build it new (doesn't fit the single-pick
-  `BLOCK_LIBRARIES` mechanism). Content: hand Claude a stone list + one blurb each,
-  it drafts the full localized library to review, then wire it in.
+- **Material block** — **built (English; translation pending).** `material` block
+  type + `MATERIALS` (148 entries) + `renderMaterials`/`buildMaterialRow`
+  (multi-select, search, collapsible category checklist, drag-reorder, short/full +
+  correspondences toggle). Canonical multi-select (no free-text fallback — the
+  148-entry searchable list replaced that need). **Remaining: the 6-language
+  translation pass** — turn each `name/ess/bel` and the `ch/el/zo/pl` *values* from
+  flat English strings into `{NL,EN,DE,FR,IT,ES}` objects in `MATERIALS` (labels in
+  `MAT_LABELS` already done). It is canonical, so this is a direct edit of the data
+  const, *not* a `/translate` round-trip. Big job (≈148 × ~7 fields × 6) — do it in
+  chunks by category. *Not added to any `PRODUCT_TYPES` template yet* — it's a
+  hand-added palette item; consider defaulting it onto gemstone/mala/chakra types.
+  Source content: `esoteric_materials_beliefs.xlsx` (the user's upload).
 - 3 commercial entries (Selenite / Gemstone trees / Salt lamps) keep real `<ol>/<ul>`
   lists rather than inline `<br>` — left as lists pending the user's call.
 - Pre-existing saved blocks don't retroactively pick up format changes (e.g. the

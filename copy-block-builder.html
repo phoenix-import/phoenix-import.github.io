@@ -176,6 +176,37 @@
     .sku-preview { font-size: 14px; line-height: 1.6; color: #1a1a2e; }
     .sku-hint { color: #c4c4cc; }
 
+    /* Material block */
+    .mat-row { padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .mat-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #374151; }
+    .mat-controls label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .mat-controls select { padding: 4px 7px; border: 1px solid #d8b4fe; border-radius: 6px; font-size: 12px; font-family: inherit; color: #4c1d95; background: #fff; cursor: pointer; outline: none; }
+    .mat-controls select:focus { border-color: #68437B; }
+    .mat-selected { display: flex; flex-direction: column; gap: 4px; }
+    .mat-chip { display: flex; align-items: center; gap: 7px; padding: 5px 8px; background: #faf7fc; border: 1px solid #ecdcf7; border-radius: 6px; font-size: 13px; color: #1a1a2e; }
+    .mat-chip.dragging { opacity: 0.4; }
+    .mat-chip-handle { cursor: grab; color: #b9a3c9; font-size: 13px; line-height: 1; user-select: none; }
+    .mat-chip-name { flex: 1; min-width: 0; }
+    .mat-chip-cat { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: #a78bba; flex-shrink: 0; }
+    .mat-chip-x { background: transparent; border: none; color: #b9a3c9; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .mat-chip-x:hover { color: #b33a6f; }
+    .mat-chip-drop { height: 2px; background: #ca427e; border-radius: 2px; margin: -3px 0; }
+    .mat-empty { font-size: 12px; color: #b6a9c4; font-style: italic; padding: 2px 2px; }
+    .mat-search { display: flex; align-items: center; gap: 6px; }
+    .mat-search input { flex: 1; min-width: 0; padding: 6px 9px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
+    .mat-search input:focus { border-color: #68437B; }
+    .mat-toggle { background: #f3eef8; border: 1px solid #e3d3f1; color: #68437B; font-size: 11.5px; font-weight: 600; border-radius: 6px; padding: 5px 9px; cursor: pointer; white-space: nowrap; }
+    .mat-toggle:hover { background: #ece3f5; }
+    .mat-browse { border: 1px solid #eee; border-radius: 7px; max-height: 230px; overflow-y: auto; background: #fff; }
+    .mat-cat-head { position: sticky; top: 0; background: #f9fafb; padding: 4px 9px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #9a86ad; border-bottom: 1px solid #f0f0f0; }
+    .mat-opt { display: flex; align-items: center; gap: 8px; padding: 4px 9px; font-size: 13px; color: #1a1a2e; cursor: pointer; }
+    .mat-opt:hover { background: #faf7fc; }
+    .mat-opt input { cursor: pointer; }
+    .mat-opt-ess { color: #9ca3af; font-size: 11.5px; }
+    .mat-none { padding: 8px 10px; font-size: 12px; color: #b6a9c4; font-style: italic; }
+    .mat-preview { font-size: 13.5px; line-height: 1.6; color: #1a1a2e; border-top: 1px dashed #eee; padding-top: 7px; }
+    .mat-preview p { margin: 0.3em 0; }
+
     /* Editor (contenteditable) + preview typography */
     .editor { outline: none; font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.7; color: #1a1a2e; background: #fff; }
     .block-editor { min-height: 56px; padding: 10px 14px; }
@@ -398,7 +429,8 @@ const BLOCK_TYPES = {
   safety:       { label: "Safety guidelines",                seed: "text" },
   brand_line:   { label: "Brand / line info",                seed: "text" },
   commercial:   { label: "Commercial boilerplate",           seed: "text" },
-  symbolism:    { label: "Symbolism / spiritual boilerplate", seed: "text" }
+  symbolism:    { label: "Symbolism / spiritual boilerplate", seed: "text" },
+  material:     { label: "Material (gemstones & naturals)",   seed: "text" }
 };
 
 // Legacy block keys from earlier iterations → current keys (null = drop).
@@ -915,10 +947,213 @@ const SKU_TEMPLATE = {
   ES: "Precio por pieza, vendido por {n} piezas"
 };
 
+/* ---- Material library (gemstones & naturals) --------------------------- *
+ * One canonical English entry per variety (id-keyed). name/ess/bel/correspondence
+ * values are written in English for now; the Material block is CANONICAL (excluded
+ * from the translation file, injected per language), so a later pass localises each
+ * field in place (a field may become a {NL,EN,…} object — matPick handles both).  */
+const MATERIALS = [
+  {"id": 1, "cat": "Quartz", "name": "Clear quartz", "ess": "The master amplifier", "bel": "Regarded as the master healer of the mineral world. Believed to amplify energy and intention, to be programmable with a focused thought, and to clarify the mind and improve memory. Used to cleanse, charge and amplify other stones, and treated as a neutral booster that takes on whatever purpose it is given.", "ch": "Crown / all", "el": "All", "zo": "All (esp. Leo)", "pl": "Sun / Moon"},
+  {"id": 2, "cat": "Quartz", "name": "Amethyst", "ess": "Stone of sobriety and serenity", "bel": "Named from the Greek for 'not intoxicated' and historically worn to ward off drunkenness. Associated with spiritual protection, intuition and inner calm, and used as a meditation stone. Believed to transmute lower energies, ease insomnia and nightmares, and quiet an overactive mind.", "ch": "Third eye / Crown", "el": "Air / Water", "zo": "Pisces, Virgo, Aquarius, Capricorn", "pl": "Jupiter / Neptune"},
+  {"id": 3, "cat": "Quartz", "name": "Rose quartz", "ess": "Stone of unconditional love", "bel": "The classic stone of the heart. Associated with unconditional love, self-love and emotional healing. Believed to open the heart to compassion, attract and restore loving relationships, and gently soothe grief, resentment and heartache.", "ch": "Heart", "el": "Water / Earth", "zo": "Taurus, Libra", "pl": "Venus"},
+  {"id": 4, "cat": "Quartz", "name": "Smoky quartz", "ess": "Grounding and detoxifying", "bel": "Valued as a grounding and protective stone. Believed to anchor the wearer, draw off and neutralise negative energy, and relieve stress, fear and overwhelm. Often used as a gentle counterweight to anxiety and as an aid to letting go.", "ch": "Root", "el": "Earth / Air", "zo": "Scorpio, Sagittarius, Capricorn", "pl": "Saturn / Pluto"},
+  {"id": 5, "cat": "Quartz", "name": "Citrine", "ess": "The merchant's stone of abundance", "bel": "Known as the merchant's stone and strongly tied to abundance, prosperity and manifestation. Associated with confidence, joy and personal will. Said to be one of the few stones that does not hold negative energy and so never needs cleansing, instead radiating warmth and optimism.", "ch": "Solar plexus / Sacral", "el": "Fire", "zo": "Aries, Gemini, Leo, Libra", "pl": "Sun / Mercury"},
+  {"id": 6, "cat": "Quartz", "name": "Ametrine", "ess": "Bridge of intellect and action", "bel": "A natural blend of amethyst and citrine, believed to unite spiritual insight with practical action. Associated with clear decision-making, mental focus and balancing the material and spiritual sides of life.", "ch": "Solar plexus / Crown", "el": "Fire / Air", "zo": "Libra", "pl": "Sun / Mercury"},
+  {"id": 7, "cat": "Quartz", "name": "Green aventurine", "ess": "Stone of opportunity", "bel": "Called the stone of opportunity and one of the luckiest stones for prosperity and games of chance. Associated with optimism, leadership and emotional comfort, and seen as a soothing healer of the heart that opens a person to new possibilities.", "ch": "Heart", "el": "Earth", "zo": "Aries, Leo", "pl": "Mercury"},
+  {"id": 8, "cat": "Quartz", "name": "Blue aventurine", "ess": "Self-discipline and calm", "bel": "Valued for self-discipline, inner strength and calm. Believed to support clear communication, cool hot tempers and help the wearer act from a centred rather than reactive place.", "ch": "Throat / Third eye", "el": "Water", "zo": "Aquarius", "pl": "Mercury"},
+  {"id": 9, "cat": "Quartz", "name": "Red aventurine", "ess": "Vitality and action", "bel": "Associated with vitality, creativity and renewed drive. Believed to stir action, revitalise the body and help turn ideas and intentions into manifested results.", "ch": "Root / Sacral", "el": "Fire", "zo": "Aries", "pl": "Mars"},
+  {"id": 10, "cat": "Quartz", "name": "Rutilated quartz", "ess": "Illuminated amplification", "bel": "Clear quartz threaded with golden rutile, poetically called angel hair. Believed to accelerate spiritual growth and amplify intention, with the rutile fibres said to draw off negativity and bring light into dark emotional places.", "ch": "Crown / Solar plexus", "el": "Air", "zo": "Gemini, Taurus", "pl": "Sun"},
+  {"id": 11, "cat": "Quartz", "name": "Tiger's eye, Gold", "ess": "Courage and the evil-eye guard", "bel": "A classic stone of courage, confidence and willpower. Long worn as protection against the evil eye and ill intent. Associated with grounded optimism, focus and clear-headed, practical decisions under pressure.", "ch": "Solar plexus / Sacral", "el": "Earth / Fire", "zo": "Capricorn, Leo", "pl": "Sun / Mars"},
+  {"id": 12, "cat": "Quartz", "name": "Hawk's eye, Blue (hawk's eye)", "ess": "Insight and perspective", "bel": "The blue form of tiger's eye, also called falcon's eye. Believed to grant a higher vantage point on problems, calm anxiety and offer perspective, insight and a more detached, observing view of one's circumstances.", "ch": "Throat / Third eye", "el": "Air / Water", "zo": "Capricorn", "pl": "Saturn"},
+  {"id": 13, "cat": "Quartz", "name": "Red tiger's eye", "ess": "Motivation and drive", "bel": "An energising stone associated with motivation, vitality and overcoming inertia. Believed to stir passion and drive in those who feel sluggish, low or stuck.", "ch": "Root / Sacral", "el": "Fire", "zo": "Leo", "pl": "Mars"},
+  {"id": 14, "cat": "Quartz", "name": "Carnelian", "ess": "Stone of action and vitality", "bel": "The stone of action, historically worn by warriors for boldness and by speakers for confidence. Associated with courage, motivation, creativity and sexual vitality. Believed to overcome procrastination and stage fright and to restore appetite for life.", "ch": "Sacral", "el": "Fire", "zo": "Taurus, Cancer, Leo, Virgo", "pl": "Sun / Mars"},
+  {"id": 15, "cat": "Quartz", "name": "Moss agate", "ess": "The gardener's stone", "bel": "Known as the gardener's stone for its tie to growth, abundance and the natural world. Associated with new beginnings, stability and connection to nature. Believed to encourage steady progress and fresh starts after a difficult period.", "ch": "Heart", "el": "Earth", "zo": "Virgo", "pl": "Mercury"},
+  {"id": 16, "cat": "Quartz", "name": "Blue lace agate", "ess": "Gentle, calming speech", "bel": "A soft, soothing stone of the throat. Associated with calm, peace and gentle communication. Believed to ease anxiety, cool heated words and help sensitive or anxious speakers express themselves clearly.", "ch": "Throat", "el": "Air / Water", "zo": "Pisces, Gemini", "pl": "Mercury / Neptune"},
+  {"id": 17, "cat": "Quartz", "name": "Fire agate", "ess": "Protective grounding flame", "bel": "A grounding and protective stone with an inner fiery flash. Believed to build a shield around the wearer, return negative energy to its source, and rekindle vitality and courage.", "ch": "Root / Sacral", "el": "Fire / Earth", "zo": "Aries", "pl": "Mars"},
+  {"id": 18, "cat": "Quartz", "name": "Botswana agate", "ess": "Comfort through transition", "bel": "Associated with comfort, transition and gentle problem-solving. Traditionally linked to releasing grief and breaking habits (often cited in connection with quitting smoking). Believed to help the wearer look toward solutions rather than dwell on problems.", "ch": "Crown / Root", "el": "Earth", "zo": "Scorpio", "pl": "Saturn"},
+  {"id": 19, "cat": "Quartz", "name": "Dendritic agate", "ess": "Stone of plenitude", "bel": "Called the stone of plenitude, tied to abundance, fullness and growth in all areas of life. Associated with deep connection to the earth and trees, and believed to bring stability and quiet perseverance.", "ch": "Root / Heart", "el": "Earth", "zo": "Gemini", "pl": "Venus"},
+  {"id": 20, "cat": "Quartz", "name": "Black onyx", "ess": "Strength and self-mastery", "bel": "A stone of strength, protection and self-mastery. Believed to absorb and transform negative energy, steady the wearer during conflict or grief, and build the willpower and stamina to see hard things through.", "ch": "Root", "el": "Earth", "zo": "Leo, Capricorn", "pl": "Saturn / Mars"},
+  {"id": 21, "cat": "Quartz", "name": "Sardonyx", "ess": "Strength in partnership", "bel": "A banded stone of strength, willpower and integrity. Traditionally associated with happy and lasting partnership and marriage, courage in adversity, and steadfast commitment.", "ch": "Root / Sacral", "el": "Earth / Fire", "zo": "Aries, Leo", "pl": "Mars"},
+  {"id": 22, "cat": "Quartz", "name": "Chalcedony", "ess": "Stone of goodwill", "bel": "A nurturing, gentle stone sometimes called the speaker's stone or stone of brotherhood. Associated with goodwill, calm and harmonious communication. Believed to dissolve hostility and ease feelings of isolation.", "ch": "Throat", "el": "Water", "zo": "Cancer, Sagittarius", "pl": "Moon"},
+  {"id": 23, "cat": "Quartz", "name": "Bloodstone, Heliotrope", "ess": "Courage and life force", "bel": "Also called heliotrope and, in Christian legend, tied to drops of Christ's blood falling on green jasper. Associated with courage, vitality and the blood and circulation in folk tradition. Believed to ground, protect and build resilience and endurance.", "ch": "Root / Heart", "el": "Earth", "zo": "Aries, Libra, Pisces", "pl": "Mars"},
+  {"id": 24, "cat": "Quartz", "name": "Red jasper", "ess": "The supreme nurturer", "bel": "Part of the jasper family often called the supreme nurturer. Associated with stamina, endurance and grounding. Believed to give steady courage and strength through prolonged stress, and to stabilise without overstimulating.", "ch": "Root", "el": "Earth", "zo": "Aries, Scorpio", "pl": "Mars"},
+  {"id": 25, "cat": "Quartz", "name": "Picture jasper", "ess": "Stone of global awareness", "bel": "Marked with landscape-like patterns and called the stone of global awareness. Associated with deep connection to the earth, comfort and nurturing. Believed to bring hidden feelings to the surface gently and instil a sense of belonging.", "ch": "Root", "el": "Earth", "zo": "Leo", "pl": "Saturn"},
+  {"id": 26, "cat": "Quartz", "name": "Ocean jasper", "ess": "Uplift and release", "bel": "An orbicular jasper associated with joy, uplift and the release of negativity. Believed to encourage patience, emotional clarity and a more positive outlook, drawing on the rhythm and renewal of the sea.", "ch": "Heart / Solar plexus", "el": "Water / Earth", "zo": "Cancer", "pl": "Neptune"},
+  {"id": 27, "cat": "Quartz", "name": "Kambaba jasper", "ess": "Ancient calm", "bel": "A green stromatolite stone carrying some of the oldest fossil life on earth. Associated with calm, peace and tranquillity. Believed to soothe troubled minds, ground scattered energy and deepen connection to nature.", "ch": "Heart", "el": "Earth", "zo": "Capricorn", "pl": "Saturn"},
+  {"id": 28, "cat": "Quartz", "name": "Leopard skin jasper", "ess": "Shamanic self-healing", "bel": "A spotted jasper with strong shamanic associations. Linked to self-healing, harmony and connection with animal guides or totems. Believed to support those who walk a healing or transformative path.", "ch": "Root / Sacral", "el": "Earth", "zo": "Gemini", "pl": "Mercury"},
+  {"id": 29, "cat": "Quartz", "name": "Chrysoprase", "ess": "Stone of joy and Venus", "bel": "An apple-green stone of the heart sometimes called a stone of Venus. Associated with joy, hope and optimism. Believed to heal the heart, encourage compassion and forgiveness, and draw in new love and abundance.", "ch": "Heart", "el": "Earth", "zo": "Libra, Cancer", "pl": "Venus"},
+  {"id": 30, "cat": "Mineral", "name": "Lapis lazuli", "ess": "Stone of truth and royalty", "bel": "A deep blue stone of wisdom and truth, prized by ancient Egyptian royalty and ground into Cleopatra's eyeshadow. Associated with inner vision, intellect and honest communication. Believed to deepen spiritual insight and reveal one's own truth.", "ch": "Third eye / Throat", "el": "Air / Water", "zo": "Sagittarius, Libra", "pl": "Jupiter / Venus"},
+  {"id": 31, "cat": "Mineral", "name": "Sodalite", "ess": "Stone of logic", "bel": "Called the stone of logic and rational thought. Associated with clear thinking, intuition and truthfulness. Believed to calm a busy mind, ease the resolution of conflicting feelings, and support honest self-expression.", "ch": "Third eye / Throat", "el": "Air / Water", "zo": "Sagittarius, Virgo", "pl": "Venus"},
+  {"id": 32, "cat": "Mineral", "name": "Labradorite", "ess": "Stone of magic and transformation", "bel": "A grey feldspar with a flash of inner colour (labradorescence) seen as captured fire. Called a stone of magic and transformation. Associated with protecting the aura, awakening intuition and psychic ability, and shielding against energy drain.", "ch": "Third eye / Throat / Crown", "el": "Water", "zo": "Leo, Scorpio, Sagittarius", "pl": "Uranus"},
+  {"id": 33, "cat": "Mineral", "name": "Larvikite", "ess": "Grounded inner transformation", "bel": "A dark Norwegian feldspar, sometimes sold as black labradorite. Associated with grounding, protection and inner transformation. Believed to neutralise negativity, steady the mind and deepen connection to the earth and nature spirits.", "ch": "Root / Third eye", "el": "Earth", "zo": "Aquarius", "pl": "Saturn"},
+  {"id": 34, "cat": "Mineral", "name": "Moonstone, White", "ess": "Stone of new beginnings", "bel": "The classic stone of new beginnings, tied to the moon and the divine feminine. Associated with intuition, emotional balance and fertility. Believed to attune the wearer to natural and lunar cycles and to soften and balance the emotions.", "ch": "Crown / Third eye", "el": "Water", "zo": "Cancer", "pl": "Moon"},
+  {"id": 35, "cat": "Mineral", "name": "Rainbow moonstone", "ess": "Light-bringer and aura cleanser", "bel": "Technically a white labradorite, prized for its blue flash. Associated with bringing in light, amplifying intuition and cleansing the aura. Believed to act as a prism that disperses energy through the whole being and offers gentle protection.", "ch": "Crown / Third eye", "el": "Water", "zo": "Cancer, Libra", "pl": "Moon"},
+  {"id": 36, "cat": "Mineral", "name": "Peach moonstone", "ess": "Soothing the worried heart", "bel": "A warm, gentle moonstone associated with self-love and reassurance. Believed to soothe worry and anxiety, support the heart, and help sensitive people see the best in themselves and their situations.", "ch": "Heart / Solar plexus", "el": "Water", "zo": "Cancer", "pl": "Moon"},
+  {"id": 37, "cat": "Mineral", "name": "Black moonstone", "ess": "New-moon intuition", "bel": "Tied to the energy of the new moon and fresh, hidden potential. Associated with grounded intuition, protection and new beginnings. Believed to support setting intentions and starting over while keeping the wearer rooted.", "ch": "Root / Sacral", "el": "Water / Earth", "zo": "Cancer, Scorpio", "pl": "Moon"},
+  {"id": 38, "cat": "Mineral", "name": "Grey moonstone", "ess": "Stone of the unseen", "bel": "Sometimes called the new-moon stone, associated with mystery and the unseen. Believed to open perception to subtle energies, support journeying into the subconscious, and reveal what is hidden or not yet formed.", "ch": "Third eye / Crown", "el": "Water", "zo": "Cancer", "pl": "Moon"},
+  {"id": 39, "cat": "Mineral", "name": "Sunstone", "ess": "Stone of the sun", "bel": "A joyful, warming stone tied to solar energy. Associated with leadership, personal power and optimism. Believed to dispel fear and self-doubt, restore the joy of living, and bring warmth, abundance and vitality.", "ch": "Sacral / Solar plexus", "el": "Fire", "zo": "Leo, Libra", "pl": "Sun"},
+  {"id": 40, "cat": "Mineral", "name": "Black obsidian", "ess": "Mirror to the soul", "bel": "Volcanic glass long used for scrying and protection. Called a psychic shield and a mirror to the soul. Associated with truth, cutting through illusion and grounding. Believed to surface and release buried trauma, which is why tradition treats it as powerful and confronting.", "ch": "Root", "el": "Earth / Fire", "zo": "Scorpio, Sagittarius", "pl": "Saturn / Pluto"},
+  {"id": 41, "cat": "Mineral", "name": "Snowflake obsidian", "ess": "Calm purity through change", "bel": "Black obsidian flecked with grey crystal snowflakes. Called a stone of purity and balance. Associated with calm during upheaval, releasing stagnant patterns, and bringing the light and shadow of a situation into balance.", "ch": "Root", "el": "Earth", "zo": "Virgo, Capricorn", "pl": "Saturn"},
+  {"id": 42, "cat": "Mineral", "name": "Mahogany obsidian", "ess": "Gentle grounding strength", "bel": "A softer, warmer obsidian banded with mahogany red. Associated with grounding, strength and protection delivered gently. Believed to release tension and old wounds and to restore a sense of personal power.", "ch": "Root / Sacral", "el": "Earth / Fire", "zo": "Scorpio", "pl": "Mars"},
+  {"id": 43, "cat": "Mineral", "name": "Gold sheen obsidian", "ess": "Scrying the root cause", "bel": "Obsidian with a golden shimmer, favoured for scrying. Believed to reveal the root cause of a problem, illuminate the difference between ego and true will, and support reclaiming personal power.", "ch": "Solar plexus", "el": "Fire", "zo": "Sagittarius", "pl": "Sun"},
+  {"id": 44, "cat": "Mineral", "name": "Silver sheen obsidian", "ess": "Mirror of reflection", "bel": "Obsidian with a silvery shimmer, associated with reflection and meditation. Believed to act as a mirror for self-examination, support patience and astral or inner journeying, and bring clarity through stillness.", "ch": "Third eye", "el": "Water", "zo": "Sagittarius", "pl": "Moon"},
+  {"id": 45, "cat": "Mineral", "name": "Rainbow obsidian", "ess": "Healing heartbreak", "bel": "Obsidian banded with rainbow sheen, sometimes called the stone of pleasure. Associated with releasing grief, heartbreak and disappointment. Believed to gently cut emotional cords and bring hope and light after loss.", "ch": "Heart / Root", "el": "Earth", "zo": "Libra, Scorpio", "pl": "Venus"},
+  {"id": 46, "cat": "Mineral", "name": "Apache tear", "ess": "Comfort in grief", "bel": "A translucent rounded obsidian named for a Native American legend of grieving Apache women. Associated with comfort, mourning and forgiveness. Believed to gently ground while supporting the wearer through sorrow without numbing it.", "ch": "Root", "el": "Earth", "zo": "Scorpio", "pl": "Saturn"},
+  {"id": 47, "cat": "Mineral", "name": "Black tourmaline", "ess": "Premier protection stone", "bel": "The classic protective stone, also called schorl. Associated with shielding against negativity, ill intent and (in modern belief) electromagnetic energy. Believed to ground the wearer and transmute heavy energy into a more usable form.", "ch": "Root", "el": "Earth", "zo": "Capricorn", "pl": "Saturn"},
+  {"id": 48, "cat": "Mineral", "name": "Pink tourmaline", "ess": "Heart-soothing love", "bel": "A heart stone associated with love, compassion and emotional healing. Believed to soothe anxious or wounded feelings, encourage joy and gentleness, and restore the capacity to give and receive love.", "ch": "Heart", "el": "Water", "zo": "Libra", "pl": "Venus"},
+  {"id": 49, "cat": "Mineral", "name": "Green tourmaline", "ess": "Vitality and renewal", "bel": "Also called verdelite, a heart stone tied to vitality and prosperity. Associated with healing, renewal and connection to nature. Believed to revitalise the body and open the heart to abundance and growth.", "ch": "Heart", "el": "Earth", "zo": "Capricorn", "pl": "Venus"},
+  {"id": 50, "cat": "Mineral", "name": "Watermelon tourmaline", "ess": "Heart super-activator", "bel": "Pink and green tourmaline in one crystal, called a super-activator of the heart. Associated with balance, love and joy. Believed to harmonise the inner and outer self and to heal old emotional wounds with patience.", "ch": "Heart", "el": "Water / Earth", "zo": "Gemini, Virgo", "pl": "Venus"},
+  {"id": 51, "cat": "Mineral", "name": "Blue tourmaline", "ess": "Clear, honest expression", "bel": "Also called indicolite, tied to the throat and third eye. Associated with honest communication, intuition and calm. Believed to support clear self-expression and a tolerant, open-minded outlook.", "ch": "Throat / Third eye", "el": "Water", "zo": "Taurus, Libra", "pl": "Venus"},
+  {"id": 52, "cat": "Mineral", "name": "Malachite", "ess": "Stone of transformation", "bel": "A banded green stone of transformation and protection, traditionally carried by travellers. Believed to absorb negativity, guard against danger, break unwanted patterns, and bring buried emotions to the surface for release. Tradition treats it as potent and recommends caution.", "ch": "Heart / Solar plexus", "el": "Earth / Fire", "zo": "Scorpio, Capricorn", "pl": "Venus"},
+  {"id": 53, "cat": "Mineral", "name": "Turquoise", "ess": "Master healer and traveller's talisman", "bel": "An ancient protective talisman across Persian, Native American and Tibetan cultures, often called a master healer. Associated with protection, wisdom, communication and wholeness. Traditionally believed to guard the traveller and rider and to strengthen friendship.", "ch": "Throat / Third eye", "el": "Earth / Air", "zo": "Sagittarius, Scorpio, Pisces", "pl": "Venus / Neptune"},
+  {"id": 54, "cat": "Mineral", "name": "Chrysocolla", "ess": "Stone of communication and the feminine", "bel": "A teal stone tied to communication, teaching and feminine power. Associated with tranquillity, empowerment and wise expression. Believed to calm emotional turbulence and give voice to inner wisdom.", "ch": "Throat / Heart", "el": "Water", "zo": "Taurus, Gemini, Virgo", "pl": "Venus"},
+  {"id": 55, "cat": "Mineral", "name": "Amazonite", "ess": "Stone of courage and truth", "bel": "A soothing blue-green feldspar called the stone of courage and truth. Associated with harmony, hope and balance. Believed to filter stress, help the wearer speak their truth without over-emotion, and see both sides of a problem.", "ch": "Heart / Throat", "el": "Water / Earth", "zo": "Virgo", "pl": "Uranus"},
+  {"id": 56, "cat": "Mineral", "name": "Aquamarine", "ess": "Stone of the sea and sailors", "bel": "A sea-blue stone long carried by sailors for safe passage. Associated with courage, calm and clear communication. Believed to soothe fear, cool anger, and bring the steadiness and clarity of calm water.", "ch": "Throat", "el": "Water", "zo": "Pisces, Aries, Gemini", "pl": "Moon / Neptune"},
+  {"id": 57, "cat": "Mineral", "name": "Emerald", "ess": "Stone of successful love", "bel": "Called the stone of successful love and a gem of the goddess Venus. Associated with loyalty, wisdom, abundance and foresight. Believed to deepen unconditional love and partnership and to sharpen intuition and mental clarity.", "ch": "Heart", "el": "Earth", "zo": "Taurus, Gemini, Aries", "pl": "Venus / Mercury"},
+  {"id": 58, "cat": "Mineral", "name": "Nephrite jade", "ess": "Stone of heaven and luck", "bel": "Revered in China as the stone of heaven. Associated with luck, prosperity, harmony and longevity. Believed to attract good fortune, protect the wearer, bring serene wisdom, and support meaningful dreams.", "ch": "Heart", "el": "Earth", "zo": "Aries, Gemini, Taurus, Libra", "pl": "Venus"},
+  {"id": 59, "cat": "Mineral", "name": "Jadeite", "ess": "Purity and harmonious abundance", "bel": "The rarer, harder jade, of which the green imperial variety is most prized. Associated with purity, balance and abundance. Believed to harmonise the emotions and attract prosperity earned with integrity.", "ch": "Heart", "el": "Earth", "zo": "Aries, Libra", "pl": "Venus"},
+  {"id": 60, "cat": "Mineral", "name": "Serpentine", "ess": "Awakener of kundalini", "bel": "Named for its snake-like appearance and tied to kundalini awakening, the rising serpent energy. Associated with earth connection, meditation and clearing blocked energy. Believed to aid the conscious, gradual rise of life force up the spine.", "ch": "Heart / Earth star", "el": "Earth", "zo": "Gemini", "pl": "Saturn"},
+  {"id": 61, "cat": "Mineral", "name": "Unakite", "ess": "Stone of vision and release", "bel": "A mottled green and pink stone called a stone of vision. Associated with balance, patience and gentle emotional release. Believed to bring buried feelings to the surface slowly, support recovery, and (in folk use) accompany pregnancy.", "ch": "Heart / Third eye", "el": "Earth", "zo": "Scorpio", "pl": "Mars / Venus"},
+  {"id": 62, "cat": "Mineral", "name": "Rhodonite", "ess": "Stone of compassion and rescue", "bel": "A pink and black stone called the stone of compassion, sometimes the rescue stone. Associated with emotional healing, forgiveness and reconciliation. Believed to release resentment and shock, and to restore balance after trauma or betrayal.", "ch": "Heart", "el": "Earth", "zo": "Taurus", "pl": "Venus / Mars"},
+  {"id": 63, "cat": "Mineral", "name": "Rhodochrosite", "ess": "Stone of the compassionate heart", "bel": "A rose-banded stone of self-love and the compassionate heart. Associated with inner-child healing, joy and emotional release. Believed to help the wearer reclaim lost or wounded parts of themselves and to draw in love.", "ch": "Heart / Solar plexus", "el": "Fire / Water", "zo": "Scorpio, Leo", "pl": "Venus"},
+  {"id": 64, "cat": "Mineral", "name": "Mangano calcite, Rose-pink (mangano)", "ess": "The gentle reiki stone", "bel": "A soft pink calcite, sometimes called the reiki stone. Associated with unconditional love, peace and nervous-system calm. Believed to release fear and grief, ease anxiety, and surround the wearer in gentle, supportive energy.", "ch": "Heart", "el": "Water / Earth", "zo": "Cancer", "pl": "Venus"},
+  {"id": 65, "cat": "Mineral", "name": "Garnet", "ess": "Stone of commitment and the heart's fire", "bel": "A deep red stone of passion, vitality and devotion, long carried as a traveller's protective talisman. Associated with energy, courage and regeneration. Believed to rekindle the inner fire, strengthen commitment, and revitalise body and will.", "ch": "Root / Sacral", "el": "Fire", "zo": "Aries, Leo, Virgo, Capricorn, Aquarius", "pl": "Mars / Pluto"},
+  {"id": 66, "cat": "Mineral", "name": "Ruby", "ess": "King of gems", "bel": "Called the king of gems, tied to passion, courage and life force. Associated with love, prosperity, nobility and protection. Believed to fan the fire of the heart and the blood, build confidence and drive, and shield against misfortune.", "ch": "Root / Heart", "el": "Fire", "zo": "Cancer, Leo, Scorpio, Sagittarius", "pl": "Sun / Mars"},
+  {"id": 67, "cat": "Mineral", "name": "Sapphire", "ess": "Stone of wisdom", "bel": "Long called the wisdom stone and a stone of royalty and the heavens. Associated with truth, mental clarity and spiritual devotion. Believed to focus the mind, calm and align the wearer, and support the fulfilment of cherished goals.", "ch": "Third eye / Throat", "el": "Water / Air", "zo": "Virgo, Libra, Sagittarius", "pl": "Saturn / Venus"},
+  {"id": 68, "cat": "Mineral", "name": "Peridot", "ess": "Gem of the sun", "bel": "Called a gem of the sun in ancient Egypt and a stone of compassion. Associated with abundance, renewal and releasing toxic emotions such as jealousy and resentment. Believed to lighten guilt, refresh the spirit, and open the way to prosperity.", "ch": "Heart / Solar plexus", "el": "Earth / Fire", "zo": "Leo, Virgo", "pl": "Sun / Mercury"},
+  {"id": 69, "cat": "Mineral", "name": "Blue topaz", "ess": "Clarity and true expression", "bel": "A cool blue topaz tied to the throat and third eye. Associated with clear communication, truth and self-expression. Believed to clarify thought, support honest speech, and help the wearer articulate ideas and feelings.", "ch": "Throat / Third eye", "el": "Air", "zo": "Sagittarius, Scorpio", "pl": "Jupiter"},
+  {"id": 70, "cat": "Mineral", "name": "Imperial topaz", "ess": "Stone of strength and good fortune", "bel": "The golden topaz, a stone of strength, confidence and good fortune. Associated with personal will, generosity and abundance. Believed to recharge the body and spirit, attract helpful circumstances, and radiate warmth and joy.", "ch": "Solar plexus / Sacral", "el": "Fire", "zo": "Leo, Sagittarius", "pl": "Sun / Jupiter"},
+  {"id": 71, "cat": "Mineral", "name": "Iolite", "ess": "The Viking's compass", "bel": "Tied by legend to Viking navigators who used it to locate the sun, hence the Viking's compass. Associated with inner vision, intuition and shamanic journeying. Believed to support clear direction in life and, in modern folk use, the handling of money and debt.", "ch": "Third eye", "el": "Air / Water", "zo": "Sagittarius, Taurus, Libra", "pl": "Saturn"},
+  {"id": 72, "cat": "Mineral", "name": "Tanzanite", "ess": "Stone of transformation", "bel": "A rare blue-violet stone found only near Mount Kilimanjaro, called a stone of transformation. Associated with higher consciousness, intuition and linking the heart with the mind. Believed to open communication with higher realms and accelerate spiritual insight.", "ch": "Third eye / Throat / Crown", "el": "Water", "zo": "Sagittarius, Gemini, Libra", "pl": "Mercury / Jupiter"},
+  {"id": 73, "cat": "Mineral", "name": "Kyanite, Blue", "ess": "Self-clearing aligner", "bel": "A bladed blue stone said never to hold or accumulate negativity, so it never needs cleansing. Associated with alignment of the chakras, communication and meditation. Believed to build energetic bridges, support attunement, and aid dream recall.", "ch": "Throat / Third eye", "el": "Air", "zo": "Aries, Taurus, Libra", "pl": "Venus / Saturn"},
+  {"id": 74, "cat": "Mineral", "name": "Apatite, Blue", "ess": "Stone of manifestation", "bel": "Called a stone of manifestation tied to the throat and third eye. Associated with motivation, inspiration and clear communication. Believed to clear confusion, sharpen learning, and (in folk use) help curb the appetite.", "ch": "Throat / Third eye", "el": "Air", "zo": "Gemini", "pl": "Mercury / Uranus"},
+  {"id": 75, "cat": "Mineral", "name": "Rainbow fluorite", "ess": "The genius stone", "bel": "Banded multicoloured fluorite called the genius stone. Associated with focus, mental clarity and order out of chaos. Believed to absorb and neutralise stress and negativity, and to organise scattered thoughts and energies.", "ch": "Third eye / Crown", "el": "Air", "zo": "Capricorn, Pisces", "pl": "Mercury / Neptune"},
+  {"id": 76, "cat": "Mineral", "name": "Purple fluorite", "ess": "Spiritual clarity", "bel": "Tied to the third eye and spiritual focus. Associated with intuition, meditation and devotion. Believed to bring orderly, clear thinking to spiritual practice and to deepen inner sight.", "ch": "Third eye", "el": "Air", "zo": "Pisces", "pl": "Neptune"},
+  {"id": 77, "cat": "Mineral", "name": "Green fluorite", "ess": "Clearing the heart", "bel": "A heart-centred fluorite tied to emotional cleansing. Associated with renewal, harmony and releasing emotional clutter. Believed to clear heartache and bring information held in the heart into conscious awareness.", "ch": "Heart", "el": "Earth / Water", "zo": "Capricorn", "pl": "Venus"},
+  {"id": 78, "cat": "Mineral", "name": "Blue fluorite", "ess": "Orderly, calm expression", "bel": "Tied to the throat and clear communication. Associated with calm, orderly thought and clear expression. Believed to help the wearer communicate ideas in a measured, well-structured way.", "ch": "Throat", "el": "Air / Water", "zo": "Capricorn", "pl": "Mercury"},
+  {"id": 79, "cat": "Mineral", "name": "Yellow fluorite", "ess": "Creative cooperation", "bel": "Tied to the solar plexus and creative will. Associated with creativity, intellect and cooperation. Believed to support manifestation, group harmony, and the orderly expression of ideas.", "ch": "Solar plexus", "el": "Fire", "zo": "Leo", "pl": "Sun"},
+  {"id": 80, "cat": "Mineral", "name": "Lepidolite", "ess": "Stone of transition and peace", "bel": "A lilac mica naturally containing lithium, called a stone of transition. Associated with calm, emotional balance and rest. Believed to soothe anxiety and stress, support restful sleep, and steady the wearer through change.", "ch": "Third eye / Heart / Crown", "el": "Water", "zo": "Libra", "pl": "Jupiter / Neptune"},
+  {"id": 81, "cat": "Mineral", "name": "Charoite", "ess": "Stone of transformation and courage", "bel": "A swirling violet stone from Siberia called a stone of transformation. Associated with bridging the heart and crown, releasing fear, and overcoming resistance to change. Believed to support deep healing and the courage to face what must be faced.", "ch": "Crown / Third eye / Heart", "el": "Water", "zo": "Scorpio, Sagittarius", "pl": "Neptune"},
+  {"id": 82, "cat": "Mineral", "name": "Sugilite", "ess": "Love stone of the age", "bel": "A rare violet stone called the love stone of this age. Associated with spiritual love, protection and the violet flame. Believed to comfort and shield sensitive people and empaths and to align the wearer with their life purpose.", "ch": "Crown / Third eye", "el": "Water", "zo": "Virgo", "pl": "Jupiter / Pluto"},
+  {"id": 83, "cat": "Mineral", "name": "Hematite", "ess": "The warrior's grounding stone", "bel": "An iron-rich stone whose name comes from the Greek for blood. Roman soldiers reputedly painted themselves with it before battle. Associated with grounding, focus and willpower. Believed to dissolve negativity, steady the mind, and restore confidence.", "ch": "Root", "el": "Earth", "zo": "Aries, Aquarius", "pl": "Mars / Saturn"},
+  {"id": 84, "cat": "Mineral", "name": "Pyrite", "ess": "Fool's gold of abundance", "bel": "Known as fool's gold and tied to abundance and prosperity. Associated with willpower, confidence and protection. Believed to act as an energetic shield, attract money and opportunity, and stoke vitality and assertive action.", "ch": "Solar plexus", "el": "Earth / Fire", "zo": "Leo", "pl": "Sun / Mars"},
+  {"id": 85, "cat": "Mineral", "name": "Magnetite, Lodestone", "ess": "The drawing stone", "bel": "Naturally magnetic, also called lodestone. Associated with attraction, manifestation and balancing polarities. Believed to literally and energetically draw in what is desired, ground the wearer, and bring stability.", "ch": "Root", "el": "Earth", "zo": "Aries, Capricorn", "pl": "Mars / Saturn"},
+  {"id": 86, "cat": "Mineral", "name": "Shungite", "ess": "Ancient shield and purifier", "bel": "An ancient carbon-rich stone from Karelia containing fullerenes. In modern belief tied to protection from electromagnetic energy and to water purification. Associated with grounding, detoxification and shielding from negativity.", "ch": "Root", "el": "Earth", "zo": "Capricorn, Scorpio", "pl": "Saturn"},
+  {"id": 87, "cat": "Mineral", "name": "Selenite", "ess": "Liquid light", "bel": "A luminous gypsum named for the moon goddess Selene, often called liquid light. Associated with cleansing, clarity and angelic connection. Believed to cleanse and charge other stones and spaces, lift the vibration of a room, and bring deep peace.", "ch": "Crown / higher crown", "el": "Air", "zo": "Taurus, Cancer", "pl": "Moon"},
+  {"id": 88, "cat": "Mineral", "name": "Satin spar", "ess": "Cleansing light wand", "bel": "A fibrous, pearly form of gypsum closely related to selenite and often sold as it. Associated with clearing energy, light and protection. Commonly shaped into wands and used to sweep and cleanse the aura and surroundings.", "ch": "Crown", "el": "Air", "zo": "Cancer", "pl": "Moon"},
+  {"id": 89, "cat": "Mineral", "name": "Howlite", "ess": "Stone of patience", "bel": "A white stone veined with grey, called the stone of patience. Associated with calm, stillness and sleep. Believed to absorb stress and tension, reduce anger and rage, and quiet an overactive mind.", "ch": "Crown / Third eye", "el": "Air", "zo": "Gemini, Virgo", "pl": "Mercury"},
+  {"id": 90, "cat": "Mineral", "name": "Magnesite", "ess": "Quiet visualisation", "bel": "A white stone tied to the crown and inner stillness. Associated with calm, meditation and vivid visualisation. Believed to relax the wearer, support imaginative inner work, and encourage self-love and patience.", "ch": "Crown / Third eye", "el": "Earth", "zo": "Aries", "pl": "Venus"},
+  {"id": 91, "cat": "Mineral", "name": "Prehnite", "ess": "The healer's healer", "bel": "A pale green stone called the stone that heals the healer. Associated with unconditional love, calm and decluttering of both space and mind. Believed to renew those who give care to others and to support inner knowing and prophecy.", "ch": "Heart / Solar plexus", "el": "Earth", "zo": "Libra", "pl": "Venus"},
+  {"id": 92, "cat": "Mineral", "name": "Aragonite", "ess": "Centring earth-anchor", "bel": "Often seen as reddish-brown clustered sputniks, called the conservationist's stone. Associated with grounding, stability and patience. Believed to centre scattered energy, combat stress and oversensitivity, and deepen connection to the earth.", "ch": "Root / Earth star", "el": "Earth", "zo": "Capricorn", "pl": "Saturn"},
+  {"id": 93, "cat": "Mineral", "name": "Orange calcite", "ess": "Creative spark", "bel": "A bright sacral-chakra calcite tied to creativity and joy. Associated with vitality, confidence and the flow of creative and sexual energy. Believed to energise, lift low moods, and dissolve resistance to taking action.", "ch": "Sacral", "el": "Fire", "zo": "Cancer, Leo", "pl": "Sun"},
+  {"id": 94, "cat": "Mineral", "name": "Blue calcite", "ess": "Soothing recuperation", "bel": "A soft blue calcite tied to calm and communication. Associated with soothing frayed nerves, gentle expression and recovery. Believed to filter incoming energy so the wearer can rest and recuperate.", "ch": "Throat / Third eye", "el": "Water", "zo": "Cancer", "pl": "Moon"},
+  {"id": 95, "cat": "Mineral", "name": "Green calcite", "ess": "Releasing the old", "bel": "A heart-centred calcite tied to emotional balance. Associated with releasing old patterns, mental healing and renewal. Believed to ease the transition out of stale situations and invite in abundance and fresh growth.", "ch": "Heart", "el": "Earth", "zo": "Cancer", "pl": "Venus"},
+  {"id": 96, "cat": "Mineral", "name": "Honey calcite", "ess": "Persistence and will", "bel": "A golden calcite tied to the solar plexus and personal power. Associated with intellect, confidence and persistence. Believed to strengthen the will, support recovery from hardship, and help the wearer see challenges through.", "ch": "Solar plexus", "el": "Fire", "zo": "Leo", "pl": "Sun"},
+  {"id": 97, "cat": "Mineral", "name": "Optical calcite", "ess": "Doubling clarity", "bel": "Clear calcite that splits light into a double image, also called Iceland spar. Associated with clearing, amplification and new perspective. Believed to cleanse energy and reveal a situation from more than one angle.", "ch": "Crown / all", "el": "Air", "zo": "Cancer", "pl": "Moon"},
+  {"id": 98, "cat": "Mineral", "name": "Celestite, Celestine", "ess": "Heavenly communication", "bel": "A sky-blue stone called a stone of heavenly communication. Associated with angelic connection, peace and dream recall. Believed to bring serenity, ease worry, and open a gentle channel to guides and the celestial realms.", "ch": "Throat / Third eye / Crown", "el": "Air", "zo": "Gemini", "pl": "Venus / Neptune"},
+  {"id": 99, "cat": "Mineral", "name": "Angelite", "ess": "Connection with guides", "bel": "A pale blue stone formed from compressed celestite. Associated with angelic connection, peace and compassion. Believed to support communication with guides and angels and to bring a calm, supported feeling.", "ch": "Throat / Third eye / Crown", "el": "Air", "zo": "Aquarius", "pl": "Neptune"},
+  {"id": 100, "cat": "Mineral", "name": "Larimar", "ess": "The dolphin stone of Atlantis", "bel": "A rare Caribbean blue stone, found only in the Dominican Republic, called the dolphin stone or Atlantis stone. Associated with calm, serenity and feminine energy. Believed to cool hot emotions and bring the soothing peace of the sea.", "ch": "Throat", "el": "Water", "zo": "Leo, Pisces", "pl": "Neptune"},
+  {"id": 101, "cat": "Mineral", "name": "White opal", "ess": "Stone of inspiration", "bel": "A play-of-colour opal seen as inner fire and called a stone of inspiration and love. Associated with imagination, creativity and emotional intensity. Believed to amplify feelings and traits, for better or worse, so it asks for emotional balance.", "ch": "Crown", "el": "Water", "zo": "Cancer, Libra, Scorpio, Pisces", "pl": "Venus / Neptune"},
+  {"id": 102, "cat": "Mineral", "name": "Fire opal", "ess": "Stone of passion", "bel": "An orange-red opal called a stone of passion and action. Associated with desire, vitality and energy. Believed to ignite drive and creativity, stir the emotions, and support taking bold, decisive steps.", "ch": "Sacral", "el": "Fire", "zo": "Aries, Leo", "pl": "Mars"},
+  {"id": 103, "cat": "Mineral", "name": "Common opal", "ess": "Gentle emotional balance", "bel": "Opal without the fiery play of colour, gentler in feel. Associated with calm, soothing and emotional balance. Believed to quiet the mind, ease worry, and bring steady, grounding comfort.", "ch": "Heart / Crown", "el": "Water", "zo": "Cancer", "pl": "Neptune"},
+  {"id": 104, "cat": "Organic", "name": "Amber", "ess": "Fossil light of vitality", "bel": "Fossilised tree resin, not a true mineral, sometimes containing ancient insects. Called a stone of purification and warmth. Associated with vitality, ancient wisdom and life force. Believed to draw out negativity and bring sunny, warming energy.", "ch": "Solar plexus / Sacral", "el": "Earth / Fire", "zo": "Leo, Aquarius", "pl": "Sun"},
+  {"id": 105, "cat": "Organic", "name": "Jet", "ess": "The mourning stone", "bel": "Fossilised wood (lignite), most famously Whitby jet used in Victorian mourning jewellery. Called the witch's stone. Associated with protection, grief and grounding. Believed to absorb negativity, support those in mourning, and guard against ill intent.", "ch": "Root", "el": "Earth", "zo": "Capricorn", "pl": "Saturn"},
+  {"id": 106, "cat": "Organic", "name": "Moldavite", "ess": "Stone of rapid transformation", "bel": "A green glassy tektite formed roughly fifteen million years ago by a meteorite impact in what is now Czechia, hence its extraterrestrial reputation. Called a stone of transformation and the holy grail stone. Associated with rapid, sometimes intense spiritual change (the so-called moldavite flush) and connection to higher realms.", "ch": "Heart / Third eye / Crown", "el": "Air", "zo": "Scorpio, Cancer, Aquarius", "pl": "Uranus"},
+  {"id": 107, "cat": "Seed", "name": "Rudraksha", "ess": "Tears of Shiva", "bel": "A sacred seed (Elaeocarpus ganitrus) in Hindu and Buddhist practice, believed to have formed from the tears of Lord Shiva. Worn for protection, calm and spiritual elevation, and used to count mantras in meditation. The number of natural faces (mukhi) on the seed determines its ruling deity, planet and specific quality.", "ch": "Crown / all", "el": "", "zo": "", "pl": "Shiva"},
+  {"id": 108, "cat": "Seed", "name": "Rudraksha, 1 Mukhi", "ess": "Supreme consciousness", "bel": "The rarest and most revered face count, ruled by Lord Shiva and the Sun. Associated with liberation (moksha), single-pointed focus and detachment. Believed to lead the wearer toward higher consciousness and freedom from worldly attachment.", "ch": "Crown", "el": "", "zo": "Leo", "pl": "Sun"},
+  {"id": 109, "cat": "Seed", "name": "Rudraksha, 2 Mukhi", "ess": "Unity and relationship", "bel": "Ruled by Ardhanarishvara, the union of Shiva and Shakti, and the Moon. Associated with unity, harmony and emotional balance. Believed to strengthen relationships, partnerships and family bonds.", "ch": "Heart", "el": "", "zo": "Cancer", "pl": "Moon"},
+  {"id": 110, "cat": "Seed", "name": "Rudraksha, 3 Mukhi", "ess": "Releasing the past", "bel": "Ruled by Agni, the fire god, and Mars. Associated with burning away guilt, inferiority and the weight of past mistakes. Believed to restore self-confidence, vitality and a fresh start.", "ch": "Solar plexus", "el": "Fire", "zo": "Aries", "pl": "Mars"},
+  {"id": 111, "cat": "Seed", "name": "Rudraksha, 4 Mukhi", "ess": "Knowledge and learning", "bel": "Ruled by Brahma, the creator and god of knowledge, and Mercury. Associated with learning, intellect, memory and communication. Favoured by students, teachers and writers.", "ch": "Throat / Third eye", "el": "Air", "zo": "Gemini", "pl": "Mercury"},
+  {"id": 112, "cat": "Seed", "name": "Rudraksha, 5 Mukhi", "ess": "Peace and wellbeing", "bel": "The most common face count, ruled by Kalagni (a form of Shiva) and Jupiter, and said to embody the five elements. Considered suitable for anyone to wear. Associated with peace, calm and general wellbeing.", "ch": "Crown / all", "el": "", "zo": "Sagittarius, Pisces", "pl": "Jupiter"},
+  {"id": 113, "cat": "Seed", "name": "Rudraksha, 6 Mukhi", "ess": "Willpower and grounding", "bel": "Ruled by Kartikeya (Skanda) and Venus. Associated with willpower, focus and grounding of excess energy. Believed to support artistic expression, emotional stability and steady relationships.", "ch": "Sacral / Root", "el": "", "zo": "Taurus, Libra", "pl": "Venus"},
+  {"id": 114, "cat": "Seed", "name": "Rudraksha, 7 Mukhi", "ess": "Prosperity and Lakshmi", "bel": "Ruled by Mahalakshmi, goddess of fortune, and associated with Saturn. Tied to financial growth, abundance and relief from the difficult effects of Saturn. Worn to draw prosperity and stability.", "ch": "Sacral", "el": "", "zo": "Capricorn, Aquarius", "pl": "Saturn"},
+  {"id": 115, "cat": "Seed", "name": "Rudraksha, 8 Mukhi", "ess": "Remover of obstacles", "bel": "Ruled by Lord Ganesha and associated with Rahu. Tied to the removal of obstacles and success in new ventures. Believed to clear the path for fresh beginnings and bring wisdom to overcome difficulties.", "ch": "Root", "el": "", "zo": "Virgo", "pl": "Rahu"},
+  {"id": 116, "cat": "Seed", "name": "Rudraksha, 9 Mukhi", "ess": "Fearless energy", "bel": "Ruled by Goddess Durga (and Bhairava) and associated with Ketu. Tied to energy, fearlessness and dynamism. Believed to grant the strength and protection of the goddess in her nine forms.", "ch": "Root / Sacral", "el": "", "zo": "Sagittarius, Pisces", "pl": "Ketu"},
+  {"id": 117, "cat": "Seed", "name": "Rudraksha, 10 Mukhi", "ess": "The protector", "bel": "Ruled by Lord Vishnu, the preserver, and said to pacify the effects of all planets. Tied to protection, peace and shielding from negative energies. Worn as an all-round guardian bead.", "ch": "All", "el": "", "zo": "All", "pl": "Pacifies all planets"},
+  {"id": 118, "cat": "Seed", "name": "Rudraksha, 11 Mukhi", "ess": "Courage and self-control", "bel": "Ruled by Lord Hanuman. Associated with courage, wisdom, strength and self-control. Believed to grant fearlessness, adventurous spirit and mastery over the senses.", "ch": "Crown / Third eye", "el": "", "zo": "Aries, Scorpio", "pl": "Mars (Hanuman)"},
+  {"id": 119, "cat": "Seed", "name": "Rudraksha, 12 Mukhi", "ess": "Radiance and leadership", "bel": "Ruled by Surya, the sun god, and the Sun. Associated with radiance, leadership and vitality. Believed to instil confidence, brilliance and the strength to lead and to keep moving forward.", "ch": "Solar plexus", "el": "Fire", "zo": "Leo", "pl": "Sun"},
+  {"id": 120, "cat": "Seed", "name": "Rudraksha, 13 Mukhi", "ess": "Charisma and fulfilment", "bel": "Ruled by Indra and Kamadeva and associated with Venus. Tied to charisma, magnetism and the fulfilment of desires. Believed to bring worldly comforts and personal allure.", "ch": "Sacral / Third eye", "el": "", "zo": "Taurus, Libra", "pl": "Venus"},
+  {"id": 121, "cat": "Seed", "name": "Rudraksha, 14 Mukhi", "ess": "Deva Mani, the third eye", "bel": "Called Deva Mani (divine gem) and said to come from the third eye of Lord Shiva, often linked with Hanuman. Among the most prized beads. Associated with intuition, the sixth sense and sound decision-making, and believed to activate the Ajna (third-eye) chakra.", "ch": "Third eye", "el": "", "zo": "Capricorn, Aquarius", "pl": "Saturn / Mars"},
+  {"id": 122, "cat": "Seed", "name": "Rudraksha, Gauri-Shankar", "ess": "Sacred union", "bel": "Two rudraksha seeds naturally joined as one, seen as the union of Shiva (Shankar) and Parvati (Gauri). Associated with harmony, union and devotion. Believed to bless relationships, marriage and family life with balance and bliss.", "ch": "Heart / Crown", "el": "", "zo": "Cancer", "pl": "Moon"},
+  {"id": 123, "cat": "Seed", "name": "Vaijayanti, Job's Tears (Coix lacryma-jobi)", "ess": "Garland of victory", "bel": "Pearly tear-shaped seeds (Job's Tears) with natural holes, whose name means garland of victory. Associated with Krishna and Vishnu and, by legend, with a garland Krishna made for Radha. Tied to devotion, purity and victory over ego and ignorance, and traditionally believed to protect against negativity and tantric harm.", "ch": "Heart / Crown", "el": "", "zo": "", "pl": ""},
+  {"id": 124, "cat": "Seed", "name": "Lotus seed, Nelumbo nucifera", "ess": "Purity rising from the mud", "bel": "The seed of the sacred lotus, which blooms unstained above muddy water. A central symbol of purity, spiritual awakening and the unfolding of consciousness in Hindu and Buddhist thought. Strung into malas as a reminder that enlightenment grows out of, but is not soiled by, worldly life.", "ch": "Crown", "el": "Water", "zo": "", "pl": ""},
+  {"id": 125, "cat": "Seed", "name": "Bodhi seed, Bodhichitta", "ess": "Seed of awakening", "bel": "Seeds linked to the Bodhi tree under which the Buddha attained enlightenment, often called bodhichitta after the awakened mind. Prized in Buddhist practice for meditation and the accumulation of merit, and worn as a reminder of the aspiration to awaken for the benefit of all.", "ch": "Crown", "el": "", "zo": "", "pl": ""},
+  {"id": 126, "cat": "Seed", "name": "Tulsi, Holy basil (Ocimum sanctum)", "ess": "Wood of devotion", "bel": "Beads carved from the wood of holy basil, the most sacred plant in Vaishnavism and dear to Vishnu and Krishna. Associated with devotion (bhakti), purity and protection. Worn for divine connection and as a guard against negative influence.", "ch": "Heart", "el": "", "zo": "", "pl": ""},
+  {"id": 127, "cat": "Seed", "name": "Neem wood", "ess": "Purifier and protector", "bel": "Beads of neem, a tree revered in Ayurveda for its cleansing properties. Associated with purification, protection and grounding. Believed to clear negativity and support a healthy, settled state.", "ch": "Root", "el": "", "zo": "", "pl": ""},
+  {"id": 128, "cat": "Seed", "name": "Rosewood", "ess": "Warm devotional wood", "bel": "A fragrant reddish wood used in malas and incense. Associated with warmth, love and grounding. Believed to calm the heart, support devotion, and carry a gentle, comforting presence.", "ch": "Heart", "el": "", "zo": "", "pl": ""},
+  {"id": 129, "cat": "Seed", "name": "White sandalwood, Santalum album", "ess": "Wood of the gods", "bel": "A fragrant pale wood long burned in temples and worn in malas, sometimes called the wood of the gods. Associated with meditation, calm and devotion. Believed to quiet the mind, purify the space, and link the material and the divine.", "ch": "Crown / Root", "el": "", "zo": "", "pl": ""},
+  {"id": 130, "cat": "Seed", "name": "Red sandalwood, Raktachandan (Pterocarpus santalinus)", "ess": "Grounding red wood", "bel": "The red counterpart to white sandalwood, used in ritual and malas. Associated with grounding, protection and vitality. Believed to steady and protect the wearer and to add warmth and strength to practice.", "ch": "Root", "el": "", "zo": "", "pl": ""},
+  {"id": 131, "cat": "Seed", "name": "Agarwood, Oud (Aquilaria)", "ess": "The most precious incense", "bel": "A rare, resin-rich wood prized across Sufi, Buddhist and Hindu traditions as the highest devotional incense. Associated with deep meditation, grounding and elevation at once. Believed to settle the body while opening the higher mind.", "ch": "Crown / Root", "el": "", "zo": "", "pl": ""},
+  {"id": 132, "cat": "Seed", "name": "Ebony", "ess": "Dark wood of power", "bel": "A dense black wood used in malas and ritual objects. Associated with protection, grounding and strength. Believed to dispel negativity and lend the wearer a sense of solid, quiet power.", "ch": "Root", "el": "", "zo": "", "pl": ""},
+  {"id": 133, "cat": "Seed", "name": "Coconut shell", "ess": "Humble renunciation", "bel": "Beads cut from coconut shell, valued for simplicity and humility. Associated with grounding, austerity and renunciation in some mala traditions. A reminder that practice does not require costly materials.", "ch": "Root", "el": "", "zo": "", "pl": ""},
+  {"id": 134, "cat": "Seed", "name": "Lava stone, Basalt", "ess": "Born of fire", "bel": "Porous volcanic rock, born of fire and tied to the primal earth. Associated with grounding, strength, courage and rebirth. Often worn to anchor and stabilise, and (being porous) used to carry a drop of essential oil as a personal diffuser.", "ch": "Root", "el": "Fire / Earth", "zo": "Cancer", "pl": "Mars"},
+  {"id": 135, "cat": "Organic", "name": "Bone, Yak / buffalo (carved)", "ess": "Memento mori", "bel": "Carved bone, used especially in Tibetan Vajrayana practice (bone malas and kapala) to contemplate impermanence and mortality. Associated with grounding, ancestral connection and the cycle of life and death. Worn as a reminder to live fully in the face of death.", "ch": "Root", "el": "Earth", "zo": "", "pl": ""},
+  {"id": 136, "cat": "Organic", "name": "Horn", "ess": "Grounded strength", "bel": "Carved horn used decoratively and ritually. Associated with grounding, protection, strength and vitality. Worn for a solid, earthy presence and as a connection to animal power.", "ch": "Root", "el": "Earth", "zo": "", "pl": ""},
+  {"id": 137, "cat": "Organic", "name": "Conch, Shankha", "ess": "The dharma's call", "bel": "The sacred conch, blown in Hindu and Buddhist ritual to sound the primordial Om. One of the eight auspicious symbols (ashtamangala). Associated with sacred sound, auspiciousness, victory and purity, and seen as the call of the dharma.", "ch": "Throat / Crown", "el": "Water", "zo": "", "pl": ""},
+  {"id": 138, "cat": "Organic", "name": "Mother of pearl", "ess": "Soothing tides", "bel": "The iridescent inner shell layer, tied to the sea and the maternal. Associated with soothing, protective and intuitive energy. Believed to calm the emotions, support flow, and offer a gentle, nurturing presence.", "ch": "Crown / Throat / Sacral", "el": "Water", "zo": "Cancer", "pl": "Moon"},
+  {"id": 139, "cat": "Organic", "name": "Pearl", "ess": "Queen of gems", "bel": "Formed within a living shell, called the queen of gems and tied to the moon and the feminine. Associated with purity, integrity and wisdom gained through experience. Believed to calm and clarify the emotions and bring serene, dignified composure.", "ch": "Crown / Heart / Sacral", "el": "Water", "zo": "Cancer, Gemini", "pl": "Moon"},
+  {"id": 140, "cat": "Organic", "name": "Red coral, Moonga", "ess": "The stone of Mars", "bel": "In Vedic astrology the gem of the planet Mars (Moonga), worn for vitality, courage and drive. Associated with life force, protection and, in folk belief, the blood and circulation. Believed to strengthen willpower and assertive energy.", "ch": "Root / Sacral", "el": "Fire", "zo": "Aries, Scorpio", "pl": "Mars"},
+  {"id": 141, "cat": "Organic", "name": "Abalone shell, Paua", "ess": "Colours of the ocean", "bel": "An iridescent shell holding the colours of the sea, often used to hold smudging herbs. Associated with emotional healing, intuition and beauty. Believed to calm and soothe, and to support cooperation and partnership.", "ch": "Heart / Throat", "el": "Water", "zo": "Cancer, Pisces", "pl": "Neptune"},
+  {"id": 142, "cat": "Metal", "name": "Copper", "ess": "Conductor of energy", "bel": "A literal conductor of energy, called the metal of Venus. Associated with amplifying and conducting intention, vitality and (in folk use) circulation and joints. Often paired with stones to help their energy flow, and seen as the healer's metal.", "ch": "All", "el": "", "zo": "Taurus, Libra", "pl": "Venus"},
+  {"id": 143, "cat": "Metal", "name": "Brass", "ess": "Warm abundance", "bel": "A golden alloy used as a gold substitute in ritual objects and singing bowls. Associated with abundance, warmth and protection. Valued for durability and for carrying a bright, sunny, prosperous quality.", "ch": "Solar plexus", "el": "", "zo": "Leo", "pl": "Sun"},
+  {"id": 144, "cat": "Metal", "name": "Bronze, Bell metal", "ess": "Sacred resonance", "bel": "An ancient sacred alloy, the metal of bells and singing bowls. Associated with sacred sound, grounding and durability. Valued for its resonance in ritual and for a steady, time-honoured strength.", "ch": "Root / Throat", "el": "", "zo": "Capricorn", "pl": "Saturn"},
+  {"id": 145, "cat": "Metal", "name": "Panchaloha, Five-metal alloy", "ess": "Balance of the five metals", "bel": "A traditional five-metal temple alloy (commonly gold, silver, copper, brass or zinc, and iron or lead) used to cast deity idols and planetary rings. Associated with the balance of the five elements and planetary energies. Worn for harmony, auspiciousness and overall balance.", "ch": "All", "el": "", "zo": "All", "pl": "All (five planets)"},
+  {"id": 146, "cat": "Metal", "name": "Silver", "ess": "The moon's metal", "bel": "The lunar metal, tied to the moon and the feminine. Associated with intuition, reflection and emotional balance. Believed to enhance and gently cool the energy of the stones it holds, and to draw the wearer toward the subconscious and the receptive.", "ch": "Third eye / Crown", "el": "", "zo": "Cancer", "pl": "Moon"},
+  {"id": 147, "cat": "Metal", "name": "Gold", "ess": "The sun's metal", "bel": "The solar metal, tied to the sun and the eternal (it does not tarnish). Associated with vitality, abundance and the higher self. Believed to amplify the energy of stones, build confidence and warmth, and carry a noble, life-giving quality.", "ch": "Solar plexus / Crown", "el": "", "zo": "Leo", "pl": "Sun"},
+  {"id": 148, "cat": "Metal", "name": "Tibetan silver, White metal", "ess": "Ritual white metal", "bel": "A durable white metal used in ritual jewellery and malas. Associated with protection and grounding in everyday wear. Note that the name is a trade term: most pieces are a base-metal alloy (often nickel or zinc) with little or no actual silver.", "ch": "Root", "el": "", "zo": "", "pl": ""}
+];
+const MAT_BY_ID = Object.fromEntries(MATERIALS.map(m => [m.id, m]));
+const MAT_CATS = ['Quartz', 'Mineral', 'Seed', 'Organic', 'Metal'];
+// Localised labels for the correspondence line; the VALUES stay English until the
+// translation pass. Labels are stable, so they are filled for all six locales now.
+const MAT_LABELS = {
+  ch: { NL: 'Chakra',       EN: 'Chakra', DE: 'Chakra',      FR: 'Chakra',   IT: 'Chakra',    ES: 'Chakra' },
+  el: { NL: 'Element',      EN: 'Element', DE: 'Element',     FR: 'Élément',  IT: 'Elemento',  ES: 'Elemento' },
+  zo: { NL: 'Sterrenbeeld', EN: 'Zodiac', DE: 'Sternzeichen', FR: 'Zodiaque', IT: 'Zodiaco',   ES: 'Zodiaco' },
+  pl: { NL: 'Planeet',      EN: 'Planet', DE: 'Planet',      FR: 'Planète',  IT: 'Pianeta',   ES: 'Planeta' }
+};
+// Resolve a field that is either a flat string (English, now) or a {locale:text}
+// object (after the translation pass).
+function matPick(v, L) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  return v[L] || v.EN || v.NL || Object.values(v)[0] || '';
+}
+// The "Chakra: … | Element: … | Zodiac: … | Planet: …" line, skipping blanks.
+function matAssocLine(m, L) {
+  const segs = ['ch', 'el', 'zo', 'pl']
+    .map(k => [matPick(MAT_LABELS[k], L), matPick(m[k], L).trim()])
+    .filter(([lbl, val]) => val)
+    .map(([lbl, val]) => escText(lbl) + ': ' + escText(val));
+  return segs.join(' | ');
+}
+// Render the selected materials as canonical HTML for one language. One <p> per
+// material: bold name — essence[. then full beliefs] then the correspondence line.
+function renderMaterials(b, L) {
+  const ids = Array.isArray(b.mats) ? b.mats : [];
+  if (!ids.length) return '';
+  const full = b.matMode === 'full';
+  const assoc = b.matAssoc !== false; // default on
+  const parts = [];
+  for (const id of ids) {
+    const m = MAT_BY_ID[id];
+    if (!m) continue;
+    let head = '<strong>' + escText(matPick(m.name, L)) + '</strong>';
+    let ess = matPick(m.ess, L).trim();
+    if (ess) { if (!/[.!?…:]$/.test(ess)) ess += '.'; head += ' — ' + escText(ess); }
+    const lines = [head];
+    if (full) { const bel = matPick(m.bel, L).trim(); if (bel) lines.push(escText(bel)); }
+    if (assoc) { const a = matAssocLine(m, L); if (a) lines.push(a); }
+    parts.push('<p>' + lines.join('<br>') + '</p>');
+  }
+  return parts.join('\n');
+}
+
 // Canonical HTML for a block (instance) + product type + language, or null if the
 // block is free-text. SKU template, then universal SNIPPETS, then per-type snippets,
 // then per-block library.
 function canonicalText(b, productType, lang) {
+  if (b.type === 'material') return renderMaterials(b, lang);
   if (b.type === 'sku') {
     const n = (b.qty == null ? '' : String(b.qty)).trim();
     return n ? '<p>' + escText((SKU_TEMPLATE[lang] || SKU_TEMPLATE.NL).replace('{n}', n)) + '</p>' : '';
@@ -934,7 +1169,7 @@ function canonicalText(b, productType, lang) {
   return null;
 }
 function isCanonical(b, productType) {
-  return b.type === 'sku' || !!SNIPPETS[b.type] || !!(TYPE_SNIPPETS[productType] && TYPE_SNIPPETS[productType][b.type]) || !!libEntry(b);
+  return b.type === 'material' || b.type === 'sku' || !!SNIPPETS[b.type] || !!(TYPE_SNIPPETS[productType] && TYPE_SNIPPETS[productType][b.type]) || !!libEntry(b);
 }
 // Is the block still holding its canonical text (any language) — i.e. unedited?
 function isUneditedCanonical(b, productType) {
@@ -1263,6 +1498,8 @@ function renderStack() {
     let editor = null;
     if (block.type === 'sku') {
       card.appendChild(buildSkuRow(card, block));
+    } else if (block.type === 'material') {
+      card.appendChild(buildMaterialRow(card, block));
     } else {
       editor = document.createElement('div');
       editor.className = 'editor block-editor';
@@ -1301,6 +1538,180 @@ function buildSkuRow(card, block) {
   refresh();
   row.appendChild(field);
   row.appendChild(preview);
+  return row;
+}
+
+// Material block: multi-select from the MATERIALS library, with search, a
+// collapsible checklist, and drag-to-reorder on the picked ones. Output is
+// canonical (built by renderMaterials), so block.html is kept synced to the
+// base language exactly like the SKU block.
+function buildMaterialRow(card, block) {
+  if (!Array.isArray(block.mats)) block.mats = [];
+  if (block.matMode !== 'full') block.matMode = 'short';
+  if (block.matAssoc == null) block.matAssoc = true;
+
+  const row = document.createElement('div');
+  row.className = 'mat-row';
+
+  const ptype = () => (activeProduct() || {}).type;
+  const sync = () => {
+    block.html = canonicalText(block, ptype(), project.baseLang);
+    renderSelected();
+    renderPreview();
+    updateOutputs();
+  };
+
+  /* --- controls: short/full + associations toggle --- */
+  const controls = document.createElement('div');
+  controls.className = 'mat-controls';
+  const modeLabel = document.createElement('label');
+  modeLabel.append('Detail ');
+  const modeSel = document.createElement('select');
+  [['short', 'Short (essence)'], ['full', 'Full (with beliefs)']].forEach(([v, t]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = t; modeSel.appendChild(o);
+  });
+  modeSel.value = block.matMode;
+  modeSel.addEventListener('change', () => { block.matMode = modeSel.value; sync(); });
+  modeLabel.appendChild(modeSel);
+  const assocLabel = document.createElement('label');
+  const assocChk = document.createElement('input');
+  assocChk.type = 'checkbox'; assocChk.checked = block.matAssoc !== false;
+  assocChk.addEventListener('change', () => { block.matAssoc = assocChk.checked; sync(); });
+  assocLabel.appendChild(assocChk);
+  assocLabel.append('Show correspondences');
+  controls.appendChild(modeLabel);
+  controls.appendChild(assocLabel);
+  row.appendChild(controls);
+
+  /* --- selected list (ordered, drag to reorder) --- */
+  const selected = document.createElement('div');
+  selected.className = 'mat-selected';
+  row.appendChild(selected);
+  let dragId = null;
+  function renderSelected() {
+    selected.innerHTML = '';
+    if (!block.mats.length) {
+      const e = document.createElement('div');
+      e.className = 'mat-empty';
+      e.textContent = 'No materials selected yet — search or browse below.';
+      selected.appendChild(e);
+      return;
+    }
+    block.mats.forEach(id => {
+      const m = MAT_BY_ID[id]; if (!m) return;
+      const chip = document.createElement('div');
+      chip.className = 'mat-chip'; chip.dataset.id = id;
+      const h = document.createElement('span');
+      h.className = 'mat-chip-handle'; h.textContent = '⠿'; h.title = 'Drag to reorder';
+      const nm = document.createElement('span');
+      nm.className = 'mat-chip-name'; nm.textContent = m.name;
+      const cat = document.createElement('span');
+      cat.className = 'mat-chip-cat'; cat.textContent = m.cat;
+      const x = document.createElement('button');
+      x.className = 'mat-chip-x'; x.textContent = '×'; x.title = 'Remove';
+      x.addEventListener('click', () => {
+        block.mats = block.mats.filter(v => v !== id);
+        const cb = browse.querySelector('input[data-id="' + id + '"]'); if (cb) cb.checked = false;
+        sync();
+      });
+      chip.appendChild(h); chip.appendChild(nm); chip.appendChild(cat); chip.appendChild(x);
+      // reorder DnD (handle toggles draggable; local state, no clash with stack DnD)
+      h.addEventListener('mousedown', () => { chip.draggable = true; });
+      h.addEventListener('mouseup', () => { chip.draggable = false; });
+      chip.addEventListener('dragstart', e => {
+        if (!chip.draggable) { e.preventDefault(); return; }
+        e.stopPropagation();
+        dragId = id; e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => chip.classList.add('dragging'), 0);
+      });
+      chip.addEventListener('dragend', e => { e.stopPropagation(); chip.draggable = false; chip.classList.remove('dragging'); dragId = null; });
+      chip.addEventListener('dragover', e => {
+        if (dragId == null) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = chip.getBoundingClientRect();
+        const before = e.clientY < r.top + r.height / 2;
+        const from = block.mats.indexOf(dragId);
+        let to = block.mats.indexOf(id) + (before ? 0 : 1);
+        if (from < 0 || to < 0) return;
+        if (to > from) to--;
+        if (to === from) return;
+        block.mats.splice(from, 1);
+        block.mats.splice(to, 0, dragId);
+        renderSelected();
+        const moved = selected.querySelector('.mat-chip[data-id="' + dragId + '"]');
+        if (moved) moved.classList.add('dragging');
+      });
+      chip.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); sync(); });
+      selected.appendChild(chip);
+    });
+  }
+
+  /* --- search + collapsible browse checklist --- */
+  const searchBar = document.createElement('div');
+  searchBar.className = 'mat-search';
+  const search = document.createElement('input');
+  search.type = 'search'; search.placeholder = 'Search 148 materials (name or category)…';
+  const toggle = document.createElement('button');
+  toggle.className = 'mat-toggle'; toggle.type = 'button';
+  searchBar.appendChild(search); searchBar.appendChild(toggle);
+  row.appendChild(searchBar);
+
+  const browse = document.createElement('div');
+  browse.className = 'mat-browse';
+  row.appendChild(browse);
+
+  let open = false;
+  function setOpen(v) { open = v; browse.style.display = v ? 'block' : 'none'; toggle.textContent = v ? 'Hide list ▴' : 'Browse all ▾'; }
+  toggle.addEventListener('click', () => setOpen(!open));
+  search.addEventListener('input', () => { if (!open && search.value.trim()) setOpen(true); renderBrowse(); });
+  search.addEventListener('mousedown', () => { card.draggable = false; });
+
+  function renderBrowse() {
+    const q = search.value.trim().toLowerCase();
+    browse.innerHTML = '';
+    let shown = 0;
+    for (const cat of MAT_CATS) {
+      const items = MATERIALS.filter(m => m.cat === cat &&
+        (!q || m.name.toLowerCase().includes(q) || m.cat.toLowerCase().includes(q) || (m.ess || '').toLowerCase().includes(q)));
+      if (!items.length) continue;
+      const head = document.createElement('div');
+      head.className = 'mat-cat-head'; head.textContent = cat + ' (' + items.length + ')';
+      browse.appendChild(head);
+      items.forEach(m => {
+        shown++;
+        const opt = document.createElement('label');
+        opt.className = 'mat-opt';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.dataset.id = m.id; cb.checked = block.mats.includes(m.id);
+        cb.addEventListener('change', () => {
+          if (cb.checked) { if (!block.mats.includes(m.id)) block.mats.push(m.id); }
+          else block.mats = block.mats.filter(v => v !== m.id);
+          sync();
+        });
+        const nm = document.createElement('span'); nm.textContent = m.name;
+        const ess = document.createElement('span'); ess.className = 'mat-opt-ess'; ess.textContent = m.ess ? ' — ' + m.ess : '';
+        opt.appendChild(cb); opt.appendChild(nm); opt.appendChild(ess);
+        browse.appendChild(opt);
+      });
+    }
+    if (!shown) { const n = document.createElement('div'); n.className = 'mat-none'; n.textContent = 'No materials match "' + search.value.trim() + '".'; browse.appendChild(n); }
+  }
+
+  /* --- live preview of the rendered (base-language) output --- */
+  const preview = document.createElement('div');
+  preview.className = 'mat-preview';
+  row.appendChild(preview);
+  function renderPreview() {
+    const html = renderMaterials(block, project.baseLang);
+    preview.style.display = html ? 'block' : 'none';
+    preview.innerHTML = html;
+  }
+
+  block.html = canonicalText(block, ptype(), project.baseLang); // keep base html fresh
+  setOpen(false);
+  renderSelected();
+  renderBrowse();
+  renderPreview();
   return row;
 }
 
