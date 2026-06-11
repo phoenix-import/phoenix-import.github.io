@@ -307,18 +307,19 @@ number-only SKU field are in. Remaining / planned:
 - **`grouptool` integration** (consider). Separate tool for product groupings. Decide
   by what it emits: if groupings feed the Shopify push (collections / Paragon
   associations) fold it into the pipeline; if not, just link it from the index.
-- **Material block** — **built (English; translation pending).** `material` block
-  type + `MATERIALS` (148 entries) + `renderMaterials`/`buildMaterialRow`
-  (multi-select, search, collapsible category checklist, drag-reorder, short/full +
-  correspondences toggle). Canonical multi-select (no free-text fallback — the
-  148-entry searchable list replaced that need). **Remaining: the 6-language
-  translation pass** — turn each `name/ess/bel` and the `ch/el/zo/pl` *values* from
-  flat English strings into `{NL,EN,DE,FR,IT,ES}` objects in `MATERIALS` (labels in
-  `MAT_LABELS` already done). It is canonical, so this is a direct edit of the data
-  const, *not* a `/translate` round-trip. Big job (≈148 × ~7 fields × 6) — do it in
-  chunks by category. *Not added to any `PRODUCT_TYPES` template yet* — it's a
-  hand-added palette item; consider defaulting it onto gemstone/mala/chakra types.
-  Source content: `esoteric_materials_beliefs.xlsx` (the user's upload).
+- **Material block** — **built and fully translated (all 6 locales).** `material`
+  block type + `MATERIALS` (148 entries, `name/ess/bel` as `{NL,EN,DE,FR,IT,ES}`
+  objects) + `MAT_TERMS` (correspondence-token dictionary, translated at render via
+  `matTransValue`) + `renderMaterials`/`buildMaterialRow` (multi-select, search,
+  collapsible category checklist, drag-reorder, Full/Short/Correspondences
+  checkboxes). Canonical multi-select (no free-text fallback — the 148-entry
+  searchable list replaced that need). Output: one `<p>` per material,
+  `<strong>Name</strong> | text`. Source content: `esoteric_materials_beliefs.xlsx`.
+  *Not added to any `PRODUCT_TYPES` template yet* — it's a hand-added palette item;
+  consider defaulting it onto gemstone/mala/chakra types. Re-translation/edits: the
+  `/tmp/tr_*.py` + `/tmp/merge_mats.py` pipeline pattern (English source +
+  per-id `{lang:{name,ess,bel}}` overrides → splice the const) is the clean way to
+  revise a batch.
 - 3 commercial entries (Selenite / Gemstone trees / Salt lamps) keep real `<ol>/<ul>`
   lists rather than inline `<br>` — left as lists pending the user's call.
 - Pre-existing saved blocks don't retroactively pick up format changes (e.g. the
