@@ -121,12 +121,21 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
 ## Adding content (cookbook)
 
 All of these are **data edits** — find the `const` near the top of the
-`<script>` and add an entry. **Apply every change to BOTH files** —
-`copy-block-builder.html` (V1) and `copy-suite-v2.html` (V2) — they must stay
-identical except V2's 4 sandbox lines (title, header, `STORAGE_KEY`,
-`loadProject` seed). Easiest: edit V1, then `cp copy-block-builder.html
-copy-suite-v2.html` and re-apply those 4 patches. After any edit, syntax-check
-with the Node `vm` pattern (see Verification).
+`<script>` and add an entry.
+
+> **V1/V2 sync — read this.** *While V2 is still a synced clone of V1 (the
+> current state)*, apply every change to **both** files; they should stay
+> identical except V2's 4 sandbox lines (title, header, `STORAGE_KEY`,
+> `loadProject` seed). Shortcut: edit V1, then `cp copy-block-builder.html
+> copy-suite-v2.html` and re-apply those 4 patches. **The moment V2 forks into
+> the independent AI-writing tool, this convention ENDS:** maintain the two
+> independently — never `cp` V1 over V2, and never propagate a change either
+> direction. *How to tell which phase you're in:* `diff copy-block-builder.html
+> copy-suite-v2.html` — if it's just the ~11 sandbox lines, V2 is still a clone
+> (mirror edits); anything more means V2 has diverged (treat them as separate
+> tools, edit only the one you mean).
+
+After any edit, syntax-check with the Node `vm` pattern (see Verification).
 
 When the user pastes raw HTML, **normalize it** first: decode entities to real
 UTF-8 **but keep `&amp;`** (literal `&`, e.g. "Yogi & Yogini"), `<br />`→`<br>`,
