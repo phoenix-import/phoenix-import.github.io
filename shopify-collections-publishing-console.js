@@ -81,7 +81,7 @@
         edges { node {
           handle
           title
-          productsCount
+          productsCount { count }
           ruleSet { appliedDisjunctively }   # present => smart (automated) collection
           ${chanFields}
         } }
@@ -95,7 +95,7 @@
         handle: node.handle,
         title: node.title,
         type: node.ruleSet ? 'smart' : 'custom',
-        products_count: node.productsCount,
+        products_count: node.productsCount?.count ?? '',
         online_store: onlineStore ? !!node[`ch${pubs.indexOf(onlineStore)}`] : '',
         channels_published_count: channelsOn.length,
         channels_published: channelsOn.join(' | '),
