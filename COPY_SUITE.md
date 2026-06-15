@@ -218,6 +218,16 @@ segments in order, disclaimers injected canonically, joined with `<br>`. Gated:
 `buildParsed` only pushes a locale whose **title** is translated. NL title
 required before generating the console-script.
 
+**Proofread re-ingest (Finalize):** the Finalize section is a 3-step flow —
+**1. download for proofread** (CSV/XLSX = `buildFinalRows`), **2. upload proofread
+final** (the file after the chat `/proofread` skill), **3. generate** script +
+Paragon imports. The upload sets `proofreadFinal = {rows,name,count}` (parsed via
+`readRows`, same `SKU,LANG,TITLE,COPY` shape); **`buildParsed` then sources from
+`proofreadFinal` when set, else the live project**, so the proofread copy is what
+actually gets pushed. A `#finSource` line shows which source is active; "Use live
+project" (`clearProofBtn`) clears it. Editing blocks does *not* auto-invalidate an
+uploaded file — clear it manually if you re-export.
+
 **The skill** (`.claude/skills/translate/`): file-in → translated-file-back.
 `translate_io.py extract <file>` detects base language + dumps `[[TR]]` cells to
 `/tmp/translate_cells.json`; the agent writes translations to
