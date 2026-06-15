@@ -68,7 +68,7 @@ the Pipeline Generator (every SKU needs an NL row).
 
 ---
 
-## Block types (the copy "segments") — `BLOCK_TYPES`, 19 of them
+## Block types (the copy "segments") — `BLOCK_TYPES`, 20 of them
 
 In spreadsheet order (from `copy_types.xlsx`, columns B–S):
 factual, evocative, **variant** (scent/colour — not in any template, added by
@@ -76,7 +76,13 @@ hand), sku, reach, weight_size, natural_disc, dye_disc, medical_disc,
 content_list (list seed), ingredients (list seed), composition, technical,
 esoteric, how_to_use, safety, brand_line, commercial, symbolism, **material**
 (multi-select gemstone/natural library — see below; not in any template, added
-by hand).
+by hand), **copied_html** (a raw-HTML `<textarea>` — paste markup straight from
+existing product descriptions; used verbatim, free-text/translatable, with a live
+render preview; nbsp stripped on input).
+
+> **Non-breaking spaces:** `escText` (the serializer) converts U+00A0 → regular
+> space so pasted nbsp never leaks into the output; `stripNbsp()` (U+00A0 *and*
+> literal `&nbsp;`) is applied to the Copied HTML textarea input.
 
 - Each block is a rich-text mini-editor; the toolbar + clean-HTML serializer are
   lifted from `copy-to-html-writer.html` (`escText`/`serializeNode`/`getHTML`).
