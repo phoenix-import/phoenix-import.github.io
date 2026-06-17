@@ -293,6 +293,8 @@
     <div class="product-actions">
       <button class="mini-btn" id="newProductBtn" title="Add a new blank product">＋ New</button>
       <button class="mini-btn" id="cloneProductBtn" title="Duplicate the selected product, then edit the copy">⧉ Clone</button>
+      <button class="mini-btn" id="importProductsBtn" title="Import a list of products (SKU in column A, title in column B) from XLSX or CSV">⭳ Import xlsx</button>
+      <input type="file" id="productsFile" accept=".csv,.xlsx,.xls" style="display:none">
     </div>
     <div class="product-list" id="productList"></div>
   </div>
@@ -1457,6 +1459,72 @@ document.getElementById('newProductBtn').addEventListener('click', () => {
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
   typeInput.focus();
+});
+
+// Batch-import a product list from XLSX/CSV: SKU in column A, title in column B.
+// The first row is treated as a supplier/header row and skipped; a leading
+// "NEW "/"NIEUW " is stripped from titles; SKUs already present are skipped.
+// Each imported product is blank (type 'generic') — ready to build copy in.
+function readSheetAOA(file) {
+  return new Promise((resolve, reject) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'csv') {
+      Papa.parse(file, { header: false, skipEmptyLines: true, complete: r => resolve(r.data), error: reject });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+          resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' }));
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    } else reject(new Error('Unsupported file type: ' + ext));
+  });
+}
+function cleanImportTitle(s) {
+  return stripNbsp(String(s == null ? '' : s)).replace(/^\s*(new|nieuw)\b[\s:.\-–]*/i, '').trim();
+}
+const productsFile = document.getElementById('productsFile');
+document.getElementById('importProductsBtn').addEventListener('click', () => productsFile.click());
+productsFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const aoa = await readSheetAOA(file);
+    const dataRows = aoa.slice(1); // skip supplier/header row
+    const existing = new Set(project.products.map(p => (p.sku || '').trim()).filter(Boolean));
+    const seen = new Set();
+    const items = []; let skippedDup = 0;
+    for (const row of dataRows) {
+      const sku = String(row && row[0] != null ? row[0] : '').trim();
+      const title = cleanImportTitle(row && row[1]);
+      if (!sku || !title) continue;
+      if (existing.has(sku) || seen.has(sku)) { skippedDup++; continue; }
+      seen.add(sku);
+      items.push({ sku, title });
+    }
+    if (!items.length) {
+      alert('No new SKU + title rows found' + (skippedDup ? ' (' + skippedDup + ' already present / duplicate).' : '.'));
+      e.target.value = ''; return;
+    }
+    const preview = items.slice(0, 6).map(it => '· ' + it.sku + ' — ' + it.title).join('\n');
+    const msg = 'Import ' + items.length + ' product(s)? (first row skipped as header)' +
+      (skippedDup ? '\n' + skippedDup + ' skipped — SKU already present or duplicate.' : '') +
+      '\n\n' + preview + (items.length > 6 ? '\n…' : '');
+    if (!confirm(msg)) { e.target.value = ''; return; }
+    let last = null;
+    for (const it of items) {
+      const np = { id: newId(), type: 'generic', sku: it.sku, title: it.title, blocks: [] };
+      project.products.push(np); last = np;
+    }
+    if (last) project.activeId = last.id;
+    activeEditor = null;
+    renderAll();
+    alert('Imported ' + items.length + ' product(s).' + (skippedDup ? ' Skipped ' + skippedDup + '.' : ''));
+  } catch (err) { alert('Could not read that file: ' + (err && err.message || err)); }
+  e.target.value = '';
 });
 
 document.getElementById('cloneProductBtn').addEventListener('click', () => {
