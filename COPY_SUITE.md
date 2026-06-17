@@ -218,6 +218,16 @@ segments in order, disclaimers injected canonically, joined with `<br>`. Gated:
 `buildParsed` only pushes a locale whose **title** is translated. NL title
 required before generating the console-script.
 
+**Proofread re-ingest (Finalize):** the Finalize section is a 3-step flow —
+**1. download for proofread** (CSV/XLSX = `buildFinalRows`), **2. upload proofread
+final** (the file after the chat `/proofread` skill), **3. generate** script +
+Paragon imports. The upload sets `proofreadFinal = {rows,name,count}` (parsed via
+`readRows`, same `SKU,LANG,TITLE,COPY` shape); **`buildParsed` then sources from
+`proofreadFinal` when set, else the live project**, so the proofread copy is what
+actually gets pushed. A `#finSource` line shows which source is active; "Use live
+project" (`clearProofBtn`) clears it. Editing blocks does *not* auto-invalidate an
+uploaded file — clear it manually if you re-export.
+
 **The skill** (`.claude/skills/translate/`): file-in → translated-file-back.
 `translate_io.py extract <file>` detects base language + dumps `[[TR]]` cells to
 `/tmp/translate_cells.json`; the agent writes translations to
@@ -305,11 +315,16 @@ Status: **V1 is approaching testing.** All universal disclaimers (incl. `dye_dis
 the per-type How-to/Safety, the symbolism (22) and commercial (15) libraries, and the
 number-only SKU field are in. Remaining / planned:
 
-- **Excel product/title batch import + normalizer** (planned). Copy Suite already
-  reads XLSX (SheetJS) and has the normalizer muscle from the snippet cleaning. Idea:
-  one product per row (SKU + title), with a normalizer stripping *purchasing
-  artefacts* (supplier prefixes, bracketed codes, "NIEUW", pack quantities, casing).
-  Crux = defining the artefact rules; needs a sample of raw purchasing titles.
+- **Excel product/title batch import + normalizer** — **built (v1).** Products pane
+  → **⭳ Import xlsx** (`#importProductsBtn` + `#productsFile`). Reads XLSX/CSV as an
+  array-of-arrays (`readSheetAOA`): **column A = SKU, column B = title**; the first
+  row is skipped as a supplier/header row; SKUs already present (or duplicated in the
+  file) are skipped; each import becomes a blank `generic` product. Title normalizer
+  `cleanImportTitle` currently strips a leading `NEW`/`NIEUW` followed by any run of
+  separators (`[\s:.\-–]*`, so "NEW  ", "NEW - ", "NEW: " all clean) and nbsp; word
+  boundary protects "Newel"/"Renewed". A confirm dialog previews the first rows.
+  Easy to extend with more artefact rules (bracketed codes, pack quantities, casing)
+  as samples come in.
 - **`grouptool` integration** (consider). Separate tool for product groupings. Decide
   by what it emits: if groupings feed the Shopify push (collections / Paragon
   associations) fold it into the pipeline; if not, just link it from the index.

@@ -245,6 +245,10 @@
     .fin-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
     .fin-head h2 { font-size: 15px; color: #68437B; margin: 0; }
     .fin-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .fin-step { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #68437B; margin-right: 2px; }
+    .fin-source { font-size: 12px; color: #6b7280; margin: 8px 0 2px; }
+    .fin-source .src-proof { color: #166534; font-weight: 600; }
+    .fin-source .src-live { color: #92704a; font-weight: 600; }
     .fin-script {
       width: 100%; min-height: 220px; margin-top: 12px; border: 1px solid #d1d5db; border-radius: 8px;
       padding: 12px; font-family: "Menlo", "Consolas", monospace; font-size: 12px; line-height: 1.6;
@@ -289,6 +293,8 @@
     <div class="product-actions">
       <button class="mini-btn" id="newProductBtn" title="Add a new blank product">＋ New</button>
       <button class="mini-btn" id="cloneProductBtn" title="Duplicate the selected product, then edit the copy">⧉ Clone</button>
+      <button class="mini-btn" id="importProductsBtn" title="Import a list of products (SKU in column A, title in column B) from XLSX or CSV">⭳ Import xlsx</button>
+      <input type="file" id="productsFile" accept=".csv,.xlsx,.xls" style="display:none">
     </div>
     <div class="product-list" id="productList"></div>
   </div>
@@ -391,16 +397,24 @@
     <span class="hint" id="finStatus"></span>
   </div>
   <div class="fin-row">
-    <button class="secondary" id="finalCsvBtn" title="Download the assembled SKU/LANG/TITLE/COPY import file as CSV">Download final CSV</button>
-    <button class="secondary" id="finalXlsxBtn" title="Download the assembled import file as XLSX">Download final XLSX</button>
+    <span class="fin-step">1. Proofread:</span>
+    <button class="secondary" id="finalCsvBtn" title="Download the assembled SKU/LANG/TITLE/COPY file to run through /proofread">Download for proofread (CSV)</button>
+    <button class="secondary" id="finalXlsxBtn" title="Download the assembled file (XLSX) to run through /proofread">Download for proofread (XLSX)</button>
     <span class="ctrl-sep"></span>
+    <button class="secondary" id="uploadProofBtn" title="Upload the proofread SKU/LANG/TITLE/COPY file — the script & Paragon imports are then built from it, not the live project">2. Upload proofread final…</button>
+    <button class="ghost" id="clearProofBtn" title="Discard the uploaded proofread file and build from the live project instead" style="display:none">Use live project</button>
+    <input type="file" id="proofFile" accept=".csv,.xlsx,.xls" style="display:none">
+  </div>
+  <div class="fin-source" id="finSource"></div>
+  <div class="fin-row">
+    <span class="fin-step">3. Generate:</span>
     <button class="secondary" id="genScriptBtn" title="Generate the Shopify console-script (NL + translations)">Generate console-script</button>
     <button class="ghost" id="copyScriptBtn" title="Copy the console-script" disabled>Copy script</button>
     <button class="ghost" id="prgProductBtn" title="Paragon product import (status=Active)">PRG_product_import.xlsx</button>
     <button class="ghost" id="prgAssocBtn" title="Paragon associations import">PRG_associated_import.xlsx</button>
   </div>
   <textarea id="scriptOut" class="fin-script" readonly spellcheck="false" placeholder="Console-script appears here — paste it into the Shopify storefront console and run."></textarea>
-  <p class="fin-note">Run the console-script on the <code>*.myshopify.com</code> storefront domain. For Paragon, import the product file first, then associations. Every SKU needs an NL title.</p>
+  <p class="fin-note">Recommended flow: <strong>download for proofread → run <code>/proofread</code> in chat → upload the proofread file → generate</strong>. The script &amp; Paragon imports build from the uploaded proofread file when present, otherwise from the live project. Run the console-script on the <code>*.myshopify.com</code> storefront domain. For Paragon, import the product file first, then associations. Every SKU needs an NL title.</p>
 </div>
 
 <script>
@@ -1388,6 +1402,13 @@ const formatSelect = document.getElementById('formatSelect');
 const finStatus    = document.getElementById('finStatus');
 const scriptOut    = document.getElementById('scriptOut');
 const transFile    = document.getElementById('transFile');
+const finSource    = document.getElementById('finSource');
+const proofFile    = document.getElementById('proofFile');
+
+// When set, the console-script + Paragon imports build from this uploaded,
+// proofread SKU/LANG/TITLE/COPY file instead of the live project.
+// Shape: { rows: [[SKU,LANG,TITLE,COPY], …] (with header), name, count }.
+let proofreadFinal = null;
 
 /* ---- Language controls ------------------------------------------------ */
 function renderLangControls() {
@@ -1441,6 +1462,72 @@ document.getElementById('newProductBtn').addEventListener('click', () => {
   activeEditor = null;
   renderProducts(); renderProductFields(); renderStack(); updateOutputs();
   typeInput.focus();
+});
+
+// Batch-import a product list from XLSX/CSV: SKU in column A, title in column B.
+// The first row is treated as a supplier/header row and skipped; a leading
+// "NEW "/"NIEUW " is stripped from titles; SKUs already present are skipped.
+// Each imported product is blank (type 'generic') — ready to build copy in.
+function readSheetAOA(file) {
+  return new Promise((resolve, reject) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'csv') {
+      Papa.parse(file, { header: false, skipEmptyLines: true, complete: r => resolve(r.data), error: reject });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+          resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' }));
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    } else reject(new Error('Unsupported file type: ' + ext));
+  });
+}
+function cleanImportTitle(s) {
+  return stripNbsp(String(s == null ? '' : s)).replace(/^\s*(new|nieuw)\b[\s:.\-–]*/i, '').trim();
+}
+const productsFile = document.getElementById('productsFile');
+document.getElementById('importProductsBtn').addEventListener('click', () => productsFile.click());
+productsFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const aoa = await readSheetAOA(file);
+    const dataRows = aoa.slice(1); // skip supplier/header row
+    const existing = new Set(project.products.map(p => (p.sku || '').trim()).filter(Boolean));
+    const seen = new Set();
+    const items = []; let skippedDup = 0;
+    for (const row of dataRows) {
+      const sku = String(row && row[0] != null ? row[0] : '').trim();
+      const title = cleanImportTitle(row && row[1]);
+      if (!sku || !title) continue;
+      if (existing.has(sku) || seen.has(sku)) { skippedDup++; continue; }
+      seen.add(sku);
+      items.push({ sku, title });
+    }
+    if (!items.length) {
+      alert('No new SKU + title rows found' + (skippedDup ? ' (' + skippedDup + ' already present / duplicate).' : '.'));
+      e.target.value = ''; return;
+    }
+    const preview = items.slice(0, 6).map(it => '· ' + it.sku + ' — ' + it.title).join('\n');
+    const msg = 'Import ' + items.length + ' product(s)? (first row skipped as header)' +
+      (skippedDup ? '\n' + skippedDup + ' skipped — SKU already present or duplicate.' : '') +
+      '\n\n' + preview + (items.length > 6 ? '\n…' : '');
+    if (!confirm(msg)) { e.target.value = ''; return; }
+    let last = null;
+    for (const it of items) {
+      const np = { id: newId(), type: 'generic', sku: it.sku, title: it.title, blocks: [] };
+      project.products.push(np); last = np;
+    }
+    if (last) project.activeId = last.id;
+    activeEditor = null;
+    renderAll();
+    alert('Imported ' + items.length + ' product(s).' + (skippedDup ? ' Skipped ' + skippedDup + '.' : ''));
+  } catch (err) { alert('Could not read that file: ' + (err && err.message || err)); }
+  e.target.value = '';
 });
 
 document.getElementById('cloneProductBtn').addEventListener('click', () => {
@@ -2147,6 +2234,7 @@ function updateOutputs() {
     const noNL = parsed.skus.filter(s => !parsed.byKey[s + '|NL'] || !parsed.byKey[s + '|NL'].title);
     finStatus.innerHTML = parsed.skus.length + ' SKU(s) · ' + Object.keys(parsed.byKey).length + ' locale-row(s) with content' +
       (noNL.length ? '  ·  <span class="warn">' + noNL.length + ' without NL title</span>' : '');
+    updateFinSource();
   }
   save(STORAGE_KEY, project);
 }
@@ -2302,7 +2390,8 @@ function buildHandle(titleSpecs, locale) {
 
 // Assemble the Pipeline's {skus, byKey} from the final rows (skipping empty locales).
 function buildParsed() {
-  const rows = buildFinalRows().slice(1);
+  // Build from the uploaded proofread file if one is loaded; else the live project.
+  const rows = (proofreadFinal ? proofreadFinal.rows : buildFinalRows()).slice(1);
   const byKey = {}; const skuSet = new Set();
   for (const [sku, lang, title, copy] of rows) {
     if (!sku) continue;
@@ -2516,6 +2605,45 @@ function buildScript(parsed) {
 }
 
 /* ---- Finalize controls ------------------------------------------------ */
+// Reflects which source the script & Paragon imports build from.
+function updateFinSource() {
+  if (!finSource) return;
+  const clearBtn = document.getElementById('clearProofBtn');
+  if (proofreadFinal) {
+    finSource.innerHTML = '<span class="src-proof">▶ Generating from proofread file:</span> ' +
+      escAttr(proofreadFinal.name) + ' · ' + proofreadFinal.count + ' row(s)';
+    if (clearBtn) clearBtn.style.display = '';
+  } else {
+    finSource.innerHTML = '<span class="src-live">▶ Generating from the live project</span> ' +
+      '(download → /proofread → upload to finalize)';
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+}
+
+document.getElementById('uploadProofBtn').addEventListener('click', () => proofFile.click());
+proofFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const data = await readRows(file);
+    const pick = (r, U, L) => (r[U] != null ? r[U] : (r[L] != null ? r[L] : ''));
+    const norm = data
+      .map(r => [pick(r,'SKU','sku'), pick(r,'LANG','lang'), pick(r,'TITLE','title'), pick(r,'COPY','copy')])
+      .filter(row => String(row[0]).trim());
+    if (!norm.length) { alert('No SKU/LANG/TITLE/COPY rows found in that file.'); e.target.value = ''; return; }
+    proofreadFinal = { rows: [['SKU','LANG','TITLE','COPY'], ...norm], name: file.name, count: norm.length };
+    scriptOut.value = ''; document.getElementById('copyScriptBtn').disabled = true; // stale
+    updateOutputs(); updateFinSource();
+    alert('Loaded proofread file (' + norm.length + ' rows). The console-script and Paragon imports will now build from it.');
+  } catch (err) { alert('Could not read that file: ' + (err && err.message || err)); }
+  e.target.value = '';
+});
+document.getElementById('clearProofBtn').addEventListener('click', () => {
+  proofreadFinal = null;
+  scriptOut.value = ''; document.getElementById('copyScriptBtn').disabled = true;
+  updateOutputs(); updateFinSource();
+});
+
 document.getElementById('finalCsvBtn').addEventListener('click', () => {
   download('phoenix-shopify-import.csv', toCSV(buildFinalRows()), 'text/csv;charset=utf-8;');
 });
