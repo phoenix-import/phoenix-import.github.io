@@ -22,7 +22,7 @@ Build copy in blocks        Export for translation        /translate (chat skill
                                                                                               injects canonical disclaimers
 ```
 
-Everything lives in **one HTML file** (`copy-block-builder.html`, displayed as
+Everything lives in **one HTML file** (`copy-suite.html`, displayed as
 "Copy Suite") plus a **skill** (`.claude/skills/translate/`).
 
 ---
@@ -31,7 +31,7 @@ Everything lives in **one HTML file** (`copy-block-builder.html`, displayed as
 
 | Path | Role |
 |---|---|
-| `copy-block-builder.html` | **Copy Suite (V1, live)**. Filename kept for stable URL/bookmarks; displayed name is "Copy Suite". localStorage key `copyBlockBuilder.project`. Linked in `index.html` under "Copy & content". |
+| `copy-suite.html` | **Copy Suite (V1, live)**. Displayed name is "Copy Suite". localStorage key `copyBlockBuilder.project` (internal JS string, unaffected by the filename). Linked in `index.html` under "Copy & content". |
 | `copy-suite-v2.html` | **Copy Suite V2 sandbox** — identical clone, own key `copySuiteV2.project` (seeded once from V1), **not linked in index**. Point of departure for what's next. |
 | `shopify-consoleimport.html` | **Pipeline Generator** (pre-existing). Consumes `SKU,LANG,TITLE,COPY` (CSV/XLSX) → Shopify console-script + two Paragon xlsx files. Its logic is embedded into Copy Suite's Finalize section. |
 | `copy-to-html-writer.html` | Source of the reused contenteditable serializer + toolbar (`serializeNode`/`getHTML`). |
@@ -154,11 +154,11 @@ All of these are **data edits** — find the `const` near the top of the
 > **V1/V2 sync — read this.** *While V2 is still a synced clone of V1 (the
 > current state)*, apply every change to **both** files; they should stay
 > identical except V2's 4 sandbox lines (title, header, `STORAGE_KEY`,
-> `loadProject` seed). Shortcut: edit V1, then `cp copy-block-builder.html
+> `loadProject` seed). Shortcut: edit V1, then `cp copy-suite.html
 > copy-suite-v2.html` and re-apply those 4 patches. **The moment V2 forks into
 > the independent AI-writing tool, this convention ENDS:** maintain the two
 > independently — never `cp` V1 over V2, and never propagate a change either
-> direction. *How to tell which phase you're in:* `diff copy-block-builder.html
+> direction. *How to tell which phase you're in:* `diff copy-suite.html
 > copy-suite-v2.html` — if it's just the ~11 sandbox lines, V2 is still a clone
 > (mirror edits); anything more means V2 has diverged (treat them as separate
 > tools, edit only the one you mean).
@@ -277,8 +277,9 @@ zip was handed to the user.
   reader risk; Copy Suite imports CSV reliably.
 - **`[[TR]]` sentinel + zero-remaining check** — gives `/translate` a
   deterministic completion signal (user's idea).
-- **Filename `copy-block-builder.html` kept on rename to "Copy Suite"** — stable
-  URL/bookmarks/localStorage.
+- **Renamed `copy-block-builder.html` → `copy-suite.html`** to match the
+  displayed name. Single-user tool, so no redirect stub for old bookmarks;
+  localStorage key (`copyBlockBuilder.project`) is path-independent and unaffected.
 - **Per-product Type selector replaced the standalone "Product type" block.**
 
 ## Verification approach
