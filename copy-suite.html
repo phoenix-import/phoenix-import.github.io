@@ -635,6 +635,56 @@ const TYPE_SNIPPETS = {
   }
 };
 
+// Per-block snippet libraries: How-to-use / Safety variants the user can pick
+// from a dropdown (like boilerplate). Each product type auto-selects a default
+// variant via SNIPPET_DEFAULTS; the dropdown overrides it. Variant texts are
+// reused from TYPE_SNIPPETS (single source of truth) plus standalone additions.
+const SNIPPET_LIBRARIES = {
+  how_to_use: {
+    incense:        { label: "Incense sticks/cones",     text: TYPE_SNIPPETS.incense.how_to_use },
+    candle:         { label: "Candle",                   text: TYPE_SNIPPETS.candle.how_to_use },
+    essential_oil:  { label: "Essential oil / diffuser", text: TYPE_SNIPPETS.essential_oil.how_to_use },
+    incense_burner: { label: "Incense burner",           text: TYPE_SNIPPETS.incense_burner.how_to_use }
+  },
+  safety: {
+    incense:        { label: "Incense",            text: TYPE_SNIPPETS.incense.safety },
+    candle:         { label: "Candle",             text: TYPE_SNIPPETS.candle.safety },
+    essential_oil:  { label: "Essential oil",      text: TYPE_SNIPPETS.essential_oil.safety },
+    incense_burner: { label: "Incense burner",     text: TYPE_SNIPPETS.incense_burner.safety },
+    candle_holder:  { label: "Candle holder / lantern", text: {
+      NL: "<p><strong>Veiligheid</strong><br>Altijd op een hittebestendig oppervlak plaatsen<br>Buiten bereik van kinderen en huisdieren houden<br>Laat brandende kaarsen niet onbeheerd achter</p>",
+      EN: "<p><strong>Safety</strong><br>Always place on a heat resistant surface<br>Keep out of reach of children and pets<br>Do not leave burning candles unattended</p>",
+      DE: "<p><strong>Sicherheit</strong><br>Immer auf eine hitzebeständige Oberfläche stellen<br>Außerhalb der Reichweite von Kindern und Haustieren aufbewahren<br>Brennende Kerzen niemals unbeaufsichtigt lassen</p>",
+      FR: "<p><strong>Sécurité</strong><br>Toujours placer sur une surface résistante à la chaleur<br>Tenir hors de portée des enfants et des animaux domestiques<br>Ne jamais laisser des bougies allumées sans surveillance</p>",
+      IT: "<p><strong>Sicurezza</strong><br>Posizionare sempre su una superficie resistente al calore<br>Tenere fuori dalla portata di bambini e animali domestici<br>Non lasciare mai candele accese incustodite</p>",
+      ES: "<p><strong>Seguridad</strong><br>Colocar siempre sobre una superficie resistente al calor<br>Mantener fuera del alcance de los niños y las mascotas<br>No dejar nunca velas encendidas sin vigilancia</p>"
+    } }
+  }
+};
+
+// Product type → default snippet variant per block type (the current
+// auto-selection). A block with no explicit choice falls back to this.
+const SNIPPET_DEFAULTS = {
+  incense:               { how_to_use: 'incense',        safety: 'incense' },
+  candle:                { how_to_use: 'candle',         safety: 'candle' },
+  essential_oil:         { how_to_use: 'essential_oil',  safety: 'essential_oil' },
+  incense_burner:        { how_to_use: 'incense_burner', safety: 'incense_burner' },
+  candle_holder_lantern: { safety: 'candle_holder' }
+};
+
+// Effective snippet variant for a block: an explicit choice (block.snip) wins;
+// '' means manual/free-text; undefined falls back to the product-type default.
+function snippetKey(b, productType) {
+  if (!b || !SNIPPET_LIBRARIES[b.type]) return null;
+  const key = (b.snip !== undefined) ? b.snip
+            : ((SNIPPET_DEFAULTS[productType] || {})[b.type] || '');
+  return (key && SNIPPET_LIBRARIES[b.type][key]) ? key : null;
+}
+function snippetEntry(b, productType) {
+  const k = snippetKey(b, productType);
+  return k ? SNIPPET_LIBRARIES[b.type][k] : null;
+}
+
 // Per-block boilerplate libraries: a block type → named entries, each with text
 // in all six languages, chosen per block via the block's `lib` field.
 const BLOCK_LIBRARIES = {
@@ -1244,14 +1294,14 @@ function canonicalText(b, productType, lang) {
     const t = SNIPPETS[b.type][lang] || SNIPPETS[b.type].NL;
     return t ? '<p><em>' + escText(t) + '</em></p>' : '';
   }
-  const ts = TYPE_SNIPPETS[productType];
-  if (ts && ts[b.type]) return ts[b.type][lang] || ts[b.type].NL || '';
+  const s = snippetEntry(b, productType);
+  if (s) return s.text[lang] || s.text.NL || '';
   const e = libEntry(b);
   if (e) return e.text[lang] || e.text.NL || '';
   return null;
 }
 function isCanonical(b, productType) {
-  return b.type === 'material' || b.type === 'sku' || !!SNIPPETS[b.type] || !!(TYPE_SNIPPETS[productType] && TYPE_SNIPPETS[productType][b.type]) || !!libEntry(b);
+  return b.type === 'material' || b.type === 'sku' || !!SNIPPETS[b.type] || !!snippetEntry(b, productType) || !!libEntry(b);
 }
 // Is the block still holding its canonical text (any language) — i.e. unedited?
 function isUneditedCanonical(b, productType) {
@@ -1349,6 +1399,7 @@ function sanitizeBlocks(arr) {
     const block = { id: b.id || newId(), type, html: typeof b.html === 'string' ? b.html : '' };
     if (type === 'sku' && b.qty != null && String(b.qty).trim()) block.qty = String(b.qty).trim();
     if (b.lib && BLOCK_LIBRARIES[type] && BLOCK_LIBRARIES[type][b.lib]) block.lib = b.lib;
+    if (SNIPPET_LIBRARIES[type] && typeof b.snip === 'string' && (b.snip === '' || SNIPPET_LIBRARIES[type][b.snip])) block.snip = b.snip;
     const t = sanitizeTrans(b.t); if (t) block.t = t;
     return block;
   }).filter(Boolean);
@@ -1534,7 +1585,7 @@ document.getElementById('cloneProductBtn').addEventListener('click', () => {
     type: p.type,
     sku: p.sku,
     title: p.title,
-    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html, ...(b.qty ? { qty: b.qty } : {}), ...(b.lib ? { lib: b.lib } : {}), ...(b.t ? { t: { ...b.t } } : {}) }))
+    blocks: p.blocks.map(b => ({ id: newId(), type: b.type, html: b.html, ...(b.qty ? { qty: b.qty } : {}), ...(b.lib ? { lib: b.lib } : {}), ...(b.snip !== undefined ? { snip: b.snip } : {}), ...(b.t ? { t: { ...b.t } } : {}) }))
   };
   if (p.titleT) copy.titleT = { ...p.titleT };
   const idx = project.products.findIndex(x => x.id === p.id);
@@ -1653,6 +1704,7 @@ function renderStack() {
     head.querySelector('.block-label').textContent = cfg.label;
     card.appendChild(head);
     if (BLOCK_LIBRARIES[block.type]) card.appendChild(buildLibRow(block));
+    if (SNIPPET_LIBRARIES[block.type]) card.appendChild(buildSnippetRow(block));
     let editor = null;
     if (block.type === 'sku') {
       card.appendChild(buildSkuRow(card, block));
@@ -1920,6 +1972,48 @@ function buildLibRow(block) {
   row.appendChild(lbl);
   row.appendChild(sel);
   return row;
+}
+// A snippet picker for How-to-use / Safety blocks. Default reflects the
+// product-type auto-selection; choosing a variant overrides it.
+function buildSnippetRow(block) {
+  const p = activeProduct();
+  const row = document.createElement('div');
+  row.className = 'lib-row';
+  const lbl = document.createElement('span');
+  lbl.className = 'lib-label';
+  lbl.textContent = 'Snippet:';
+  const sel = document.createElement('select');
+  sel.className = 'lib-select';
+  const other = document.createElement('option');
+  other.value = ''; other.textContent = 'Other (manual entry)';
+  sel.appendChild(other);
+  Object.entries(SNIPPET_LIBRARIES[block.type])
+    .sort((a, b) => a[1].label.localeCompare(b[1].label))
+    .forEach(([k, e]) => {
+      const o = document.createElement('option');
+      o.value = k; o.textContent = e.label;
+      sel.appendChild(o);
+    });
+  sel.value = snippetKey(block, p && p.type) || '';
+  sel.addEventListener('change', () => onSnippetChange(block, sel.value));
+  row.appendChild(lbl);
+  row.appendChild(sel);
+  return row;
+}
+// Selecting a snippet variant fills the block with its base-language text and marks
+// it canonical (injected per language, excluded from translation). "Other" = free text.
+function onSnippetChange(block, key) {
+  const p = activeProduct(); if (!p) return;
+  if (key && SNIPPET_LIBRARIES[block.type] && SNIPPET_LIBRARIES[block.type][key]) {
+    block.snip = key;
+    block.html = canonicalText(block, p.type, project.baseLang);
+    delete block.t; // canonical now — drop any stale translations
+  } else {
+    block.snip = ''; // explicit manual entry; keep current html as a starting point
+  }
+  activeEditor = null;
+  renderStack();
+  updateOutputs();
 }
 // Selecting a named boilerplate fills the block with its base-language text and marks
 // it canonical (injected per language, excluded from translation). "Other" = free text.
