@@ -1284,7 +1284,10 @@ function renderMaterials(b, L) {
 // Canonical HTML for a block (instance) + product type + language, or null if the
 // block is free-text. SKU template, then universal SNIPPETS, then per-type snippets,
 // then per-block library.
-function canonicalText(b, productType, lang) {
+// Raw library text for a block in a language, IGNORING any edits the user made:
+// SKU template, universal SNIPPETS disclaimers, per-type How-to-use/Safety
+// snippets, then per-block boilerplate library. null = no canonical source.
+function canonicalSource(b, productType, lang) {
   if (b.type === 'material') return renderMaterials(b, lang);
   if (b.type === 'sku') {
     const n = (b.qty == null ? '' : String(b.qty)).trim();
@@ -1300,22 +1303,35 @@ function canonicalText(b, productType, lang) {
   if (e) return e.text[lang] || e.text.NL || '';
   return null;
 }
-function isCanonical(b, productType) {
-  return b.type === 'material' || b.type === 'sku' || !!SNIPPETS[b.type] || !!snippetEntry(b, productType) || !!libEntry(b);
-}
-// Is the block still holding its canonical text (any language) — i.e. unedited?
+// Is the block still holding its canonical source text (in any language) — i.e.
+// picked from a library/snippet and NOT since rewritten in the base language?
 function isUneditedCanonical(b, productType) {
-  return VALID_LOCALES.some(L => { const c = canonicalText(b, productType, L); return c && b.html === c; });
+  return VALID_LOCALES.some(L => { const c = canonicalSource(b, productType, L); return c && b.html === c; });
+}
+// Whether a block is treated as canonical: injected per language and excluded
+// from translation. Structural blocks (SKU/material) and fixed disclaimers are
+// always canonical; library-picked text (How-to-use/Safety snippets, boilerplate)
+// is canonical ONLY until its base text is edited — once rewritten it becomes a
+// normal translatable block so the change is picked up by /translate.
+function isCanonical(b, productType) {
+  if (b.type === 'material' || b.type === 'sku' || SNIPPETS[b.type]) return true;
+  if (snippetEntry(b, productType) || libEntry(b)) return isUneditedCanonical(b, productType);
+  return false;
+}
+// Effective canonical text for rendering and translation gating: the source text
+// while the block is canonical, otherwise null (so edited blocks render as free text).
+function canonicalText(b, productType, lang) {
+  return isCanonical(b, productType) ? canonicalSource(b, productType, lang) : null;
 }
 // Refresh unedited canonical blocks to the current base language (after a base change).
 function reseedSnippets() {
   for (const p of project.products)
     for (const b of p.blocks)
-      if (isUneditedCanonical(b, p.type)) b.html = canonicalText(b, p.type, project.baseLang);
+      if (isUneditedCanonical(b, p.type)) b.html = canonicalSource(b, p.type, project.baseLang);
 }
 
 function seedHtml(blockType, productType) {
-  const c = canonicalText({ type: blockType }, productType, project.baseLang);
+  const c = canonicalSource({ type: blockType }, productType, project.baseLang);
   if (c) return c;
   return BLOCK_TYPES[blockType] && BLOCK_TYPES[blockType].seed === 'list' ? '<ul><li><br></li></ul>' : '';
 }
@@ -1742,7 +1758,7 @@ function buildSkuRow(card, block) {
   const preview = document.createElement('div');
   preview.className = 'sku-preview';
   const refresh = () => {
-    block.html = canonicalText(block, (activeProduct() || {}).type, project.baseLang);
+    block.html = canonicalSource(block, (activeProduct() || {}).type, project.baseLang);
     preview.innerHTML = block.html || '<span class="sku-hint">enter a quantity →</span>';
   };
   input.addEventListener('mousedown', () => { card.draggable = false; });
@@ -1791,7 +1807,7 @@ function buildMaterialRow(card, block) {
 
   const ptype = () => (activeProduct() || {}).type;
   const sync = () => {
-    block.html = canonicalText(block, ptype(), project.baseLang);
+    block.html = canonicalSource(block, ptype(), project.baseLang);
     renderSelected();
     renderPreview();
     updateOutputs();
@@ -1940,7 +1956,7 @@ function buildMaterialRow(card, block) {
     preview.innerHTML = html;
   }
 
-  block.html = canonicalText(block, ptype(), project.baseLang); // keep base html fresh
+  block.html = canonicalSource(block, ptype(), project.baseLang); // keep base html fresh
   setOpen(false);
   renderSelected();
   renderBrowse();
@@ -2006,7 +2022,7 @@ function onSnippetChange(block, key) {
   const p = activeProduct(); if (!p) return;
   if (key && SNIPPET_LIBRARIES[block.type] && SNIPPET_LIBRARIES[block.type][key]) {
     block.snip = key;
-    block.html = canonicalText(block, p.type, project.baseLang);
+    block.html = canonicalSource(block, p.type, project.baseLang);
     delete block.t; // canonical now — drop any stale translations
   } else {
     block.snip = ''; // explicit manual entry; keep current html as a starting point
@@ -2021,7 +2037,7 @@ function onLibChange(block, key) {
   const p = activeProduct(); if (!p) return;
   if (key && BLOCK_LIBRARIES[block.type] && BLOCK_LIBRARIES[block.type][key]) {
     block.lib = key;
-    block.html = canonicalText(block, p.type, project.baseLang);
+    block.html = canonicalSource(block, p.type, project.baseLang);
     delete block.t; // canonical now — drop any stale translations
   } else {
     delete block.lib; // back to free-text; keep current html as a starting point

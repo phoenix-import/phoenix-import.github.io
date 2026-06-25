@@ -100,23 +100,34 @@ Essential oil, …).
 
 ## Standardized snippets — `SNIPPETS` + `TYPE_SNIPPETS` + `BLOCK_LIBRARIES`
 
-Three layers of canonical (never-translated) text, resolved by `canonicalText(block, productType, lang)`:
+Layers of canonical (never-translated) text. `canonicalSource(block, productType, lang)`
+returns the **raw** library text for a layer (ignoring edits); `canonicalText(...)`
+is the **effective** wrapper that returns it only while `isCanonical` holds, else
+`null`. Resolution order: SNIPPETS → snippet library → boilerplate library.
 - **`SNIPPETS`** (universal, per block type) — from `standardized_disclaimers.xlsx`:
   canonical text in all 6 languages for `reach`, `weight_size`, `natural_disc`,
-  `dye_disc`, `medical_disc`.
-- **`TYPE_SNIPPETS`** (per product type → per block) — from
-  `warnings_and_how_to_use.xlsx`: `how_to_use` + `safety` text in all 6 languages
-  for `incense`, `candle`, `essential_oil`, `incense_burner`. So those blocks are
-  standardized *only* for those types; the same block type stays free-text for
-  other product types.
+  `dye_disc`, `medical_disc`. **Always canonical** (fixed legal text).
+- **`SNIPPET_LIBRARIES`** (per block type → named variants, chosen per block via a
+  **dropdown**, like boilerplate) — `how_to_use` and `safety`. Variant texts reuse
+  `TYPE_SNIPPETS` (`incense`, `candle`, `essential_oil`, `incense_burner`) plus a
+  standalone `candle_holder` safety variant. `SNIPPET_DEFAULTS` maps a product type
+  to its auto-selected variant (e.g. `candle_holder_lantern` → `candle_holder`
+  safety); `block.snip` overrides it, `''` = manual free-text, absent = the default.
+  Product types with no default seed **blank/manual** and are translated normally.
 - **`BLOCK_LIBRARIES`** (per block type → named entries, chosen per block via a
   dropdown) — `symbolism` (22 entries incl. Feng Shui, from `symbolism_boilerplate.xlsx`)
   and `commercial` (14 entries, from `Commercial_boilerplate.xlsx`). The block
   stores the chosen entry in `block.lib`; "Other" = free-text. Adding a block type
-  to `BLOCK_LIBRARIES` automatically gives its cards a picker. `isCanonical(block,
-  productType)` decides; resolution order is SNIPPETS → TYPE_SNIPPETS → library.
+  to `BLOCK_LIBRARIES` automatically gives its cards a picker.
   (Note: `feng_shui_products`/`feng_shui_crystals` templates use `symbolism`, not
   `commercial` — their Feng Shui boilerplate lives in the symbolism library.)
+- **Edit = de-canonicalize.** For snippet/boilerplate blocks, `isCanonical` holds
+  *only while unedited* (`isUneditedCanonical`: `block.html` still matches
+  `canonicalSource` in some language). Rewrite the base-language text and the block
+  becomes a normal translatable block — it enters the translation file and the other
+  languages stop being injected from the library. Re-picking the same variant resets
+  it to the library text and drops stale `block.t`. (SNIPPETS disclaimers and
+  SKU/material stay canonical regardless of edits.)
 - **`material` block** (the gemstone/natural library) — a *fourth* canonical layer,
   but multi-select instead of single-pick. Data lives in `const MATERIALS` (148
   id-keyed entries: `name, ess` essence, `bel` beliefs, `ch/el/zo/pl`
@@ -138,7 +149,7 @@ Three layers of canonical (never-translated) text, resolved by `canonicalText(bl
   `{NL,EN,…}` object — `matPick()` already reads either shape, and the 4
   correspondence *labels* (`MAT_LABELS`) are localised for all six locales now.
 - Those blocks **auto-fill** with the base-language canonical text when added.
-- Switching base language refreshes *unedited* snippet blocks (`isUneditedSnippet`).
+- Switching base language refreshes *unedited* canonical blocks (`isUneditedCanonical` → `reseedSnippets`).
 - **Crucially**, these are NEVER machine-translated. They are excluded from the
   translation file and **injected canonically per language** at final assembly
   (`blockTextForLang`). This is the one rule that keeps legal/standard wording
@@ -175,7 +186,7 @@ strip Word/MSO `<span style>`/`class="MsoNormal"`, `<div>`→`<p>`, drop empty
 |---|---|---|---|
 | **Boilerplate dropdown entry** (symbolism/commercial) | `BLOCK_LIBRARIES.<blocktype>` | `key: { label: "Name", text: {NL,…,ES} }` (values = full HTML) | Most common. Quote keys that start with a digit (`"108"`, `"432_hz"`). |
 | **Universal disclaimer** | `SNIPPETS` | `key: {NL,…,ES}` (values = **plain text**) | Auto-wrapped in `<p><em>…</em></p>` (italic). `key` must also be a `BLOCK_TYPES` key. |
-| **Per-type how-to/safety** | `TYPE_SNIPPETS.<type>.<block>` | `{NL,…,ES}` (full HTML) | Canonical only for that product type; free-text elsewhere. |
+| **How-to/safety snippet variant** | `SNIPPET_LIBRARIES.<block>` (text may alias `TYPE_SNIPPETS.<type>.<block>`) | `key: { label: "Name", text: {NL,…,ES} }` (full HTML) | Shown in the block's Snippet dropdown. Wire its product-type default in `SNIPPET_DEFAULTS`; types with no default seed blank/manual. |
 | **Product type** | `PRODUCT_TYPES` | `key: { label: "Name", blocks: ["factual","sku",…] }` | `blocks` are `BLOCK_TYPES` keys, in display order. |
 | **Block type** (new segment) | `BLOCK_TYPES` | `key: { label: "Name", seed: "text"\|"list" }` | Add a palette item automatically. |
 | **SKU phrasing** | `SKU_TEMPLATE` | `{NL: "… {n} …", …}` | `{n}` = the quantity the user types. |
@@ -346,6 +357,12 @@ number-only SKU field are in. Remaining / planned:
   lists rather than inline `<br>` — left as lists pending the user's call.
 - Pre-existing saved blocks don't retroactively pick up format changes (e.g. the
   disclaimer italics) until re-picked or a base-language toggle; fresh builds are fine.
+  Note: if a library entry's **text** changes (not just format), an old saved block no
+  longer matches `canonicalSource`, so it now reads as *edited* → de-canonicalized →
+  flagged for translation (rather than silently serving old-base + new-other-langs).
+  Re-pick the variant to reset all six languages to the new text. This is the same
+  `isCanonical`-while-unedited rule that lets a user rewrite a snippet's base text and
+  have the other languages picked up by `/translate`.
 - Optgroup grouping for the 48-item type dropdown (by category) if it feels long.
 - Larger translation batches: chunking story for `/translate` noted but untested at scale.
 - **V2 = independent AI writing tool** (next, left to Claude's judgement). Reuses this
