@@ -141,6 +141,16 @@
   <div id="reviewArea" style="display:none">
     <div id="completeness"></div>
 
+    <div class="card" id="axisLabelCard" style="margin-top:10px">
+      <label class="row" style="gap:8px; cursor:pointer">
+        <input type="checkbox" id="axisLabelEnabled" checked>
+        <strong style="color:var(--purple)">Also overwrite the axis-1 label (<code class="k">groepsomschrijving</code>) on every written member</strong>
+      </label>
+      <p class="help" style="margin:4px 0 8px">Sets the &ldquo;what varies&rdquo; label in all 6 languages on each split member (NL is the base value; EN/DE/FR/IT/ES are registered as translations). The per-member axis <em>value</em> (<code class="k">groepswaarde_1</code>) is left untouched.</p>
+      <div class="row" id="axisLabelInputs"></div>
+      <div id="axisValueWarn" class="small" style="margin-top:6px"></div>
+    </div>
+
     <div class="row" style="margin:10px 0 4px">
       <strong style="color:var(--purple)">Proposed groups</strong>
       <button class="tiny" id="btnNewBucket">+ New group</button>
@@ -412,6 +422,10 @@ document.getElementById('btnDownloadDump').addEventListener('click', () => {
 // Step 2 — load dump, bucket, review
 // ============================================================================
 const REVIEW = '__review__';
+const LANGS = ['nl','en','de','fr','it','es'];
+const DEFAULT_AXIS_LABEL = { nl:'Soort', en:'Type', de:'Typ', fr:'Type', it:'Tipo', es:'Tipo' };
+let axisLabel = { ...DEFAULT_AXIS_LABEL };
+let axisLabelEnabled = true;
 let dump = null;          // { seedSku, seedGid, seedGroupGids, members:[...] }
 let memberByGid = {};     // gid -> member (enriched with spec/specSource)
 let buckets = [];         // [{ key, label }]  (key REVIEW is implicit, not stored here)
@@ -459,7 +473,46 @@ function ingestDump(d) {
   });
   document.getElementById('reviewArea').style.display = '';
   document.getElementById('footerActions').style.display = '';
+  renderAxisLabelInputs();
   renderReview();
+}
+
+function renderAxisLabelInputs() {
+  const wrap = document.getElementById('axisLabelInputs');
+  wrap.innerHTML = '';
+  LANGS.forEach(l => {
+    const d = document.createElement('div');
+    d.style.display = 'flex'; d.style.flexDirection = 'column'; d.style.gap = '2px';
+    const lab = document.createElement('label');
+    lab.className = 'small'; lab.style.fontWeight = '600'; lab.style.color = 'var(--purple)';
+    lab.textContent = l.toUpperCase();
+    const inp = document.createElement('input');
+    inp.className = 'txt'; inp.style.width = '110px'; inp.value = axisLabel[l] || '';
+    inp.placeholder = DEFAULT_AXIS_LABEL[l];
+    inp.addEventListener('input', () => { axisLabel[l] = inp.value; });
+    d.appendChild(lab); d.appendChild(inp); wrap.appendChild(d);
+  });
+  const cb = document.getElementById('axisLabelEnabled');
+  cb.checked = axisLabelEnabled;
+  cb.onchange = () => { axisLabelEnabled = cb.checked; renderReview(); };
+}
+
+function renderAxisWarn() {
+  const el = document.getElementById('axisValueWarn');
+  if (!dump) { el.textContent = ''; return; }
+  document.getElementById('axisLabelInputs').style.opacity = axisLabelEnabled ? '1' : '.5';
+  if (!axisLabelEnabled) { el.textContent = ''; return; }
+  const written = writableBuckets().reduce((acc, b) => acc.concat(membersInBucket(b.key)), []);
+  const missing = written.filter(m => !(m.axis1Value && String(m.axis1Value).trim()));
+  if (missing.length) {
+    el.innerHTML = '⚠ ' + missing.length + ' member(s) being written have no current axis value (<code class="k">groepswaarde_1</code>): '
+      + missing.map(m => '<code class="k">' + escapeHtml(m.sku || m.gid) + '</code>').join(' ')
+      + '. The label is set but they have no value to vary on — fill those in GroupTool / Shopify.';
+    el.style.color = 'var(--warn)';
+  } else {
+    el.innerHTML = '✓ All members being written already have an axis value (<code class="k">groepswaarde_1</code>).';
+    el.style.color = 'var(--ok)';
+  }
 }
 
 function mostCommon(arr) {
@@ -482,6 +535,7 @@ function renderReview() {
   renderCompleteness();
   renderBuckets();
   renderSummary();
+  renderAxisWarn();
 }
 
 function renderCompleteness() {
@@ -614,6 +668,7 @@ document.getElementById('btnNewBucket').addEventListener('click', () => {
 const SPLIT_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — WRITE (partition one pile into N disjoint groups)
 // Run on https://manibhadra-phoeniximport.myshopify.com/ (storefront, NOT admin)
 // REPLACES each member's custom.groep_producten with only its bucket-mates.
+// Optionally overwrites the axis-1 label custom.groepsomschrijving (+ translations).
 
 (async () => {
   const TOKEN = 'PASTE_TOKEN_HERE';
@@ -621,6 +676,8 @@ const SPLIT_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — WRITE (partition on
   if (TOKEN === 'PASTE_TOKEN_HERE') { console.error('Set TOKEN at the top of the script.'); return; }
 
   const WRITES = __WRITES__; // [{ sku, gid, group, groupGids:[...] }]
+  const LABEL = __LABEL__;   // { nl,en,de,fr,it,es } or null — axis-1 label forced on every member
+  const TR_LANGS = ['en','de','fr','it','es']; // NL is the base metafield value
 
   async function gql(query, variables) {
     const res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','X-Shopify-Access-Token':TOKEN}, body: JSON.stringify({ query, variables }) });
@@ -635,11 +692,34 @@ const SPLIT_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — WRITE (partition on
       ownerId: w.gid, namespace: 'custom', key: 'groep_producten',
       type: 'list.product_reference', value: JSON.stringify(w.groupGids),
     }];
-    const setRes = await gql(\`mutation($mfs:[MetafieldsSetInput!]!){metafieldsSet(metafields:$mfs){metafields{id} userErrors{field message}}}\`, { mfs });
+    if (LABEL && LABEL.nl) {
+      mfs.push({
+        ownerId: w.gid, namespace: 'custom', key: 'groepsomschrijving',
+        type: 'list.single_line_text_field', value: JSON.stringify([LABEL.nl]),
+      });
+    }
+    const setRes = await gql(\`mutation($mfs:[MetafieldsSetInput!]!){metafieldsSet(metafields:$mfs){metafields{id namespace key} userErrors{field message}}}\`, { mfs });
     const errs = setRes && setRes.metafieldsSet && setRes.metafieldsSet.userErrors;
     if (errs && errs.length) console.error('[' + w.sku + '] set errors:', errs);
-    else console.log('[split] ' + w.sku + ' (' + w.group + ') -> ' + w.groupGids.length + ' references');
-    results.push({ sku: w.sku, group: w.group, refs: w.groupGids.length, ok: !(errs && errs.length) });
+
+    // Register translations for the axis-1 label we just (re)wrote.
+    if (LABEL && LABEL.nl && setRes && setRes.metafieldsSet) {
+      const labelMf = setRes.metafieldsSet.metafields.find(x => x.namespace === 'custom' && x.key === 'groepsomschrijving');
+      if (labelMf) {
+        const dig = await gql(\`query($id:ID!){translatableResource(resourceId:$id){translatableContent{key digest value}}}\`, { id: labelMf.id });
+        const content = dig && dig.translatableResource && dig.translatableResource.translatableContent.find(c => c.key === 'value');
+        if (content) {
+          const trans = TR_LANGS.filter(lc => LABEL[lc]).map(lc => ({ locale: lc, key: 'value', value: JSON.stringify([LABEL[lc]]), translatableContentDigest: content.digest }));
+          const reg = await gql(\`mutation($id:ID!,$trans:[TranslationInput!]!){translationsRegister(resourceId:$id,translations:$trans){userErrors{field message}}}\`, { id: labelMf.id, trans });
+          const terr = reg && reg.translationsRegister && reg.translationsRegister.userErrors;
+          if (terr && terr.length) console.error('[' + w.sku + '] label translation errors:', terr);
+        } else { console.warn('[' + w.sku + '] no digest for groepsomschrijving'); }
+      }
+    }
+
+    const ok = !(errs && errs.length);
+    console.log('[split] ' + w.sku + ' (' + w.group + ') -> ' + w.groupGids.length + ' references' + (LABEL && LABEL.nl ? ' + label' : ''));
+    results.push({ sku: w.sku, group: w.group, refs: w.groupGids.length, label: !!(LABEL && LABEL.nl), ok });
   }
 
   window._phoenixSplitResults = results;
@@ -663,15 +743,23 @@ function buildWrites() {
 document.getElementById('btnGenerateSplit').addEventListener('click', () => {
   const writes = buildWrites();
   if (!writes.length) { alert('No writable groups (each needs ≥2 members).'); return; }
-  const raw = SPLIT_SCRIPT_TEMPLATE.replace('__WRITES__', JSON.stringify(writes, null, 2));
-  const finalScript = cachedToken ? raw.replace("'PASTE_TOKEN_HERE'", JSON.stringify(cachedToken)) : raw;
+  let label = null;
+  if (axisLabelEnabled) {
+    if (!axisLabel.nl.trim()) { alert('The axis-1 label is enabled but its NL value is empty. Fill it or untick the label option.'); return; }
+    label = {}; LANGS.forEach(l => label[l] = (axisLabel[l] || '').trim());
+  }
+  const raw = SPLIT_SCRIPT_TEMPLATE
+    .replace('__WRITES__', () => JSON.stringify(writes, null, 2))
+    .replace('__LABEL__', () => JSON.stringify(label));
+  const finalScript = cachedToken ? raw.replace("'PASTE_TOKEN_HERE'", () => JSON.stringify(cachedToken)) : raw;
   document.getElementById('scriptOutput').textContent = finalScript;
   const wb = writableBuckets();
   document.getElementById('scriptModalSub').innerHTML = (cachedToken
     ? 'Token from <code>token.txt</code> baked in. '
     : '<code>token.txt</code> not found — replace <code>PASTE_TOKEN_HERE</code> first. ')
     + 'Splits into <strong>' + wb.length + '</strong> group(s): ' + wb.map(b => escapeHtml(b.label || b.key) + ' (' + membersInBucket(b.key).length + ')').join(', ')
-    + '. Run on the storefront DevTools console. <strong>This REPLACES groep_producten</strong> on every listed member.';
+    + '. Run on the storefront DevTools console. <strong>This REPLACES groep_producten</strong> on every listed member'
+    + (label ? ' and overwrites the <code>groepsomschrijving</code> label (' + escapeHtml(label.nl) + ' +5 locales)' : '') + '.';
   document.getElementById('scriptModal').classList.add('open');
 });
 
