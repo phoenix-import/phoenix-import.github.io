@@ -345,14 +345,28 @@ const DUMP_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — DUMP (read an over-s
 
   // Read a metafield's base value + all locale translations into {nl,en,de,fr,it,es}.
   // Works for plain and list.single_line_text_field (unwrapList strips ["…"]).
+  // NOTE: TranslatableResource.translations takes a required locale arg and returns
+  // a plain list (NOT a "first:" connection) — so we alias one field per locale.
   async function getMfTranslations(mfId) {
     if (!mfId) return null;
-    const d = await gql(\`query($id:ID!){translatableResource(resourceId:$id){translatableContent{key digest value} translations(first:20){locale value}}}\`, { id: mfId });
-    if (!d || !d.translatableResource) return null;
+    const d = await gql(\`query($id:ID!){translatableResource(resourceId:$id){
+      translatableContent{ key value }
+      en: translations(locale:"en"){ key value }
+      de: translations(locale:"de"){ key value }
+      fr: translations(locale:"fr"){ key value }
+      it: translations(locale:"it"){ key value }
+      es: translations(locale:"es"){ key value }
+    }}\`, { id: mfId });
+    const tr = d && d.translatableResource;
+    if (!tr) return null;
     const out = { nl:'', en:'', de:'', fr:'', it:'', es:'' };
-    const valC = d.translatableResource.translatableContent.find(c => c.key === 'value');
-    if (valC) out.nl = unwrapList(valC.value);
-    d.translatableResource.translations.forEach(t => { if (out.hasOwnProperty(t.locale)) out[t.locale] = unwrapList(t.value); });
+    const baseC = tr.translatableContent.find(c => c.key === 'value');
+    if (baseC) out.nl = unwrapList(baseC.value);
+    ['en','de','fr','it','es'].forEach(lc => {
+      const arr = tr[lc] || [];
+      const t = arr.find(x => x.key === 'value');
+      if (t) out[lc] = unwrapList(t.value);
+    });
     return out;
   }
 
