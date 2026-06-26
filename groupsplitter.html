@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phoenix Group Splitter</title>
+<style>
+  :root {
+    --purple: #68437B;
+    --pink: #ca427e;
+    --bg: #faf7fb;
+    --card: #fff;
+    --border: #e3dee5;
+    --text: #2a1f30;
+    --muted: #6e6075;
+    --ok: #2f7d5b;
+    --warn: #b15600;
+    --danger: #b00;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font: 14px/1.45 Calibri, "Segoe UI", system-ui, sans-serif; color: var(--text); background: var(--bg); }
+  header { background: var(--purple); color: #fff; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,.08); }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .actions { display: flex; gap: 8px; align-items: center; }
+  header .folder-info { font-size: 12px; color: rgba(255,255,255,.85); margin-right: 6px; }
+  button { font: inherit; padding: 7px 13px; border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 4px; cursor: pointer; }
+  button:hover { background: #f3eef6; }
+  button.primary { background: var(--pink); color: #fff; border-color: var(--pink); }
+  button.primary:hover { background: #b03a6e; }
+  button.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+  button.ghost:hover { background: rgba(255,255,255,.12); }
+  button.tiny { padding: 3px 7px; font-size: 12px; }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px; }
+
+  h2.section-h { font-size: 14px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 22px 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px; }
+  .help { color: var(--muted); font-size: 12px; padding: 2px 0; }
+  .small { font-size: 12px; color: var(--muted); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  input.txt { font: inherit; padding: 5px 8px; border: 1px solid var(--border); border-radius: 3px; }
+  code.k { background: #f3eef6; color: var(--purple); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+  .banner { border-radius: 6px; padding: 10px 14px; margin: 8px 0; font-size: 13px; }
+  .banner.ok { background: #eaf6ef; border: 1px solid #bfe3cd; color: var(--ok); }
+  .banner.warn { background: #fdf3e7; border: 1px solid #f0d9b5; color: var(--warn); }
+  .banner.info { background: #eef0f7; border: 1px solid #d3d8ec; color: #3a3f63; }
+
+  .bucket { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+  .bucket-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #f6f1f8; border-bottom: 1px solid var(--border); }
+  .bucket-head .count { font-size: 12px; color: var(--muted); }
+  .bucket-head input.label { font: inherit; font-weight: 600; color: var(--purple); padding: 4px 7px; border: 1px solid var(--border); border-radius: 3px; flex: 1; min-width: 120px; }
+  .bucket.review .bucket-head { background: #fdf3e7; }
+  .bucket.single .bucket-head { background: #fbeef0; }
+  .bucket.willwrite .bucket-head { background: #eaf6ef; }
+
+  table.members { width: 100%; border-collapse: collapse; }
+  table.members th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  table.members td { padding: 6px 10px; border-bottom: 1px solid #f0ecf2; vertical-align: top; }
+  table.members tr:last-child td { border-bottom: none; }
+  td.sku { font-weight: 600; white-space: nowrap; }
+  td.title { color: var(--text); }
+  td.spec { color: var(--purple); white-space: nowrap; }
+  td.axis { color: var(--muted); font-size: 12px; }
+  td.flags { white-space: nowrap; }
+  .flag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+  .flag.warn { background: #fde8cf; color: var(--warn); }
+  .flag.extra { background: #e7eefb; color: #2a4d8f; }
+  select.assign { font: inherit; padding: 3px 6px; border: 1px solid var(--border); border-radius: 3px; max-width: 200px; }
+
+  .footer-actions { display: flex; gap: 10px; justify-content: flex-end; align-items: center; padding: 14px 0; position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); margin-top: 14px; }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(20,10,30,.45); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 6px; padding: 22px 24px; width: 760px; max-width: 96vw; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .modal h2 { font-size: 16px; margin: 0 0 4px; color: var(--purple); }
+  .modal .modal-sub { color: var(--muted); margin-bottom: 14px; font-size: 13px; }
+  .modal .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  pre.script { background: #1c1426; color: #f5e6f5; font: 12px/1.5 Consolas, monospace; padding: 14px; border-radius: 4px; max-height: 360px; overflow: auto; white-space: pre; }
+
+  #bootScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  #bootScreen.hidden { display: none; }
+  .boot-card { max-width: 560px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 30px 32px; }
+  .boot-card h2 { color: var(--purple); margin: 0 0 8px; font-size: 22px; }
+  .boot-card p { color: var(--muted); margin: 0 0 16px; }
+  .boot-card .boot-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .boot-card .boot-error { color: var(--danger); font-size: 13px; margin-top: 10px; }
+  .boot-card code.path { background: #f3eef6; color: var(--purple); padding: 2px 6px; border-radius: 3px; font-size: 12px; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<div id="bootScreen">
+  <div class="boot-card">
+    <h2>Phoenix Group Splitter</h2>
+    <p>Pick the folder where <code>token.txt</code> lives (the same folder used by SpecTool / GroupTool). The tool reads the token automatically.</p>
+    <p class="small">Expected location: <code class="path">C:\Users\&hellip;\Phoenix import - D2322\Data - Documenten\Inkoop\Shopify specificatie beheer</code></p>
+    <div class="boot-actions">
+      <button class="primary" id="btnPickFolder">Pick folder</button>
+    </div>
+    <div class="boot-error" id="bootError"></div>
+    <p class="small" id="browserNote" style="margin-top:14px"></p>
+  </div>
+</div>
+
+<header style="display:none" id="appHeader">
+  <h1>Phoenix Group Splitter</h1>
+  <div class="actions">
+    <span class="folder-info" id="folderInfo"></span>
+    <button class="ghost" id="btnReload">Reload token</button>
+    <button class="ghost" id="btnSwitchFolder">Switch folder</button>
+  </div>
+</header>
+
+<main id="appMain" style="display:none">
+
+  <h2 class="section-h">Step 1 &middot; Dump the existing group</h2>
+  <div class="card">
+    <p class="help" style="margin-top:0">Type any SKU from the over-stuffed group. The dump script pulls the whole <code class="k">groep_producten</code> pile, every member's title + SEO spec (the bit after <code class="k">--</code>), each member's own group set (to catch members that disagree), and the current axis values. It downloads a JSON file you load in Step 2.</p>
+    <div class="row">
+      <input id="seedSku" class="txt" type="text" placeholder="e.g. 78385" style="min-width:160px">
+      <button class="primary" id="btnGenerateDump">Generate dump script</button>
+    </div>
+    <pre id="dumpScriptOutput" class="script" style="display:none; margin-top:10px; max-height:240px"></pre>
+    <div id="dumpScriptActions" class="row" style="display:none; margin-top:6px">
+      <button id="btnCopyDump">Copy to clipboard</button>
+      <button id="btnDownloadDump">Download .js</button>
+    </div>
+  </div>
+
+  <h2 class="section-h">Step 2 &middot; Load the dump &amp; review the split</h2>
+  <div class="card">
+    <div class="row">
+      <input id="dumpFile" type="file" accept="application/json">
+      <span class="help">Drop the JSON the dump script downloaded.</span>
+    </div>
+    <div id="loadStatus" class="small" style="margin-top:6px"></div>
+  </div>
+
+  <div id="reviewArea" style="display:none">
+    <div id="completeness"></div>
+
+    <div class="row" style="margin:10px 0 4px">
+      <strong style="color:var(--purple)">Proposed groups</strong>
+      <button class="tiny" id="btnNewBucket">+ New group</button>
+      <span class="help">Each group becomes its own <code class="k">groep_producten</code>. Re-assign members with the dropdown. Groups with &lt; 2 members and the Review bin are not written.</span>
+    </div>
+    <div id="buckets"></div>
+  </div>
+
+  <div class="footer-actions" id="footerActions" style="display:none">
+    <span class="small" id="writeSummary"></span>
+    <button id="btnGenerateSplit" class="primary">Generate split script</button>
+  </div>
+</main>
+
+<div class="modal-bg" id="scriptModal">
+  <div class="modal">
+    <h2>Split script ready</h2>
+    <div class="modal-sub" id="scriptModalSub"></div>
+    <pre id="scriptOutput" class="script"></pre>
+    <div class="modal-actions">
+      <button id="btnCloseScript">Close</button>
+      <button id="btnCopyScript">Copy to clipboard</button>
+      <button class="primary" id="btnDownloadScript">Download .js</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN_FILENAME = 'token.txt';
+
+// Share the folder handle with GroupTool (same IndexedDB) so the folder is picked once.
+const IDB_NAME = 'phoenix-group-tool';
+const IDB_STORE = 'handles';
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(val, key);
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+  });
+}
+async function idbDel(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);
+  });
+}
+
+let dirHandle = null;
+let cachedToken = null;
+
+async function ensurePermission(handle, mode = 'read') {
+  const opts = { mode };
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  if ((await handle.requestPermission(opts)) === 'granted') return true;
+  return false;
+}
+async function loadFromDirHandle(handle) {
+  if (!await ensurePermission(handle, 'read')) throw new Error('Permission to read the folder was denied.');
+  dirHandle = handle;
+  await reloadToken();
+  await idbSet('dirHandle', dirHandle);
+  showApp();
+}
+async function reloadToken() {
+  cachedToken = null;
+  if (!dirHandle) return;
+  try {
+    const handle = await dirHandle.getFileHandle(TOKEN_FILENAME);
+    const file = await handle.getFile();
+    const text = (await file.text()).trim();
+    if (text) cachedToken = text;
+  } catch (e) { /* missing or unreadable */ }
+  refreshFolderInfo();
+}
+function refreshFolderInfo() {
+  const el = document.getElementById('folderInfo');
+  if (!el) return;
+  const folderTxt = dirHandle ? dirHandle.name : '';
+  const tokenTxt = cachedToken ? ' · ● token loaded' : (dirHandle ? ' · ● token.txt missing' : '');
+  el.textContent = folderTxt + tokenTxt;
+}
+function showApp() {
+  document.getElementById('bootScreen').classList.add('hidden');
+  document.getElementById('appHeader').style.display = '';
+  document.getElementById('appMain').style.display = '';
+  refreshFolderInfo();
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Parse the spec exactly like the Pipeline Generator: split on the first '--'.
+function splitTitleSpec(s) {
+  if (typeof s !== 'string' || !s.includes('--')) return { title: (s || '').trim(), spec: '' };
+  const parts = s.split('--');
+  return { title: parts[0].trim(), spec: parts.slice(1).join('--').trim() };
+}
+// Pick the best spec for a member: SEO title, then SEO description, then product title.
+function bestSpec(member) {
+  for (const [src, val] of [['seoTitle', member.seoTitle], ['seoDescription', member.seoDescription], ['title', member.title]]) {
+    const { spec } = splitTitleSpec(val);
+    if (spec) return { spec, source: src };
+  }
+  return { spec: '', source: null };
+}
+// Normalized bucket key from a spec string (accent/case/punct-insensitive).
+function specKey(s) {
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim().replace(/\s+/g, ' ');
+}
+
+// ============================================================================
+// Step 1 — dump script
+// ============================================================================
+const DUMP_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — DUMP (read an over-stuffed group -> JSON file)
+// Run on https://manibhadra-phoeniximport.myshopify.com/ (storefront, NOT admin)
+
+(async () => {
+  const TOKEN = 'PASTE_TOKEN_HERE';
+  const API = 'https://manibhadra-phoeniximport.myshopify.com/admin/api/2024-01/graphql.json';
+  const SEED_SKU = '__SEED_SKU__';
+  if (TOKEN === 'PASTE_TOKEN_HERE') { console.error('Set TOKEN at the top of the script.'); return; }
+
+  async function gql(q, v) {
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','X-Shopify-Access-Token':TOKEN}, body: JSON.stringify({query:q, variables:v}) });
+    const j = await r.json();
+    if (j.errors) console.error('GraphQL errors:', j.errors);
+    return j.data;
+  }
+  function unwrapList(v) {
+    if (typeof v !== 'string') return v;
+    const t = v.trim();
+    if (t.startsWith('[') && t.endsWith(']')) {
+      try { const a = JSON.parse(t); if (Array.isArray(a) && a.length === 1) return a[0]; if (Array.isArray(a) && a.length === 0) return ''; } catch (e) {}
+    }
+    return v;
+  }
+  function parseGroup(v) {
+    if (!v) return [];
+    try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+
+  const PRODUCT_Q = \`query($id:ID!){product(id:$id){
+    title
+    seo { title description }
+    variants(first:1){edges{node{sku}}}
+    mGroep: metafield(namespace:"custom", key:"groep_producten"){ value }
+    mDesc1: metafield(namespace:"custom", key:"groepsomschrijving"){ value }
+    mVal1:  metafield(namespace:"custom", key:"groepswaarde_1"){ value }
+    mDesc2: metafield(namespace:"custom", key:"groepsomschrijving_2"){ value }
+    mVal2:  metafield(namespace:"custom", key:"groepswaarde_2"){ value }
+  }}\`;
+
+  console.log('[split-dump] Looking up seed SKU ' + SEED_SKU + '...');
+  const seedData = await gql(\`query($q:String!){productVariants(first:5,query:$q){edges{node{sku product{id}}}}}\`, { q: 'sku:' + SEED_SKU });
+  const seedVariant = seedData && seedData.productVariants.edges.map(e=>e.node).find(v => v.sku === SEED_SKU);
+  if (!seedVariant) { console.error('[split-dump] Seed SKU not found.'); return; }
+  const seedGid = seedVariant.product.id;
+
+  async function fetchProduct(gid) {
+    const d = await gql(PRODUCT_Q, { id: gid });
+    const p = d && d.product; if (!p) return null;
+    return {
+      gid,
+      sku: (p.variants.edges[0] && p.variants.edges[0].node.sku) || '',
+      title: p.title || '',
+      seoTitle: (p.seo && p.seo.title) || '',
+      seoDescription: (p.seo && p.seo.description) || '',
+      groupSet: parseGroup(p.mGroep && p.mGroep.value),
+      axis1Label: unwrapList(p.mDesc1 && p.mDesc1.value),
+      axis1Value: (p.mVal1 && p.mVal1.value) || '',
+      axis2Label: (p.mDesc2 && p.mDesc2.value) || '',
+      axis2Value: (p.mVal2 && p.mVal2.value) || '',
+    };
+  }
+
+  // Seed first, then everything its group references (plus the seed itself).
+  const seed = await fetchProduct(seedGid);
+  if (!seed) { console.error('[split-dump] Could not read seed product.'); return; }
+  const seedGroupGids = [...new Set([seedGid, ...seed.groupSet])];
+  console.log('[split-dump] Seed group lists ' + seedGroupGids.length + ' members. Reading each...');
+
+  const byGid = { [seedGid]: seed };
+  for (const gid of seedGroupGids) {
+    if (byGid[gid]) continue;
+    const m = await fetchProduct(gid);
+    if (m) byGid[gid] = m; else console.warn('[split-dump] Could not resolve ' + gid);
+  }
+
+  // Completeness: union every member's own group set. Pull any cross-referenced
+  // product the seed didn't list, so an asymmetric pile is fully captured.
+  const union = new Set(seedGroupGids);
+  Object.values(byGid).forEach(m => m.groupSet.forEach(g => union.add(g)));
+  const extra = [...union].filter(g => !byGid[g]);
+  for (const gid of extra) {
+    const m = await fetchProduct(gid);
+    if (m) { m.discoveredExtra = true; byGid[gid] = m; console.warn('[split-dump] Discovered extra member via cross-reference: ' + gid + ' (' + m.sku + ')'); }
+  }
+
+  const members = Object.values(byGid).map(m => ({
+    ...m,
+    matchesSeed: JSON.stringify([...new Set([m.gid, ...m.groupSet])].sort()) === JSON.stringify([...seedGroupGids].sort()),
+  }));
+
+  const result = { seedSku: SEED_SKU, seedGid, seedGroupGids, members };
+  console.log('[split-dump] ' + members.length + ' members total. Result on window._phoenixSplitDump');
+  console.table(members.map(m => ({ sku: m.sku, title: m.title, seoTitle: m.seoTitle, extra: !!m.discoveredExtra, matchesSeed: m.matchesSeed })));
+  window._phoenixSplitDump = result;
+
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'phoenix-group-split-dump-' + SEED_SKU + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  console.log('[split-dump] Downloaded JSON. Load it into the Group Splitter.');
+})();
+`;
+
+let dumpScript = '';
+document.getElementById('btnGenerateDump').addEventListener('click', () => {
+  const sku = document.getElementById('seedSku').value.trim();
+  if (!sku) { alert('Enter a SKU.'); return; }
+  const raw = DUMP_SCRIPT_TEMPLATE.replace('__SEED_SKU__', sku);
+  dumpScript = cachedToken ? raw.replace("'PASTE_TOKEN_HERE'", JSON.stringify(cachedToken)) : raw;
+  const out = document.getElementById('dumpScriptOutput');
+  out.textContent = dumpScript;
+  out.style.display = 'block';
+  document.getElementById('dumpScriptActions').style.display = 'flex';
+});
+document.getElementById('btnCopyDump').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(dumpScript);
+    document.getElementById('btnCopyDump').textContent = 'Copied ✓';
+    setTimeout(() => document.getElementById('btnCopyDump').textContent = 'Copy to clipboard', 1800);
+  } catch (e) { alert('Copy failed: ' + e.message); }
+});
+document.getElementById('btnDownloadDump').addEventListener('click', () => {
+  const blob = new Blob([dumpScript], { type: 'application/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'phoenix-group-split-dump-' + Date.now() + '.js';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+// ============================================================================
+// Step 2 — load dump, bucket, review
+// ============================================================================
+const REVIEW = '__review__';
+let dump = null;          // { seedSku, seedGid, seedGroupGids, members:[...] }
+let memberByGid = {};     // gid -> member (enriched with spec/specSource)
+let buckets = [];         // [{ key, label }]  (key REVIEW is implicit, not stored here)
+let assignment = {};      // gid -> bucket key | REVIEW
+
+document.getElementById('dumpFile').addEventListener('change', () => {
+  const f = document.getElementById('dumpFile').files[0]; if (!f) return;
+  const r = new FileReader();
+  const status = document.getElementById('loadStatus');
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!d.members || !Array.isArray(d.members)) throw new Error('Not a valid split dump (no members array).');
+      ingestDump(d);
+      status.textContent = 'Loaded ' + d.members.length + ' members from seed ' + (d.seedSku || '?') + '.';
+      status.style.color = 'var(--ok)';
+    } catch (e) {
+      status.textContent = 'Load failed: ' + e.message;
+      status.style.color = 'var(--danger)';
+    }
+  };
+  r.readAsText(f);
+});
+
+function ingestDump(d) {
+  dump = d;
+  memberByGid = {};
+  assignment = {};
+  d.members.forEach(m => {
+    const { spec, source } = bestSpec(m);
+    m.spec = spec; m.specSource = source; m.specKey = specKey(spec);
+    memberByGid[m.gid] = m;
+  });
+  // Auto-bucket by spec key. Empty spec -> Review.
+  const keys = [];
+  d.members.forEach(m => {
+    if (!m.specKey) { assignment[m.gid] = REVIEW; return; }
+    if (!keys.includes(m.specKey)) keys.push(m.specKey);
+    assignment[m.gid] = m.specKey;
+  });
+  // Bucket label = the most common original spec text for that key.
+  buckets = keys.map(k => {
+    const texts = d.members.filter(m => m.specKey === k).map(m => m.spec);
+    return { key: k, label: mostCommon(texts) };
+  });
+  document.getElementById('reviewArea').style.display = '';
+  document.getElementById('footerActions').style.display = '';
+  renderReview();
+}
+
+function mostCommon(arr) {
+  const c = {}; let best = arr[0] || '', bestN = 0;
+  arr.forEach(x => { c[x] = (c[x] || 0) + 1; if (c[x] > bestN) { bestN = c[x]; best = x; } });
+  return best;
+}
+
+function membersInBucket(key) {
+  return dump.members.filter(m => assignment[m.gid] === key);
+}
+function writableBuckets() {
+  return buckets.filter(b => membersInBucket(b.key).length >= 2);
+}
+
+// ============================================================================
+// Render
+// ============================================================================
+function renderReview() {
+  renderCompleteness();
+  renderBuckets();
+  renderSummary();
+}
+
+function renderCompleteness() {
+  const el = document.getElementById('completeness');
+  const total = dump.members.length;
+  const extra = dump.members.filter(m => m.discoveredExtra);
+  const mismatched = dump.members.filter(m => !m.matchesSeed && !m.discoveredExtra);
+  const noSpec = dump.members.filter(m => !m.specKey);
+  let html = '<div class="banner info"><strong>' + total + ' members</strong> pulled from seed <code class="k">' + escapeHtml(dump.seedSku || '?') + '</code> ('
+    + escapeHtml(String(dump.seedGroupGids ? dump.seedGroupGids.length : total)) + ' listed by the seed itself).</div>';
+  if (extra.length) {
+    html += '<div class="banner warn">⚠ <strong>' + extra.length + '</strong> member(s) were referenced by other products but <em>not</em> in the seed&rsquo;s own list — discovered via cross-reference: '
+      + extra.map(m => '<code class="k">' + escapeHtml(m.sku || m.gid) + '</code>').join(' ') + '. They are included below.</div>';
+  }
+  if (mismatched.length) {
+    html += '<div class="banner warn">⚠ <strong>' + mismatched.length + '</strong> member(s) have a group set that differs from the seed&rsquo;s — the pile is asymmetric. Splitting fixes this (every member is rewritten). Affected: '
+      + mismatched.map(m => '<code class="k">' + escapeHtml(m.sku || m.gid) + '</code>').join(' ') + '.</div>';
+  }
+  if (noSpec.length) {
+    html += '<div class="banner warn">⚠ <strong>' + noSpec.length + '</strong> member(s) have no <code class="k">--</code> spec in their SEO title/description — parked in <strong>Review</strong>. Assign them by hand.</div>';
+  }
+  el.innerHTML = html;
+}
+
+function bucketOptionsHtml(selectedKey) {
+  let opts = '';
+  buckets.forEach(b => {
+    const n = membersInBucket(b.key).length;
+    opts += '<option value="' + escapeHtml(b.key) + '"' + (b.key === selectedKey ? ' selected' : '') + '>'
+      + escapeHtml(b.label || '(unnamed)') + ' (' + n + ')</option>';
+  });
+  opts += '<option value="' + REVIEW + '"' + (selectedKey === REVIEW ? ' selected' : '') + '>— Review (don\'t write) —</option>';
+  return opts;
+}
+
+function renderBuckets() {
+  const root = document.getElementById('buckets');
+  root.innerHTML = '';
+  // Render real buckets in order, then the Review bin.
+  buckets.forEach(b => root.appendChild(renderBucketCard(b.key, b.label, false)));
+  root.appendChild(renderBucketCard(REVIEW, 'Review / unassigned', true));
+}
+
+function renderBucketCard(key, label, isReview) {
+  const members = membersInBucket(key);
+  const card = document.createElement('div');
+  const willWrite = !isReview && members.length >= 2;
+  const single = !isReview && members.length === 1;
+  card.className = 'bucket' + (isReview ? ' review' : willWrite ? ' willwrite' : single ? ' single' : '');
+
+  const head = document.createElement('div');
+  head.className = 'bucket-head';
+  if (isReview) {
+    head.innerHTML = '<strong style="flex:1; color:var(--warn)">' + escapeHtml(label) + '</strong>'
+      + '<span class="count">' + members.length + ' member(s) — not written</span>';
+  } else {
+    const labelInput = document.createElement('input');
+    labelInput.className = 'label'; labelInput.value = label || '';
+    labelInput.placeholder = 'group label (e.g. per 2 bundels)';
+    labelInput.addEventListener('input', e => { const bk = buckets.find(x => x.key === key); if (bk) bk.label = e.target.value; renderSummary(); });
+    head.appendChild(labelInput);
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.innerHTML = willWrite ? ('● will write — ' + members.length + ' members') : ('⚠ ' + members.length + ' member — needs ≥2 to write');
+    head.appendChild(count);
+  }
+  card.appendChild(head);
+
+  if (members.length) {
+    const table = document.createElement('table');
+    table.className = 'members';
+    table.innerHTML = '<thead><tr><th>SKU</th><th>Title</th><th>Spec</th><th>Current axis</th><th>Flags</th><th>Move to</th></tr></thead>';
+    const tb = document.createElement('tbody');
+    members.forEach(m => tb.appendChild(renderMemberRow(m, key)));
+    table.appendChild(tb);
+    card.appendChild(table);
+  } else if (!isReview) {
+    const empty = document.createElement('div');
+    empty.className = 'help'; empty.style.padding = '8px 12px';
+    empty.textContent = 'No members — move some here or it is ignored.';
+    card.appendChild(empty);
+  }
+  return card;
+}
+
+function renderMemberRow(m, currentKey) {
+  const tr = document.createElement('tr');
+  const display = splitTitleSpec(m.seoTitle || m.title).title || m.title;
+  let flags = '';
+  if (m.discoveredExtra) flags += '<span class="flag extra">cross-ref</span>';
+  if (!m.matchesSeed && !m.discoveredExtra) flags += '<span class="flag warn">asymmetric</span>';
+  if (!m.specKey) flags += '<span class="flag warn">no spec</span>';
+  tr.innerHTML =
+    '<td class="sku">' + escapeHtml(m.sku || '') + '</td>'
+    + '<td class="title">' + escapeHtml(display) + '</td>'
+    + '<td class="spec">' + (m.spec ? escapeHtml(m.spec) : '<span class="small">—</span>') + '</td>'
+    + '<td class="axis">' + escapeHtml(m.axis1Value || '') + '</td>'
+    + '<td class="flags">' + flags + '</td>'
+    + '<td></td>';
+  const sel = document.createElement('select');
+  sel.className = 'assign';
+  sel.innerHTML = bucketOptionsHtml(currentKey);
+  sel.addEventListener('change', () => { assignment[m.gid] = sel.value; renderReview(); });
+  tr.lastElementChild.appendChild(sel);
+  return tr;
+}
+
+function renderSummary() {
+  const wb = writableBuckets();
+  const written = wb.reduce((n, b) => n + membersInBucket(b.key).length, 0);
+  const parked = dump.members.length - written;
+  const el = document.getElementById('writeSummary');
+  el.innerHTML = wb.length
+    ? ('<strong>' + wb.length + '</strong> group(s), <strong>' + written + '</strong> members rewritten · ' + parked + ' parked')
+    : 'No writable groups yet (need ≥2 members each).';
+  document.getElementById('btnGenerateSplit').disabled = wb.length === 0;
+}
+
+document.getElementById('btnNewBucket').addEventListener('click', () => {
+  const label = prompt('New group label (e.g. "doos van 24"):', '');
+  if (label == null) return;
+  const key = 'custom-' + Date.now().toString(36);
+  buckets.push({ key, label: label.trim() });
+  renderReview();
+});
+
+// ============================================================================
+// Step 3 — split (write) script
+// ============================================================================
+const SPLIT_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — WRITE (partition one pile into N disjoint groups)
+// Run on https://manibhadra-phoeniximport.myshopify.com/ (storefront, NOT admin)
+// REPLACES each member's custom.groep_producten with only its bucket-mates.
+
+(async () => {
+  const TOKEN = 'PASTE_TOKEN_HERE';
+  const API = 'https://manibhadra-phoeniximport.myshopify.com/admin/api/2024-01/graphql.json';
+  if (TOKEN === 'PASTE_TOKEN_HERE') { console.error('Set TOKEN at the top of the script.'); return; }
+
+  const WRITES = __WRITES__; // [{ sku, gid, group, groupGids:[...] }]
+
+  async function gql(query, variables) {
+    const res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','X-Shopify-Access-Token':TOKEN}, body: JSON.stringify({ query, variables }) });
+    const j = await res.json();
+    if (j.errors) console.error('GraphQL errors:', j.errors);
+    return j.data;
+  }
+
+  const results = [];
+  for (const w of WRITES) {
+    const mfs = [{
+      ownerId: w.gid, namespace: 'custom', key: 'groep_producten',
+      type: 'list.product_reference', value: JSON.stringify(w.groupGids),
+    }];
+    const setRes = await gql(\`mutation($mfs:[MetafieldsSetInput!]!){metafieldsSet(metafields:$mfs){metafields{id} userErrors{field message}}}\`, { mfs });
+    const errs = setRes && setRes.metafieldsSet && setRes.metafieldsSet.userErrors;
+    if (errs && errs.length) console.error('[' + w.sku + '] set errors:', errs);
+    else console.log('[split] ' + w.sku + ' (' + w.group + ') -> ' + w.groupGids.length + ' references');
+    results.push({ sku: w.sku, group: w.group, refs: w.groupGids.length, ok: !(errs && errs.length) });
+  }
+
+  window._phoenixSplitResults = results;
+  console.log('[split] All done. Results on window._phoenixSplitResults');
+  console.table(results);
+})();
+`;
+
+function buildWrites() {
+  const writes = [];
+  writableBuckets().forEach(b => {
+    const members = membersInBucket(b.key);
+    const gids = members.map(m => m.gid);
+    members.forEach(m => {
+      writes.push({ sku: m.sku, gid: m.gid, group: b.label || b.key, groupGids: gids.filter(g => g !== m.gid) });
+    });
+  });
+  return writes;
+}
+
+document.getElementById('btnGenerateSplit').addEventListener('click', () => {
+  const writes = buildWrites();
+  if (!writes.length) { alert('No writable groups (each needs ≥2 members).'); return; }
+  const raw = SPLIT_SCRIPT_TEMPLATE.replace('__WRITES__', JSON.stringify(writes, null, 2));
+  const finalScript = cachedToken ? raw.replace("'PASTE_TOKEN_HERE'", JSON.stringify(cachedToken)) : raw;
+  document.getElementById('scriptOutput').textContent = finalScript;
+  const wb = writableBuckets();
+  document.getElementById('scriptModalSub').innerHTML = (cachedToken
+    ? 'Token from <code>token.txt</code> baked in. '
+    : '<code>token.txt</code> not found — replace <code>PASTE_TOKEN_HERE</code> first. ')
+    + 'Splits into <strong>' + wb.length + '</strong> group(s): ' + wb.map(b => escapeHtml(b.label || b.key) + ' (' + membersInBucket(b.key).length + ')').join(', ')
+    + '. Run on the storefront DevTools console. <strong>This REPLACES groep_producten</strong> on every listed member.';
+  document.getElementById('scriptModal').classList.add('open');
+});
+
+// ============================================================================
+// Modal / header buttons
+// ============================================================================
+document.getElementById('btnCloseScript').addEventListener('click', () => document.getElementById('scriptModal').classList.remove('open'));
+document.getElementById('btnCopyScript').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(document.getElementById('scriptOutput').textContent);
+    document.getElementById('btnCopyScript').textContent = 'Copied ✓';
+    setTimeout(() => document.getElementById('btnCopyScript').textContent = 'Copy to clipboard', 1800);
+  } catch (e) { alert('Copy failed: ' + e.message); }
+});
+document.getElementById('btnDownloadScript').addEventListener('click', () => {
+  const blob = new Blob([document.getElementById('scriptOutput').textContent], { type: 'application/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'phoenix-group-split-' + Date.now() + '.js';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+document.getElementById('btnReload').addEventListener('click', async () => {
+  try { await reloadToken(); } catch (e) { alert('Reload failed: ' + e.message); }
+});
+document.getElementById('btnSwitchFolder').addEventListener('click', async () => {
+  await idbDel('dirHandle');
+  dirHandle = null; cachedToken = null;
+  document.getElementById('appHeader').style.display = 'none';
+  document.getElementById('appMain').style.display = 'none';
+  document.getElementById('bootScreen').classList.remove('hidden');
+});
+document.getElementById('btnPickFolder').addEventListener('click', async () => {
+  const errEl = document.getElementById('bootError'); errEl.textContent = '';
+  if (!window.showDirectoryPicker) { errEl.textContent = 'This browser does not support direct folder access. Use Chrome or Edge.'; return; }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'read' });
+    await loadFromDirHandle(handle);
+  } catch (e) { if (e.name !== 'AbortError') errEl.textContent = e.message; }
+});
+
+// Boot
+(async () => {
+  const note = document.getElementById('browserNote');
+  if (!window.showDirectoryPicker) {
+    note.innerHTML = 'Your browser does not support direct folder access. Use <strong>Chrome</strong> or <strong>Edge</strong>.';
+    document.getElementById('btnPickFolder').disabled = true;
+  } else {
+    note.textContent = 'Works in Chrome and Edge.';
+  }
+  try {
+    const stored = await idbGet('dirHandle');
+    if (stored) {
+      const ok = await ensurePermission(stored, 'read');
+      if (ok) await loadFromDirHandle(stored);
+      else document.getElementById('bootError').textContent = 'Folder permission was revoked — pick the folder again.';
+    }
+  } catch (e) {
+    console.warn('Boot restore failed:', e);
+    document.getElementById('bootError').textContent = e.message;
+  }
+})();
+</script>
+</body>
+</html>
