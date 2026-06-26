@@ -503,7 +503,7 @@ function restoreState() {
   dump = s.dump;
   memberByGid = {};
   dump.members.forEach(m => {
-    if (!m.axisValues) m.axisValues = Object.assign(emptyBag(), { nl: m.axis1Value || '' });
+    if (!m.axisValues) m.axisValues = Object.assign(emptyBag(), m.axis1Values || { nl: m.axis1Value || '' });
     if (m.specKey == null) { const r = bestSpec(m); m.spec = r.spec; m.specSource = r.source; m.specKey = specKey(r.spec); }
     memberByGid[m.gid] = m;
   });
@@ -553,8 +553,9 @@ function ingestDump(d) {
   d.members.forEach(m => {
     const { spec, source } = bestSpec(m);
     m.spec = spec; m.specSource = source; m.specKey = specKey(spec);
-    // Editable per-language value bag — seed from the dump (fall back to NL-only / older dumps).
-    m.axisValues = Object.assign(emptyBag(), m.axisValues || { nl: m.axis1Value || '' });
+    // Editable per-language value bag — seed from the dump's axis1Values
+    // (the key the dump script writes), then any in-progress edits, else NL-only.
+    m.axisValues = Object.assign(emptyBag(), m.axis1Values || { nl: m.axis1Value || '' }, m.axisValues || {});
     memberByGid[m.gid] = m;
   });
   // Auto-bucket by spec key. Empty spec -> Review.
