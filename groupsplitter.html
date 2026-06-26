@@ -343,12 +343,13 @@ const DUMP_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — DUMP (read an over-s
     mVal2:  metafield(namespace:"custom", key:"groepswaarde_2"){ value }
   }}\`;
 
-  // Read a metafield's base value + all locale translations into {nl,en,de,fr,it,es}.
-  // Works for plain and list.single_line_text_field (unwrapList strips ["…"]).
+  // Read a translatable resource's base value + all locale translations for one
+  // content key into {nl,en,de,fr,it,es}. key='value' for metafields, 'title' for
+  // the product title. unwrapList strips ["…"] for list.single_line_text_field.
   // NOTE: TranslatableResource.translations takes a required locale arg and returns
   // a plain list (NOT a "first:" connection) — so we alias one field per locale.
-  async function getMfTranslations(mfId) {
-    if (!mfId) return null;
+  async function getResourceTranslations(resourceId, key) {
+    if (!resourceId) return null;
     const d = await gql(\`query($id:ID!){translatableResource(resourceId:$id){
       translatableContent{ key value }
       en: translations(locale:"en"){ key value }
@@ -356,19 +357,20 @@ const DUMP_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — DUMP (read an over-s
       fr: translations(locale:"fr"){ key value }
       it: translations(locale:"it"){ key value }
       es: translations(locale:"es"){ key value }
-    }}\`, { id: mfId });
+    }}\`, { id: resourceId });
     const tr = d && d.translatableResource;
     if (!tr) return null;
     const out = { nl:'', en:'', de:'', fr:'', it:'', es:'' };
-    const baseC = tr.translatableContent.find(c => c.key === 'value');
+    const baseC = tr.translatableContent.find(c => c.key === key);
     if (baseC) out.nl = unwrapList(baseC.value);
     ['en','de','fr','it','es'].forEach(lc => {
       const arr = tr[lc] || [];
-      const t = arr.find(x => x.key === 'value');
+      const t = arr.find(x => x.key === key);
       if (t) out[lc] = unwrapList(t.value);
     });
     return out;
   }
+  const getMfTranslations = (mfId) => getResourceTranslations(mfId, 'value');
 
   console.log('[split-dump] Looking up seed SKU ' + SEED_SKU + '...');
   const seedData = await gql(\`query($q:String!){productVariants(first:5,query:$q){edges{node{sku product{id}}}}}\`, { q: 'sku:' + SEED_SKU });
@@ -382,10 +384,12 @@ const DUMP_SCRIPT_TEMPLATE = `// Phoenix Group Splitter — DUMP (read an over-s
     const emptyBag = { nl:'', en:'', de:'', fr:'', it:'', es:'' };
     const axis1Values = (p.mVal1 && p.mVal1.id) ? (await getMfTranslations(p.mVal1.id) || { ...emptyBag, nl: (p.mVal1.value || '') }) : { ...emptyBag };
     const axis1LabelAll = (p.mDesc1 && p.mDesc1.id) ? await getMfTranslations(p.mDesc1.id) : null;
+    const titleValues = (await getResourceTranslations(gid, 'title')) || { ...emptyBag, nl: (p.title || '') };
     return {
       gid,
       sku: (p.variants.edges[0] && p.variants.edges[0].node.sku) || '',
       title: p.title || '',
+      titleValues,                                  // product title in all 6 languages
       seoTitle: (p.seo && p.seo.title) || '',
       seoDescription: (p.seo && p.seo.description) || '',
       groupSet: parseGroup(p.mGroep && p.mGroep.value),
@@ -504,6 +508,7 @@ function restoreState() {
   memberByGid = {};
   dump.members.forEach(m => {
     if (!m.axisValues) m.axisValues = Object.assign(emptyBag(), m.axis1Values || { nl: m.axis1Value || '' });
+    if (!m.titleValues) m.titleValues = Object.assign(emptyBag(), { nl: splitTitleSpec(m.seoTitle || m.title).title || m.title || '' });
     if (m.specKey == null) { const r = bestSpec(m); m.spec = r.spec; m.specSource = r.source; m.specKey = specKey(r.spec); }
     memberByGid[m.gid] = m;
   });
@@ -556,6 +561,8 @@ function ingestDump(d) {
     // Editable per-language value bag — seed from the dump's axis1Values
     // (the key the dump script writes), then any in-progress edits, else NL-only.
     m.axisValues = Object.assign(emptyBag(), m.axis1Values || { nl: m.axis1Value || '' }, m.axisValues || {});
+    // Read-only per-language product title reference (dump writes titleValues).
+    if (!m.titleValues) m.titleValues = Object.assign(emptyBag(), { nl: splitTitleSpec(m.seoTitle || m.title).title || m.title || '' });
     memberByGid[m.gid] = m;
   });
   // Auto-bucket by spec key. Empty spec -> Review.
@@ -710,7 +717,7 @@ function renderBucketCard(key, label, isReview) {
   if (members.length) {
     const table = document.createElement('table');
     table.className = 'members';
-    table.innerHTML = '<thead><tr><th>SKU</th><th>Title</th><th>Spec</th><th>Value (groepswaarde_1) · ' + currentLang.toUpperCase() + '</th><th>Flags</th><th>Move to</th></tr></thead>';
+    table.innerHTML = '<thead><tr><th>SKU</th><th>Title · ' + currentLang.toUpperCase() + '</th><th>Spec</th><th>Value (groepswaarde_1) · ' + currentLang.toUpperCase() + '</th><th>Flags</th><th>Move to</th></tr></thead>';
     const tb = document.createElement('tbody');
     members.forEach(m => tb.appendChild(renderMemberRow(m, key)));
     table.appendChild(tb);
@@ -726,7 +733,8 @@ function renderBucketCard(key, label, isReview) {
 
 function renderMemberRow(m, currentKey) {
   const tr = document.createElement('tr');
-  const display = splitTitleSpec(m.seoTitle || m.title).title || m.title;
+  const rawTitle = (m.titleValues && (m.titleValues[currentLang] || m.titleValues.nl)) || m.seoTitle || m.title || '';
+  const display = splitTitleSpec(rawTitle).title || rawTitle;
   let flags = '';
   if (m.discoveredExtra) flags += '<span class="flag extra">cross-ref</span>';
   if (!m.matchesSeed && !m.discoveredExtra) flags += '<span class="flag warn">asymmetric</span>';
