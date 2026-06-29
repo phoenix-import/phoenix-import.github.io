@@ -2372,12 +2372,26 @@ function downloadXlsx(rows, sheet, filename) {
   XLSX.writeFile(wb, filename);
 }
 
+// Auto filename: <prefix>_<first word of the first titled product>_<DDMMYYYY>.<ext>
+// e.g. "Tingsha's Flower of life -- 7cm" → translate_tingsha_29062026.csv
+function exportName(prefix, ext) {
+  const titled = project.products.find(p => (p.title || '').trim());
+  let slug = ((titled ? titled.title : '').trim().split(/\s+/)[0] || '')
+    .replace(/['’]s$/i, '')          // drop a trailing possessive 's
+    .toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (!slug) slug = 'export';
+  const d = new Date();
+  const date = String(d.getDate()).padStart(2, '0') +
+               String(d.getMonth() + 1).padStart(2, '0') + d.getFullYear();
+  return prefix + '_' + slug + '_' + date + '.' + ext;
+}
+
 /* ---- Translation round-trip (file in → /translate → file back in) ------ */
 document.getElementById('exportTransCsvBtn').addEventListener('click', () => {
-  download('phoenix-translate.csv', toCSV(buildTranslationRows()), 'text/csv;charset=utf-8;');
+  download(exportName('translate', 'csv'), toCSV(buildTranslationRows()), 'text/csv;charset=utf-8;');
 });
 document.getElementById('exportTransXlsxBtn').addEventListener('click', () => {
-  downloadXlsx(buildTranslationRows(), 'Translate', 'phoenix-translate.xlsx');
+  downloadXlsx(buildTranslationRows(), 'Translate', exportName('translate', 'xlsx'));
 });
 
 // Import the translated file (CSV or XLSX) back in.
@@ -2742,10 +2756,10 @@ document.getElementById('clearProofBtn').addEventListener('click', () => {
 });
 
 document.getElementById('finalCsvBtn').addEventListener('click', () => {
-  download('phoenix-shopify-import.csv', toCSV(buildFinalRows()), 'text/csv;charset=utf-8;');
+  download(exportName('proofread', 'csv'), toCSV(buildFinalRows()), 'text/csv;charset=utf-8;');
 });
 document.getElementById('finalXlsxBtn').addEventListener('click', () => {
-  downloadXlsx(buildFinalRows(), 'Import', 'phoenix-shopify-import.xlsx');
+  downloadXlsx(buildFinalRows(), 'Import', exportName('proofread', 'xlsx'));
 });
 document.getElementById('genScriptBtn').addEventListener('click', () => {
   const parsed = buildParsed();
@@ -2766,7 +2780,7 @@ document.getElementById('prgProductBtn').addEventListener('click', () => {
     const nl = parsed.byKey[sku + '|NL']; const en = parsed.byKey[sku + '|EN'];
     rows.push([sku, 'Active', nl ? nl.title : '', nl ? nl.title : '', en ? en.title : '']);
   }
-  downloadXlsx(rows, 'Blad1', 'PRG_product_import.xlsx');
+  downloadXlsx(rows, 'Blad1', exportName('PRG_product', 'xlsx'));
 });
 document.getElementById('prgAssocBtn').addEventListener('click', () => {
   const parsed = buildParsed();
@@ -2777,7 +2791,7 @@ document.getElementById('prgAssocBtn').addEventListener('click', () => {
       if (!r) continue;
       rows.push(['product', sku, 'product', sku, '', 'Vertaling', L, r.title, '']);
     }
-  downloadXlsx(rows, 'Blad1', 'PRG_associated_import.xlsx');
+  downloadXlsx(rows, 'Blad1', exportName('PRG_associated', 'xlsx'));
 });
 document.getElementById('exportBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(JSON.stringify(project, null, 2))
