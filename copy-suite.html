@@ -2697,16 +2697,6 @@ function buildScript(parsed) {
   log('NL ok:', nlResults.success.length, '| NL failed:', nlResults.failed.length, '| missing GID:', missing.length);
   if (nlResults.failed.length) console.log('NL failures:', nlResults.failed);
   window._consoleResults = { skuToGid, nlResults, missing };
-
-  const csvLines = ['sku,gid'];
-  for (const sku of skus) if (skuToGid[sku]) csvLines.push(sku + ',gid://shopify/Product/' + skuToGid[sku]);
-  const blob = new Blob([csvLines.join('\\r\\n') + '\\r\\n'], { type: 'text/csv;charset=utf-8;' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'sku-gid.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-  log('Downloaded sku-gid.csv.');
 })();
 `;
 }
