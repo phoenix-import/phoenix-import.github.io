@@ -115,7 +115,7 @@ is the **effective** wrapper that returns it only while `isCanonical` holds, els
   safety); `block.snip` overrides it, `''` = manual free-text, absent = the default.
   Product types with no default seed **blank/manual** and are translated normally.
 - **`BLOCK_LIBRARIES`** (per block type → named entries, chosen per block via a
-  dropdown) — `symbolism` (22 entries incl. Feng Shui, from `symbolism_boilerplate.xlsx`)
+  dropdown) — `symbolism` (23 entries incl. Feng Shui, from `symbolism_boilerplate.xlsx`)
   and `commercial` (14 entries, from `Commercial_boilerplate.xlsx`). The block
   stores the chosen entry in `block.lib`; "Other" = free-text. Adding a block type
   to `BLOCK_LIBRARIES` automatically gives its cards a picker.
