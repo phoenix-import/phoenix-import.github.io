@@ -129,7 +129,7 @@ is the **effective** wrapper that returns it only while `isCanonical` holds, els
   it to the library text and drops stale `block.t`. (SNIPPETS disclaimers and
   SKU/material stay canonical regardless of edits.)
 - **`material` block** (the gemstone/natural library) — a *fourth* canonical layer,
-  but multi-select instead of single-pick. Data lives in `const MATERIALS` (148
+  but multi-select instead of single-pick. Data lives in `const MATERIALS` (151
   id-keyed entries: `name, ess` essence, `bel` beliefs, `ch/el/zo/pl`
   correspondences, `cat`). The block stores `block.mats` (ordered array of ids) and
   three **independent checkbox** flags: `block.matFull` (the beliefs paragraph —
@@ -346,11 +346,11 @@ number-only SKU field are in. Remaining / planned:
   by what it emits: if groupings feed the Shopify push (collections / Paragon
   associations) fold it into the pipeline; if not, just link it from the index.
 - **Material block** — **built and fully translated (all 6 locales).** `material`
-  block type + `MATERIALS` (148 entries, `name/ess/bel` as `{NL,EN,DE,FR,IT,ES}`
+  block type + `MATERIALS` (151 entries, `name/ess/bel` as `{NL,EN,DE,FR,IT,ES}`
   objects) + `MAT_TERMS` (correspondence-token dictionary, translated at render via
   `matTransValue`) + `renderMaterials`/`buildMaterialRow` (multi-select, search,
   collapsible category checklist, drag-reorder, Full/Short/Correspondences
-  checkboxes). Canonical multi-select (no free-text fallback — the 148-entry
+  checkboxes). Canonical multi-select (no free-text fallback — the 151-entry
   searchable list replaced that need). Output: one `<p>` per material,
   `<strong>Name</strong> | text`. Source content: `esoteric_materials_beliefs.xlsx`.
   *Not added to any `PRODUCT_TYPES` template yet* — it's a hand-added palette item;
