@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chatbot Testing</title>
+<style>
+  body{font-family:Calibri,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#fff;color:#333;line-height:1.6;}
+  header{background:#68437B;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:16px;}
+  header h1{font-size:18px;font-weight:600;margin:0;}
+  header img{height:36px;}
+  .content{padding:2rem;max-width:42rem;}
+  p.desc{color:#555;margin-bottom:1.5rem;}
+  h2{font-size:15px;font-weight:600;color:#68437B;margin:1.5rem 0 .5rem;}
+  ol{padding-left:1.2rem;}
+  li{margin-bottom:.5rem;}
+  .note{background:#f7f2fa;border-left:4px solid #ca427e;padding:12px 16px;border-radius:4px;font-size:14px;color:#555;margin-top:1.5rem;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Chatbot Testing</h1>
+  <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import"></a>
+</header>
+
+<div class="content">
+  <p class="desc">This page hosts a live sandbox of the Watermelon.ai chat widget so we can test conversations, responses, and behaviour in isolation before rolling changes out to the storefronts.</p>
+
+  <h2>How to use</h2>
+  <ol>
+    <li>The widget loads automatically — look for the chat launcher in the bottom-right corner of this page.</li>
+    <li>Open it and run through the flows you want to check (greetings, product questions, hand-off, etc.).</li>
+    <li>If the launcher doesn't appear, refresh the page or check your network connection — the widget is loaded from an external script.</li>
+  </ol>
+
+  <div class="note">Testing here has no impact on live storefront chats. This is an isolated environment for the Watermelon.ai widget only.</div>
+</div>
+
+<script async
+        type="module"
+        src="https://chatwidget-prod.web.app/embed/init.iife.js"
+        data-watermelon-widget-id="XoLNJ5sjY8Q"
+        data-watermelon-settings-id="17254"></script>
+</body>
+</html>
