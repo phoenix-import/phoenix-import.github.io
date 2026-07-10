@@ -42,5 +42,18 @@
         src="https://chatwidget-prod.web.app/embed/init.iife.js"
         data-watermelon-widget-id="XoLNJ5sjY8Q"
         data-watermelon-settings-id="17254"></script>
+
+<button onclick="resetChat()">New conversation</button>
+<script>
+function resetChat() {
+  window.postMessage({ type: 'logout', payload: {} }, '*');
+  document.querySelectorAll('iframe').forEach(f => {
+    try { f.contentWindow.postMessage({ type: 'logout' }, '*'); } catch (e) {}
+  });
+  localStorage.clear();
+  setTimeout(() => location.reload(), 300);
+}
+</script>
+  
 </body>
 </html>
