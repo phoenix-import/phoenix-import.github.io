@@ -7,10 +7,9 @@
 //
 //     • Windorgels & windgongen (14) -> a clean group referencing only each other
 //     • Meridiaankogels          (6) -> a clean group referencing only each other
-//     • Everything else         (21) -> custom.groep_producten emptied ([]),
+//     • Tafelgongen              (3) -> a clean group referencing only each other
+//     • Everything else         (18) -> custom.groep_producten emptied ([]),
 //                                       i.e. removed from the pile entirely.
-//                                       (the 3 tafelgongen are cleared too, per
-//                                        "only wind items; clear tafelgong")
 //
 //   It REPLACES custom.groep_producten on every listed product, so the old
 //   cross-links to the junk are purged. It does NOT touch groepsomschrijving /
@@ -67,13 +66,26 @@
         { sku: '05941', gid: 'gid://shopify/Product/10769207066967' }, // Gele draak
       ],
     },
+    {
+      label: 'Tafelgongen',
+      members: [
+        { sku: '0200',  gid: 'gid://shopify/Product/10769059938647' }, // Tafelgong met klopper en houten frame
+        { sku: '0206',  gid: 'gid://shopify/Product/10769216995671' }, // Tafelgong klein zwart en goudkleur
+        { sku: '0224',  gid: 'gid://shopify/Product/10769064493399' }, // Tafelgong met klopper en roodhouten frame
+      ],
+    },
+    {
+      label: 'Tabiano biosulfur zwavel',
+      members: [
+        { sku: '031100', gid: 'gid://shopify/Product/10769070948695' }, // Tabiano biosulfur zwavel douchegel
+        { sku: '031200', gid: 'gid://shopify/Product/10769238393175' }, // Tabiano biosulfur zwavel shampoo
+        { sku: '031400', gid: 'gid://shopify/Product/10769248551255' }, // Tabiano biosulfur zwavel zeep
+      ],
+    },
   ];
 
-  // Unlinked entirely (groep_producten -> []). Includes the tafelgongen.
+  // Unlinked entirely (groep_producten -> []).
   const CLEAR = [
-    { sku: '0200',   gid: 'gid://shopify/Product/10769059938647' }, // Tafelgong houten frame
-    { sku: '0206',   gid: 'gid://shopify/Product/10769216995671' }, // Tafelgong klein zwart/goud
-    { sku: '0224',   gid: 'gid://shopify/Product/10769064493399' }, // Tafelgong roodhouten frame
     { sku: '0115',   gid: 'gid://shopify/Product/10769756979543' }, // Boeddha met kaarshouder steengrijs
     { sku: '0120',   gid: 'gid://shopify/Product/10769217126743' }, // Sfeerlicht kaarshouder Mudra
     { sku: '0121',   gid: 'gid://shopify/Product/10769771987287' }, // Twee engeltjes met waxinelichthouders
@@ -84,9 +96,6 @@
     { sku: '02513',  gid: 'gid://shopify/Product/10769374085463' }, // Lavandin - lavendel bloemen zakje
     { sku: '02545',  gid: 'gid://shopify/Product/10769374642519' }, // Marseille zeep Lavendel
     { sku: '02575',  gid: 'gid://shopify/Product/10769699340631' }, // Kussengeur Provençaalse Lavendel
-    { sku: '031100', gid: 'gid://shopify/Product/10769070948695' }, // Tabiano biosulfur douchegel
-    { sku: '031200', gid: 'gid://shopify/Product/10769238393175' }, // Tabiano biosulfur shampoo
-    { sku: '031400', gid: 'gid://shopify/Product/10769248551255' }, // Tabiano biosulfur zeep
     { sku: '10118',  gid: 'gid://shopify/Product/10769259233623' }, // Zakje zand
     { sku: '1013',   gid: 'gid://shopify/Product/10769376870743' }, // Wierook Nag Champa Super Hit
     { sku: '1017',   gid: 'gid://shopify/Product/10769377067351' }, // Wierook Satya Natural
