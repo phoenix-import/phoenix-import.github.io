@@ -137,7 +137,7 @@
       { mf: identifiers });
     const errs = d && d.metafieldsDelete && d.metafieldsDelete.userErrors;
     if (errs && errs.length) console.error('  axis delete errors:', errs);
-    return (d && d.metafieldsDelete && d.metafieldsDelete.deletedMetafields || []).map(x => x.key);
+    return (d && d.metafieldsDelete && d.metafieldsDelete.deletedMetafields || []).filter(Boolean).map(x => x.key);
   }
 
   // ===========================================================================
@@ -164,7 +164,10 @@
     let ok = true, dropped = [];
     if (!DRY_RUN) {
       ok = await setGroup(c.gid, []);
-      if (CLEAR_AXIS_ON_CLEARED) dropped = await deleteAxisMetafields(c.gid);
+      if (CLEAR_AXIS_ON_CLEARED) {
+        try { dropped = await deleteAxisMetafields(c.gid); }
+        catch (e) { console.warn('  [' + c.sku + '] axis delete skipped: ' + e.message); }
+      }
     }
     console.log('[split] ' + c.sku + ' -> cleared' + (CLEAR_AXIS_ON_CLEARED && dropped.length ? ' (axis: ' + dropped.join(',') + ')' : '') + (ok ? '' : ' FAILED'));
     results.push({ sku: c.sku, action: 'cleared', refs: 0, ok });
