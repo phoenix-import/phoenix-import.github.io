@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EUDR Map Check — Coordinates &amp; Deforestation</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #f4f4f5; color: #333;
+      font: 14px/1.45 Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+    .page-header { background: #68437B; color: #fff; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+    .page-header h1 { font-size: 18px; font-weight: 600; margin: 0; color: #fff; }
+    .page-header a { margin-left: auto; line-height: 0; }
+    .page-header img { height: 36px; }
+
+    :root{
+      --panel:#fff; --panel2:#fafafa; --ink:#333; --muted:#666;
+      --stroke:#d1d5db; --purple:#68437B; --accent:#ca427e; --bad:#e74c3c; --good:#2ea043; --radius:8px;
+    }
+
+    #map { position: absolute; inset: 0; }
+    .stage { position: relative; height: calc(100vh - 53px); }
+
+    /* Floating control card */
+    .panel {
+      position: absolute; top: 12px; left: 12px; z-index: 1200; width: 320px; max-width: calc(100vw - 24px);
+      background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius);
+      box-shadow: 0 4px 18px rgba(0,0,0,.18); max-height: calc(100vh - 78px); display: flex; flex-direction: column;
+    }
+    .panel .scroll { overflow: auto; padding: 12px; }
+    fieldset { border: 1px solid var(--stroke); border-radius: var(--radius); margin: 0 0 10px 0; padding: 10px; background: var(--panel2); }
+    legend { padding: 0 6px; color: var(--muted); font-weight: 600; }
+    label { display: block; margin: 8px 0 4px 0; }
+    input, select, button, textarea {
+      width: 100%; background: #fff; border: 1px solid var(--stroke); color: var(--ink);
+      padding: 8px; border-radius: 6px; font: inherit;
+    }
+    textarea { resize: vertical; min-height: 60px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row-3 { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .hint { margin-top: 5px; font-size: 12px; color: var(--muted); }
+    .btn { cursor: pointer; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .btn.primary:hover { background: #b33a6f; }
+    .btn.ghost { background: transparent; }
+    .btn.ghost:hover { background: #f2f2f2; }
+    .btn.sm { padding: 5px 8px; font-size: 12px; }
+    .seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .seg button { background: #fff; }
+    .seg button.active { background: var(--purple); border-color: var(--purple); color: #fff; font-weight: 600; }
+    .inline { display: flex; align-items: center; gap: 8px; }
+    .inline input[type="checkbox"] { width: auto; }
+    .inline input[type="range"] { flex: 1; }
+    .msg { margin-top: 6px; font-size: 12px; min-height: 15px; }
+    .msg.bad { color: var(--bad); }
+    .msg.good { color: var(--good); }
+    details > summary { cursor: pointer; color: var(--purple); font-weight: 600; margin-top: 4px; }
+
+    /* Collapse toggle */
+    .panel .head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--stroke); }
+    .panel .head strong { flex: 1; color: var(--purple); }
+    .panel.collapsed .scroll { display: none; }
+    .collapse-btn { width: auto; padding: 4px 8px; }
+
+    /* Swipe divider */
+    #divider {
+      position: absolute; top: 0; bottom: 0; width: 40px; margin-left: -20px; z-index: 1100;
+      cursor: ew-resize; display: none; touch-action: none;
+    }
+    #divider::before { content: ""; position: absolute; left: 19px; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 3px rgba(0,0,0,.5); }
+    #divider .knob {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 2px solid var(--purple);
+      box-shadow: 0 1px 6px rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center;
+      color: var(--purple); font-weight: 700; font-size: 15px;
+    }
+    .swipe-tag {
+      position: absolute; top: 10px; z-index: 1100; background: rgba(255,255,255,.92); border: 1px solid var(--stroke);
+      border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 600; display: none; pointer-events: none;
+    }
+    #tagLeft { left: 12px; } #tagRight { right: 12px; }
+
+    /* Coordinate readout */
+    .readout {
+      position: absolute; bottom: 12px; left: 12px; z-index: 1100; background: rgba(255,255,255,.92);
+      border: 1px solid var(--stroke); border-radius: 6px; padding: 5px 9px; font-size: 12px;
+      font-family: ui-monospace, Consolas, monospace;
+    }
+    .leaflet-popup-content { font: 13px/1.4 Calibri, sans-serif; }
+    .pop-coord { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    .pop-coord b { display:block; }
+    .copybtn { margin-top: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; border: 1px solid var(--stroke); border-radius: 5px; background: #fff; width: 100%; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>EUDR Map Check — Coordinates &amp; Deforestation</h1>
+    <a href="index.html"><img src="logo.png" alt="Phoenix Import"></a>
+  </div>
+
+  <div class="stage">
+    <div id="map"></div>
+    <div id="divider"><div class="knob">⇔</div></div>
+    <div class="swipe-tag" id="tagLeft">2020 baseline</div>
+    <div class="swipe-tag" id="tagRight">recent</div>
+    <div class="readout" id="readout">Move over the map…</div>
+
+    <div class="panel" id="panel">
+      <div class="head">
+        <strong>Controls</strong>
+        <button class="btn ghost collapse-btn sm" id="collapseBtn" title="Hide / show panel">–</button>
+      </div>
+      <div class="scroll">
+
+        <fieldset>
+          <legend>Go to coordinates</legend>
+          <div class="row-3">
+            <input id="coordInput" placeholder="e.g. 52.3794, 4.9009" />
+            <button class="btn primary" id="goBtn">Go</button>
+          </div>
+          <div class="hint">Accepts decimal (<code>lat, lon</code>), reversed order, N/S/E/W, or DMS
+            (<code>52°22'46"N 4°54'03"E</code>). A draggable pin is dropped.</div>
+          <label class="inline" style="margin-top:8px;">
+            <input type="checkbox" id="clickToRead" /> Click map to read / move the pin
+          </label>
+          <div class="msg" id="coordMsg"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Base map</legend>
+          <div class="seg" id="baseSeg">
+            <button data-base="osm" class="active">Street (OSM)</button>
+            <button data-base="esri">Satellite (Esri)</button>
+            <button data-base="s2-2020">Sentinel-2 2020</button>
+            <button data-base="s2-2024">Sentinel-2 2024</button>
+          </div>
+          <div class="hint">Sentinel-2 layers are dated cloud-free mosaics. <b>2020</b> is the EUDR cut-off baseline.</div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Compare 2020 → recent (swipe)</legend>
+          <label class="inline"><input type="checkbox" id="compareOn" /> Enable swipe compare</label>
+          <div class="row" style="margin-top:8px;">
+            <div>
+              <label>Left (baseline)</label>
+              <select id="leftSel">
+                <option value="s2-2020" selected>Sentinel-2 2020</option>
+                <option value="s2-2021">Sentinel-2 2021</option>
+                <option value="s2-2022">Sentinel-2 2022</option>
+                <option value="s2-2023">Sentinel-2 2023</option>
+                <option value="s2-2024">Sentinel-2 2024</option>
+                <option value="esri">Satellite (Esri)</option>
+              </select>
+            </div>
+            <div>
+              <label>Right (recent)</label>
+              <select id="rightSel">
+                <option value="s2-2020">Sentinel-2 2020</option>
+                <option value="s2-2021">Sentinel-2 2021</option>
+                <option value="s2-2022">Sentinel-2 2022</option>
+                <option value="s2-2023">Sentinel-2 2023</option>
+                <option value="s2-2024" selected>Sentinel-2 2024</option>
+                <option value="esri">Satellite (Esri)</option>
+              </select>
+            </div>
+          </div>
+          <div class="hint">Drag the divider. Forest present on the left that is bare on the right = clearing after that year.</div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Forest-loss overlay</legend>
+          <label class="inline"><input type="checkbox" id="lossOn" /> Show tree-cover loss (Hansen/UMD, 2000–2025)</label>
+          <label style="margin-top:8px;">Opacity <span id="lossOpaVal">70%</span></label>
+          <input type="range" id="lossOpa" min="0" max="100" value="70" />
+          <div class="hint">Red = canopy lost since 2000. Cross-check the <i>date</i> of loss with the swipe above —
+            only clearing <b>after 2020</b> matters for EUDR.</div>
+        </fieldset>
+
+        <details>
+          <summary>Plot a parcel (paste GeoJSON)</summary>
+          <textarea id="geoInput" placeholder='Paste a GeoJSON Feature / FeatureCollection / geometry, or "lat, lon"…'></textarea>
+          <div class="row" style="margin-top:6px;">
+            <button class="btn ghost sm" id="geoBtn">Show on map</button>
+            <button class="btn ghost sm" id="geoClear">Clear parcel</button>
+          </div>
+          <div class="msg" id="geoMsg"></div>
+        </details>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    "use strict";
+
+    // ---------- Layer factory ----------
+    var EOX_ATTR = 'Sentinel-2 cloudless (<a href="https://s2maps.eu">s2maps.eu</a>) by EOX — Contains modified Copernicus Sentinel data';
+    function makeLayer(key){
+      if (key === 'osm')
+        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          { maxZoom: 19, maxNativeZoom: 19, attribution: '© OpenStreetMap contributors' });
+      if (key === 'esri')
+        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          { maxZoom: 19, maxNativeZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+      var m = /^s2-(\d{4})$/.exec(key);
+      if (m)
+        return L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-' + m[1] + '_3857/default/g/{z}/{y}/{x}.jpg',
+          { maxZoom: 19, maxNativeZoom: 14, attribution: EOX_ATTR });
+      return null;
+    }
+    function layerLabel(key){
+      if (key === 'osm') return 'Street';
+      if (key === 'esri') return 'Esri satellite';
+      var m = /^s2-(\d{4})$/.exec(key);
+      return m ? ('Sentinel-2 ' + m[1]) : key;
+    }
+
+    // ---------- Map ----------
+    var map = L.map('map', { center: [20, 0], zoom: 3, worldCopyJump: true, zoomControl: true });
+    L.control.scale({ imperial: false }).addTo(map);
+
+    map.createPane('leftPane');  map.getPane('leftPane').style.zIndex  = 300;
+    map.createPane('rightPane'); map.getPane('rightPane').style.zIndex = 301;
+    map.createPane('lossPane');  var lossPaneEl = map.getPane('lossPane');
+    lossPaneEl.style.zIndex = 350; lossPaneEl.style.pointerEvents = 'none';
+
+    var baseKey = 'osm';
+    var baseLayer = makeLayer('osm').addTo(map);
+
+    // Forest-loss overlay
+    var lossLayer = L.tileLayer(
+      'https://storage.googleapis.com/earthenginepartners-hansen/tiles/gfc_v1.13/loss_alpha/{z}/{x}/{y}.png',
+      { pane: 'lossPane', maxZoom: 19, maxNativeZoom: 12, opacity: 0.7,
+        attribution: 'Tree-cover loss: Hansen/UMD/Google/USGS/NASA' });
+
+    function setBase(key){
+      if (compareOn) return;
+      if (key === baseKey && map.hasLayer(baseLayer)) return;
+      if (baseLayer) map.removeLayer(baseLayer);
+      baseKey = key;
+      baseLayer = makeLayer(key).addTo(map);
+      baseLayer.bringToBack();
+      document.querySelectorAll('#baseSeg button').forEach(function(b){
+        b.classList.toggle('active', b.dataset.base === key);
+      });
+    }
+    document.querySelectorAll('#baseSeg button').forEach(function(b){
+      b.addEventListener('click', function(){ setBase(b.dataset.base); });
+    });
+
+    // ---------- Forest-loss toggle ----------
+    document.getElementById('lossOn').addEventListener('change', function(e){
+      if (e.target.checked) lossLayer.addTo(map); else map.removeLayer(lossLayer);
+    });
+    var lossOpa = document.getElementById('lossOpa'), lossOpaVal = document.getElementById('lossOpaVal');
+    lossOpa.addEventListener('input', function(){
+      var v = +lossOpa.value; lossOpaVal.textContent = v + '%'; lossLayer.setOpacity(v / 100);
+    });
+
+    // ---------- Swipe compare ----------
+    var compareOn = false, leftLayer = null, rightLayer = null, swipeRatio = 0.5;
+    var divider = document.getElementById('divider');
+    var tagLeft = document.getElementById('tagLeft'), tagRight = document.getElementById('tagRight');
+
+    function buildCompareLayers(){
+      if (leftLayer)  { map.removeLayer(leftLayer);  leftLayer = null; }
+      if (rightLayer) { map.removeLayer(rightLayer); rightLayer = null; }
+      var lk = document.getElementById('leftSel').value;
+      var rk = document.getElementById('rightSel').value;
+      leftLayer  = makeLayer(lk); leftLayer.options.pane  = 'leftPane';  leftLayer.addTo(map);
+      rightLayer = makeLayer(rk); rightLayer.options.pane = 'rightPane'; rightLayer.addTo(map);
+      tagLeft.textContent = layerLabel(lk);
+      tagRight.textContent = layerLabel(rk);
+      updateClip();
+    }
+    function updateClip(){
+      if (!compareOn) return;
+      var size = map.getSize();
+      var dx = swipeRatio * size.x;
+      var nw = map.containerPointToLayerPoint([0, 0]);
+      var se = map.containerPointToLayerPoint([size.x, size.y]);
+      var clipX = Math.round(map.containerPointToLayerPoint([dx, 0]).x);
+      map.getPane('leftPane').style.clip  = 'rect(' + nw.y + 'px,' + clipX + 'px,' + se.y + 'px,' + nw.x + 'px)';
+      map.getPane('rightPane').style.clip = 'rect(' + nw.y + 'px,' + se.x + 'px,' + se.y + 'px,' + clipX + 'px)';
+    }
+    function positionDivider(){
+      var w = map.getSize().x;
+      divider.style.left = (swipeRatio * w) + 'px';
+    }
+    function setCompare(on){
+      compareOn = on;
+      if (on){
+        buildCompareLayers();
+        divider.style.display = 'block';
+        tagLeft.style.display = tagRight.style.display = 'block';
+        positionDivider();
+      } else {
+        if (leftLayer)  { map.removeLayer(leftLayer);  leftLayer = null; }
+        if (rightLayer) { map.removeLayer(rightLayer); rightLayer = null; }
+        map.getPane('leftPane').style.clip = map.getPane('rightPane').style.clip = '';
+        divider.style.display = 'none';
+        tagLeft.style.display = tagRight.style.display = 'none';
+        // ensure a base layer is present again
+        var k = baseKey; baseKey = null; setBase(k);
+      }
+    }
+    document.getElementById('compareOn').addEventListener('change', function(e){ setCompare(e.target.checked); });
+    document.getElementById('leftSel').addEventListener('change', function(){ if (compareOn) buildCompareLayers(); });
+    document.getElementById('rightSel').addEventListener('change', function(){ if (compareOn) buildCompareLayers(); });
+
+    map.on('move zoom moveend zoomend viewreset resize', function(){ if (compareOn){ updateClip(); positionDivider(); } });
+
+    // Divider drag
+    (function(){
+      var dragging = false;
+      function moveTo(clientX){
+        var rect = map.getContainer().getBoundingClientRect();
+        var x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        swipeRatio = x / rect.width;
+        positionDivider(); updateClip();
+      }
+      divider.addEventListener('pointerdown', function(e){ dragging = true; divider.setPointerCapture(e.pointerId); e.preventDefault(); });
+      divider.addEventListener('pointermove', function(e){ if (dragging) moveTo(e.clientX); });
+      divider.addEventListener('pointerup',   function(e){ dragging = false; try{ divider.releasePointerCapture(e.pointerId);}catch(_){} });
+    })();
+
+    // ---------- Coordinate parsing ----------
+    function parseCoords(str){
+      if (!str) return null;
+      var s = str.trim().replace(/[;]+/g, ',');
+
+      // DMS, e.g. 52°22'46.1"N 4°54'03.2"E  (also supports minutes-only, spaces, N/S/E/W)
+      var dms = /(\d{1,3})[°\s]+(\d{1,2})['′\s]*(?:(\d{1,2}(?:\.\d+)?)["″\s]*)?\s*([NSEW])/gi;
+      var found = [], mm;
+      while ((mm = dms.exec(s)) !== null){
+        var deg = +mm[1] + (+mm[2] || 0) / 60 + (+(mm[3] || 0)) / 3600;
+        var hemi = mm[4].toUpperCase();
+        if (hemi === 'S' || hemi === 'W') deg = -deg;
+        found.push({ v: deg, axis: (hemi === 'N' || hemi === 'S') ? 'lat' : 'lon' });
+      }
+      if (found.length === 2){
+        var la = found.find(function(f){ return f.axis === 'lat'; });
+        var lo = found.find(function(f){ return f.axis === 'lon'; });
+        if (la && lo) return norm(la.v, lo.v);
+      }
+
+      // Decimal degrees, tolerant of trailing hemisphere letters
+      var tokens = s.match(/-?\d+(?:\.\d+)?\s*[NSEW]?/gi);
+      if (!tokens || tokens.length < 2) return null;
+      function val(t){
+        var h = (t.match(/[NSEW]/i) || [''])[0].toUpperCase();
+        var n = parseFloat(t);
+        if (isNaN(n)) return null;
+        if (h === 'S' || h === 'W') n = -Math.abs(n);
+        return { n: n, h: h };
+      }
+      var a = val(tokens[0]), b = val(tokens[1]);
+      if (!a || !b) return null;
+      // If hemisphere letters disambiguate order, honour them
+      if (a.h && b.h){
+        var lat = /[NS]/.test(a.h) ? a.n : b.n;
+        var lon = /[EW]/.test(a.h) ? a.n : b.n;
+        return norm(lat, lon);
+      }
+      // Default assume "lat, lon"; swap if that puts latitude out of range but longitude in
+      var latC = a.n, lonC = b.n;
+      if (Math.abs(latC) > 90 && Math.abs(lonC) <= 90){ var t = latC; latC = lonC; lonC = t; }
+      return norm(latC, lonC);
+    }
+    function norm(lat, lon){
+      if (isNaN(lat) || isNaN(lon)) return null;
+      if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+      return { lat: lat, lon: lon };
+    }
+    function fmt(n){ return (Math.round(n * 1e6) / 1e6).toFixed(6); }
+
+    // ---------- Pin / marker ----------
+    var pin = null;
+    function popupHtml(lat, lon){
+      var pair = fmt(lat) + ', ' + fmt(lon);
+      return '<div class="pop-coord"><b>Lat: ' + fmt(lat) + '</b><b>Lon: ' + fmt(lon) + '</b></div>' +
+             '<button class="copybtn" data-copy="' + pair + '">Copy "lat, lon"</button>';
+    }
+    function dropPin(lat, lon, fly){
+      if (!pin){
+        pin = L.marker([lat, lon], { draggable: true }).addTo(map);
+        pin.on('dragend', function(){ var p = pin.getLatLng(); refreshPin(p.lat, p.lng); });
+      } else {
+        pin.setLatLng([lat, lon]);
+      }
+      pin.bindPopup(popupHtml(lat, lon)).openPopup();
+      if (fly) map.flyTo([lat, lon], Math.max(map.getZoom(), 16), { duration: 0.8 });
+    }
+    function refreshPin(lat, lon){
+      pin.setLatLng([lat, lon]);
+      pin.bindPopup(popupHtml(lat, lon)).openPopup();
+      msg('coordMsg', 'Pin: ' + fmt(lat) + ', ' + fmt(lon), 'good');
+    }
+    // copy handler (delegated; popups are re-rendered)
+    document.addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('.copybtn');
+      if (!b) return;
+      var txt = b.getAttribute('data-copy');
+      navigator.clipboard && navigator.clipboard.writeText(txt);
+      b.textContent = 'Copied ✓';
+      setTimeout(function(){ b.textContent = 'Copy "lat, lon"'; }, 1200);
+    });
+
+    function msg(id, text, kind){
+      var el = document.getElementById(id);
+      el.textContent = text || '';
+      el.className = 'msg' + (kind ? ' ' + kind : '');
+    }
+
+    document.getElementById('goBtn').addEventListener('click', go);
+    document.getElementById('coordInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') go(); });
+    function go(){
+      var c = parseCoords(document.getElementById('coordInput').value);
+      if (!c){ msg('coordMsg', 'Could not read those coordinates.', 'bad'); return; }
+      dropPin(c.lat, c.lon, true);
+      msg('coordMsg', 'Went to ' + fmt(c.lat) + ', ' + fmt(c.lon), 'good');
+    }
+
+    // Click-to-read
+    var clickToRead = document.getElementById('clickToRead');
+    map.on('click', function(e){
+      if (!clickToRead.checked) return;
+      dropPin(e.latlng.lat, e.latlng.lng, false);
+      msg('coordMsg', 'Pin: ' + fmt(e.latlng.lat) + ', ' + fmt(e.latlng.lng), 'good');
+    });
+
+    // Live readout
+    var readout = document.getElementById('readout');
+    map.on('mousemove', function(e){ readout.textContent = fmt(e.latlng.lat) + ', ' + fmt(e.latlng.lng); });
+    map.on('mouseout', function(){ readout.textContent = 'Move over the map…'; });
+
+    // ---------- Parcel (GeoJSON / point) ----------
+    var parcel = null;
+    document.getElementById('geoBtn').addEventListener('click', function(){
+      var raw = document.getElementById('geoInput').value.trim();
+      if (!raw){ msg('geoMsg', 'Paste GeoJSON or a coordinate first.', 'bad'); return; }
+      var data = null;
+      try { data = JSON.parse(raw); } catch(_){ data = null; }
+      if (!data){
+        var c = parseCoords(raw);
+        if (c){ dropPin(c.lat, c.lon, true); msg('geoMsg', 'Dropped a pin.', 'good'); return; }
+        msg('geoMsg', 'Not valid GeoJSON or a coordinate.', 'bad'); return;
+      }
+      try {
+        if (parcel) { map.removeLayer(parcel); parcel = null; }
+        parcel = L.geoJSON(data, {
+          style: { color: '#ca427e', weight: 2, fillColor: '#ca427e', fillOpacity: 0.15 }
+        }).addTo(map);
+        var b = parcel.getBounds();
+        if (b.isValid()) map.flyToBounds(b, { padding: [40, 40], maxZoom: 17 });
+        msg('geoMsg', 'Parcel shown.', 'good');
+      } catch(err){ msg('geoMsg', 'Could not draw that GeoJSON.', 'bad'); }
+    });
+    document.getElementById('geoClear').addEventListener('click', function(){
+      if (parcel){ map.removeLayer(parcel); parcel = null; }
+      msg('geoMsg', 'Parcel cleared.', '');
+    });
+
+    // ---------- Panel collapse ----------
+    document.getElementById('collapseBtn').addEventListener('click', function(){
+      var p = document.getElementById('panel');
+      p.classList.toggle('collapsed');
+      this.textContent = p.classList.contains('collapsed') ? '+' : '–';
+    });
+  })();
+  </script>
+</body>
+</html>
