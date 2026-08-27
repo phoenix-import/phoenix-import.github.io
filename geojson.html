@@ -296,12 +296,112 @@
             margin-top: 10px;
         }
         
+        /* Geometry type switch */
+        .geometry-switch-wrap {
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .geometry-switch-wrap legend {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .geometry-switch {
+            display: inline-flex;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 999px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .geometry-switch input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .geometry-switch label {
+            padding: 8px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 14px;
+            user-select: none;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .geometry-switch input:checked + label {
+            background: #68437B;
+            color: white;
+        }
+
+        .geometry-switch input:focus-visible + label {
+            outline: 2px solid #ca427e;
+            outline-offset: 2px;
+        }
+
+        .switch-hint {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+            max-width: 700px;
+        }
+
+        body.geom-polygon .point-only {
+            display: none;
+        }
+
+        body.geom-point .polygon-only {
+            display: none;
+        }
+
+        .plot-point-icon span {
+            display: block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ca427e;
+            border: 3px solid white;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
+        }
+
+        .plot-point-icon.needs-area span {
+            background: white;
+            border-color: #e74c3c;
+        }
+
+        .point-popup label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .point-popup input {
+            width: 120px;
+            padding: 5px;
+            margin-top: 4px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .point-popup p {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+            max-width: 190px;
+        }
+
         .leaflet-draw-toolbar {
             margin-top: 10px !important;
         }
     </style>
 </head>
-<body>
+<body class="geom-polygon">
     <div class="page-header">
         <h1>EUDR GeoJSON Converter</h1>
         <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import"></a>
@@ -309,6 +409,17 @@
     <div class="container">
         <p class="subtitle">Make plot location files for EU deforestation rules</p>
         
+        <fieldset class="geometry-switch-wrap">
+            <legend>What are you adding?</legend>
+            <div class="geometry-switch">
+                <input type="radio" name="geometry-type" id="geom-polygon" value="polygon" checked>
+                <label for="geom-polygon">Plot (polygon)</label>
+                <input type="radio" name="geometry-type" id="geom-point" value="point">
+                <label for="geom-point">Single point</label>
+            </div>
+            <p class="switch-hint" id="geometry-hint"></p>
+        </fieldset>
+
         <div class="input-modes">
             <button class="mode-btn active" data-mode="wgs84">GPS Coordinates</button>
             <button class="mode-btn" data-mode="utm">UTM Grid</button>
@@ -319,15 +430,19 @@
             <div class="input-panel">
                 <!-- WGS84 Entry Mode -->
                 <div class="input-mode active" id="wgs84-mode">
-                    <h3>Add Coordinates (Decimal)</h3>
-                    <p>Enter GPS coordinates as decimal numbers</p>
-                    
+                    <h3 class="polygon-only">Add Coordinates (Decimal)</h3>
+                    <p class="polygon-only">Enter the corners of the plot as decimal GPS coordinates.</p>
+
+                    <h3 class="point-only">Add Single Points (Decimal)</h3>
+                    <p class="point-only">Each row becomes its own plot. Give the coordinate and the plot area in hectares.</p>
+
                     <table class="coord-grid">
                         <thead>
                             <tr>
-                                <th>Point</th>
+                                <th>#</th>
                                 <th>Longitude</th>
                                 <th>Latitude</th>
+                                <th class="point-only">Area (ha)</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -336,26 +451,31 @@
                                 <td>1</td>
                                 <td><input type="number" class="wgs84-lon" step="0.000001" min="-180" max="180"></td>
                                 <td><input type="number" class="wgs84-lat" step="0.000001" min="-90" max="90"></td>
+                                <td class="point-only"><input type="number" class="wgs84-area" step="0.01" min="0" max="4"></td>
                                 <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
                             </tr>
                         </tbody>
                     </table>
-                    
-                    <button class="btn" onclick="addWGS84Row()">Add Point</button>
-                    <button class="btn" onclick="closeRing('wgs84')">Close Shape</button>
-                    <button class="btn success" onclick="processWGS84()">Add to Map</button>
+
+                    <button class="btn" onclick="addWGS84Row()">Add Row</button>
+                    <button class="btn polygon-only" onclick="closeRing('wgs84')">Close Shape</button>
+                    <button class="btn success polygon-only" onclick="processWGS84()">Add Shape to Map</button>
+                    <button class="btn success point-only" onclick="processWGS84Points()">Add Points to Map</button>
                 </div>
                 
                 <!-- UTM Entry Mode -->
                 <div class="input-mode" id="utm-mode">
-                    <h3>Add UTM Coordinates</h3>
-                    <p>Enter UTM grid coordinates (will convert to GPS)</p>
-                    
+                    <h3 class="polygon-only">Add UTM Coordinates</h3>
+                    <p class="polygon-only">Enter the plot corners as UTM grid coordinates (will convert to GPS).</p>
+
+                    <h3 class="point-only">Add Single Points (UTM)</h3>
+                    <p class="point-only">Each row becomes its own plot. Coordinates are converted to GPS on the map.</p>
+
                     <div class="form-group">
                         <label>UTM Zone (1-60)</label>
                         <input type="number" id="utm-zone" min="1" max="60" value="33">
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Hemisphere</label>
                         <select id="utm-hemisphere">
@@ -363,13 +483,14 @@
                             <option value="S">Southern</option>
                         </select>
                     </div>
-                    
+
                     <table class="coord-grid">
                         <thead>
                             <tr>
-                                <th>Point</th>
+                                <th>#</th>
                                 <th>Easting (m)</th>
                                 <th>Northing (m)</th>
+                                <th class="point-only">Area (ha)</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -378,21 +499,23 @@
                                 <td>1</td>
                                 <td><input type="number" class="utm-easting" step="0.01"></td>
                                 <td><input type="number" class="utm-northing" step="0.01"></td>
+                                <td class="point-only"><input type="number" class="utm-area" step="0.01" min="0" max="4"></td>
                                 <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
                             </tr>
                         </tbody>
                     </table>
-                    
-                    <button class="btn" onclick="addUTMRow()">Add Point</button>
-                    <button class="btn" onclick="closeRing('utm')">Close Shape</button>
-                    <button class="btn success" onclick="processUTM()">Convert & Add to Map</button>
+
+                    <button class="btn" onclick="addUTMRow()">Add Row</button>
+                    <button class="btn polygon-only" onclick="closeRing('utm')">Close Shape</button>
+                    <button class="btn success polygon-only" onclick="processUTM()">Convert &amp; Add Shape</button>
+                    <button class="btn success point-only" onclick="processUTMPoints()">Convert &amp; Add Points</button>
                 </div>
                 
                 <!-- Map Selection Mode -->
                 <div class="input-mode" id="map-mode">
                     <h3>Draw on Map</h3>
-                    <div class="map-instructions">
-                        <strong>How to draw:</strong>
+                    <div class="map-instructions polygon-only">
+                        <strong>How to draw a plot:</strong>
                         <ul>
                             <li>Click the polygon button (□) on the map</li>
                             <li>Click on the map to add corners</li>
@@ -401,9 +524,25 @@
                             <li>Use trash icon to delete shapes</li>
                         </ul>
                     </div>
-                    
+
+                    <div class="map-instructions point-only">
+                        <strong>How to place a point:</strong>
+                        <ul>
+                            <li>Click the marker button on the map</li>
+                            <li>Click the spot where the plot is</li>
+                            <li>Fill in the plot area (ha) in the popup that opens</li>
+                            <li>Hollow red points still need an area</li>
+                            <li>Use the edit or trash icon to move or delete points</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-group point-only">
+                        <label for="default-point-area">Area for new points (ha)</label>
+                        <input type="number" id="default-point-area" min="0" max="4" step="0.01" placeholder="Optional, e.g. 0.5">
+                    </div>
+
                     <button class="btn danger" onclick="clearAllPolygons()">Clear All</button>
-                    <button class="btn" onclick="simplifyPolygons()" title="Reduces extra points to stay under limits">Reduce Points</button>
+                    <button class="btn polygon-only" onclick="simplifyPolygons()" title="Reduces extra points to stay under limits">Reduce Points</button>
                     <button class="btn success" onclick="captureFromMap()">Save These Shapes</button>
                 </div>
                 
@@ -440,15 +579,23 @@
                 <div id="map"></div>
                 <div class="stats-panel">
                     <div class="stat-row">
-                        <span class="stat-label">Shapes:</span> 
+                        <span class="stat-label">Plots:</span>
                         <span class="stat-value" id="feature-count">0</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">Points:</span> 
+                        <span class="stat-label">Polygons:</span>
+                        <span class="stat-value" id="polygon-count">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Corner points:</span>
                         <span class="stat-value" id="vertex-count">0</span>
                     </div>
                     <div class="stat-row">
-                        <span class="stat-label">Total Area:</span> 
+                        <span class="stat-label">Single points:</span>
+                        <span class="stat-value" id="point-count">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Total Area:</span>
                         <span class="stat-value" id="total-area">0 ha</span>
                     </div>
                 </div>
@@ -462,7 +609,18 @@
         let drawnItems;
         let drawControl;
         let currentMode = 'wgs84';
+        let currentGeometry = 'polygon';
         let currentFeatures = [];
+        
+        const POLYGON_STYLE = {
+            color: '#2c3e50',
+            fillColor: '#3498db',
+            fillOpacity: 0.3,
+            weight: 2
+        };
+        
+        // Single points are only allowed for plots of 4 ha or less (EUDR Art. 2(28)).
+        const MAX_POINT_AREA_HA = 4;
         
         // Initialize Leaflet map
         function initMap() {
@@ -477,37 +635,23 @@
             drawnItems = new L.FeatureGroup();
             map.addLayer(drawnItems);
             
-            // Initialize the draw control
-            drawControl = new L.Control.Draw({
-                position: 'topleft',
-                draw: {
-                    polygon: {
-                        allowIntersection: false,
-                        showArea: true,
-                        shapeOptions: {
-                            color: '#2c3e50',
-                            fillColor: '#3498db',
-                            fillOpacity: 0.3,
-                            weight: 2
-                        }
-                    },
-                    polyline: false,
-                    circle: false,
-                    circlemarker: false,
-                    rectangle: false,
-                    marker: false
-                },
-                edit: {
-                    featureGroup: drawnItems,
-                    edit: true,
-                    remove: true
-                }
-            });
+            // Build the draw toolbar for the current geometry type
+            buildDrawControl();
             
             // Event handlers for drawing
             map.on(L.Draw.Event.CREATED, function(e) {
                 const layer = e.layer;
-                drawnItems.addLayer(layer);
+                
+                if (layer instanceof L.Marker) {
+                    const fallback = parseFloat(document.getElementById('default-point-area').value);
+                    layer.plotArea = isNaN(fallback) ? null : fallback;
+                    preparePointMarker(layer);
+                    drawnItems.addLayer(layer);
+                    layer.openPopup();
+                } else {
+                    drawnItems.addLayer(layer);
+                }
+                
                 updateStats();
             });
             
@@ -520,12 +664,98 @@
             });
         }
         
+        function pointIcon(hasArea) {
+            return L.divIcon({
+                className: 'plot-point-icon' + (hasArea ? '' : ' needs-area'),
+                html: '<span></span>',
+                iconSize: [18, 18],
+                iconAnchor: [9, 9],
+                popupAnchor: [0, -12]
+            });
+        }
+        
+        // The toolbar offers the polygon tool or the marker tool, never both,
+        // so the switch at the top decides what you can draw.
+        function buildDrawControl() {
+            if (drawControl) {
+                map.removeControl(drawControl);
+            }
+            
+            drawControl = new L.Control.Draw({
+                position: 'topleft',
+                draw: {
+                    polygon: currentGeometry === 'polygon' ? {
+                        allowIntersection: false,
+                        showArea: true,
+                        shapeOptions: POLYGON_STYLE
+                    } : false,
+                    marker: currentGeometry === 'point' ? {
+                        icon: pointIcon(false)
+                    } : false,
+                    polyline: false,
+                    circle: false,
+                    circlemarker: false,
+                    rectangle: false
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    edit: true,
+                    remove: true
+                }
+            });
+            
+            if (currentMode === 'map') {
+                map.addControl(drawControl);
+            }
+        }
+        
+        // Every point carries its own area, edited in a popup on the marker.
+        function preparePointMarker(marker) {
+            const wrap = document.createElement('div');
+            wrap.className = 'point-popup';
+            
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.max = String(MAX_POINT_AREA_HA);
+            input.step = '0.01';
+            if (marker.plotArea !== null && marker.plotArea !== undefined) {
+                input.value = marker.plotArea;
+            }
+            
+            const label = document.createElement('label');
+            label.textContent = 'Plot area (ha)';
+            label.appendChild(input);
+            
+            const note = document.createElement('p');
+            note.textContent = 'A single point is only allowed for plots of ' + MAX_POINT_AREA_HA + ' ha or less.';
+            
+            input.addEventListener('input', function() {
+                const value = parseFloat(input.value);
+                marker.plotArea = isNaN(value) ? null : value;
+                refreshPointIcon(marker);
+                updateStats();
+            });
+            
+            wrap.appendChild(label);
+            wrap.appendChild(note);
+            
+            marker.bindPopup(wrap);
+            refreshPointIcon(marker);
+        }
+        
+        function refreshPointIcon(marker) {
+            const area = marker.plotArea;
+            const ok = typeof area === 'number' && area > 0 && area <= MAX_POINT_AREA_HA;
+            marker.setIcon(pointIcon(ok));
+        }
+        
         // Initialize the map on page load
         window.onload = function() {
             initMap();
         };
         
-        // Mode switching
+        // Input mode switching (how coordinates get entered)
         document.querySelectorAll('.mode-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -544,6 +774,33 @@
             });
         });
         
+        // Geometry type switching (whole plot vs single point)
+        const GEOMETRY_HINTS = {
+            polygon: 'A polygon traces the outline of the plot. Required for plots larger than ' + MAX_POINT_AREA_HA + ' hectares.',
+            point: 'A single point marks the plot with one coordinate. Only allowed for plots of ' + MAX_POINT_AREA_HA + ' hectares or less, and every point must state its area in hectares.'
+        };
+        
+        function applyGeometryType(type) {
+            currentGeometry = type;
+            document.body.classList.toggle('geom-polygon', type === 'polygon');
+            document.body.classList.toggle('geom-point', type === 'point');
+            document.getElementById('geometry-hint').textContent = GEOMETRY_HINTS[type];
+            
+            if (map) {
+                buildDrawControl();
+            }
+        }
+        
+        document.querySelectorAll('input[name="geometry-type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    applyGeometryType(this.value);
+                }
+            });
+        });
+        
+        applyGeometryType(document.querySelector('input[name="geometry-type"]:checked').value);
+        
         // WGS84 Functions
         function addWGS84Row() {
             const tbody = document.getElementById('wgs84-coords');
@@ -553,6 +810,7 @@
                 <td>${rowCount}</td>
                 <td><input type="number" class="wgs84-lon" step="0.000001" min="-180" max="180"></td>
                 <td><input type="number" class="wgs84-lat" step="0.000001" min="-90" max="90"></td>
+                <td class="point-only"><input type="number" class="wgs84-area" step="0.01" min="0" max="${MAX_POINT_AREA_HA}"></td>
                 <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
             `;
             tbody.appendChild(row);
@@ -599,6 +857,32 @@
             showValidation('Shape added to map', 'success');
         }
         
+        // Each filled-in row becomes its own single-point plot.
+        function processWGS84Points() {
+            const rows = document.querySelectorAll('#wgs84-coords tr');
+            const points = [];
+            let error = null;
+            
+            rows.forEach((row, index) => {
+                const lon = parseFloat(row.querySelector('.wgs84-lon').value);
+                const lat = parseFloat(row.querySelector('.wgs84-lat').value);
+                const areaField = row.querySelector('.wgs84-area');
+                const area = parseFloat(areaField ? areaField.value : '');
+                
+                if (isNaN(lon) && isNaN(lat)) return; // empty row, skip
+                
+                const problem = checkPoint(index + 1, lon, lat, area);
+                if (problem) {
+                    error = error || problem;
+                    return;
+                }
+                
+                points.push({ lat: lat, lon: lon, area: isNaN(area) ? null : area });
+            });
+            
+            addPoints(points, error);
+        }
+        
         // UTM Functions
         function addUTMRow() {
             const tbody = document.getElementById('utm-coords');
@@ -608,19 +892,27 @@
                 <td>${rowCount}</td>
                 <td><input type="number" class="utm-easting" step="0.01"></td>
                 <td><input type="number" class="utm-northing" step="0.01"></td>
+                <td class="point-only"><input type="number" class="utm-area" step="0.01" min="0" max="${MAX_POINT_AREA_HA}"></td>
                 <td><button class="btn danger small" onclick="removeRow(this)">×</button></td>
             `;
             tbody.appendChild(row);
         }
         
-        function processUTM() {
+        function readUTMZone() {
             const zone = parseInt(document.getElementById('utm-zone').value);
-            const hemisphere = document.getElementById('utm-hemisphere').value;
             
             if (!zone || zone < 1 || zone > 60) {
                 showValidation('Zone must be a number from 1 to 60', 'error');
-                return;
+                return null;
             }
+            
+            const hemisphere = document.getElementById('utm-hemisphere').value;
+            return `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +datum=WGS84`;
+        }
+        
+        function processUTM() {
+            const projString = readUTMZone();
+            if (!projString) return;
             
             const coords = [];
             const rows = document.querySelectorAll('#utm-coords tr');
@@ -630,8 +922,6 @@
                 const northing = parseFloat(row.querySelector('.utm-northing').value);
                 
                 if (!isNaN(easting) && !isNaN(northing)) {
-                    // Define UTM projection
-                    const projString = `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +datum=WGS84`;
                     const wgs84 = proj4(projString, 'WGS84', [easting, northing]);
                     coords.push([wgs84[1], wgs84[0]]); // Leaflet uses [lat, lon]
                 }
@@ -650,6 +940,41 @@
             
             displayPolygon(coords);
             showValidation('UTM converted and shape added to map', 'success');
+        }
+        
+        // Each filled-in row becomes its own single-point plot.
+        function processUTMPoints() {
+            const projString = readUTMZone();
+            if (!projString) return;
+            
+            const rows = document.querySelectorAll('#utm-coords tr');
+            const points = [];
+            let error = null;
+            
+            rows.forEach((row, index) => {
+                const easting = parseFloat(row.querySelector('.utm-easting').value);
+                const northing = parseFloat(row.querySelector('.utm-northing').value);
+                const areaField = row.querySelector('.utm-area');
+                const area = parseFloat(areaField ? areaField.value : '');
+                
+                if (isNaN(easting) && isNaN(northing)) return; // empty row, skip
+                
+                if (isNaN(easting) || isNaN(northing)) {
+                    error = error || `Row ${index + 1}: fill in both easting and northing`;
+                    return;
+                }
+                
+                const wgs84 = proj4(projString, 'WGS84', [easting, northing]);
+                const problem = checkPoint(index + 1, wgs84[0], wgs84[1], area);
+                if (problem) {
+                    error = error || problem;
+                    return;
+                }
+                
+                points.push({ lat: wgs84[1], lon: wgs84[0], area: isNaN(area) ? null : area });
+            });
+            
+            addPoints(points, error);
         }
         
         // Common Functions
@@ -701,61 +1026,117 @@
             }
         }
         
+        // Shared validation for one single-point row. Returns an error string or null.
+        function checkPoint(rowNumber, lon, lat, area) {
+            if (isNaN(lon) || isNaN(lat)) {
+                return `Row ${rowNumber}: fill in both longitude and latitude`;
+            }
+            if (lat < -90 || lat > 90) {
+                return `Row ${rowNumber}: latitude must be between -90 and 90`;
+            }
+            if (lon < -180 || lon > 180) {
+                return `Row ${rowNumber}: longitude must be between -180 and 180`;
+            }
+            if (!isNaN(area) && area <= 0) {
+                return `Row ${rowNumber}: area must be more than 0 ha`;
+            }
+            if (!isNaN(area) && area > MAX_POINT_AREA_HA) {
+                return `Row ${rowNumber}: ${area} ha is over the ${MAX_POINT_AREA_HA} ha limit for single points. Draw this plot as a polygon instead.`;
+            }
+            return null;
+        }
+        
+        function addPoints(points, error) {
+            if (error) {
+                showValidation(error, 'error');
+                return;
+            }
+            
+            if (points.length === 0) {
+                showValidation('Fill in at least one coordinate', 'error');
+                return;
+            }
+            
+            points.forEach(point => displayPoint(point.lat, point.lon, point.area));
+            fitToLayers();
+            
+            const missing = points.filter(point => point.area === null).length;
+            if (missing > 0) {
+                showValidation(`${points.length} point(s) added. ${missing} still need an area in hectares \u2014 click the point on the map to fill it in.`, 'warning');
+            } else {
+                showValidation(`${points.length} point(s) added to map`, 'success');
+            }
+        }
+        
         function displayPolygon(coordinates) {
             // Create and add polygon to map
-            const polygon = L.polygon(coordinates, {
-                color: '#2c3e50',
-                fillColor: '#3498db',
-                fillOpacity: 0.3,
-                weight: 2
-            });
+            const polygon = L.polygon(coordinates, POLYGON_STYLE);
             
             drawnItems.addLayer(polygon);
             
             // Fit map to bounds
-            const bounds = polygon.getBounds();
-            map.fitBounds(bounds, { padding: [50, 50] });
+            map.fitBounds(polygon.getBounds(), { padding: [50, 50] });
             
             updateStats();
+        }
+        
+        function displayPoint(lat, lon, area) {
+            const marker = L.marker([lat, lon]);
+            marker.plotArea = (typeof area === 'number' && !isNaN(area)) ? area : null;
+            preparePointMarker(marker);
+            
+            drawnItems.addLayer(marker);
+            
+            updateStats();
+        }
+        
+        function fitToLayers() {
+            const bounds = drawnItems.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            }
         }
         
         // Map mode functions
         function clearAllPolygons() {
             drawnItems.clearLayers();
             updateStats();
-            showValidation('All shapes removed', 'warning');
+            showValidation('Everything removed from the map', 'warning');
         }
         
         function simplifyPolygons() {
-            const layers = [];
+            const polygons = [];
             drawnItems.eachLayer(function(layer) {
                 if (layer instanceof L.Polygon) {
-                    const latlngs = layer.getLatLngs()[0];
-                    const coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                    
-                    // Create GeoJSON and simplify
-                    const polygon = turf.polygon([coords]);
-                    const simplified = turf.simplify(polygon, {
-                        tolerance: 0.00001,
-                        highQuality: true
-                    });
-                    
-                    // Convert back to Leaflet format
-                    const simplifiedCoords = simplified.geometry.coordinates[0].map(c => [c[1], c[0]]);
-                    layers.push(simplifiedCoords);
+                    polygons.push(layer);
                 }
             });
             
-            // Clear and redraw
-            drawnItems.clearLayers();
-            layers.forEach(coords => {
-                const polygon = L.polygon(coords, {
-                    color: '#2c3e50',
-                    fillColor: '#3498db',
-                    fillOpacity: 0.3,
-                    weight: 2
+            if (polygons.length === 0) {
+                showValidation('No shapes on the map to reduce', 'error');
+                return;
+            }
+            
+            // Replace polygons one by one so any single points stay put
+            polygons.forEach(function(layer) {
+                const coords = layer.getLatLngs()[0].map(ll => [ll.lng, ll.lat]);
+                
+                // turf needs an explicitly closed ring
+                if (coords[0][0] !== coords[coords.length - 1][0] || 
+                    coords[0][1] !== coords[coords.length - 1][1]) {
+                    coords.push([...coords[0]]);
+                }
+                
+                const simplified = turf.simplify(turf.polygon([coords]), {
+                    tolerance: 0.00001,
+                    highQuality: true
                 });
-                drawnItems.addLayer(polygon);
+                
+                // Convert back to Leaflet format
+                const simplifiedCoords = simplified.geometry.coordinates[0].map(c => [c[1], c[0]]);
+                
+                drawnItems.removeLayer(layer);
+                drawnItems.addLayer(L.polygon(simplifiedCoords, POLYGON_STYLE));
             });
             
             updateStats();
@@ -765,16 +1146,18 @@
         function captureFromMap() {
             updateStats();
             if (currentFeatures.length === 0) {
-                showValidation('No shapes on map yet', 'error');
+                showValidation('Nothing on the map yet', 'error');
                 return;
             }
-            showValidation(`${currentFeatures.length} shape(s) saved from map`, 'success');
+            showValidation(`${currentFeatures.length} plot(s) saved from map`, 'success');
         }
         
         function updateStats() {
             const features = [];
             let totalVertices = 0;
             let totalArea = 0;
+            let polygonCount = 0;
+            let pointCount = 0;
             
             drawnItems.eachLayer(function(layer) {
                 if (layer instanceof L.Polygon) {
@@ -797,16 +1180,34 @@
                     };
                     
                     features.push(feature);
+                    polygonCount++;
                     totalVertices += coords.length;
                     
                     // Calculate area
-                    const area = turf.area(feature);
-                    totalArea += area / 10000; // Convert to hectares
+                    totalArea += turf.area(feature) / 10000; // Convert to hectares
+                } else if (layer instanceof L.Marker) {
+                    const latlng = layer.getLatLng();
+                    const area = (typeof layer.plotArea === 'number' && !isNaN(layer.plotArea)) ? layer.plotArea : null;
+                    
+                    features.push({
+                        type: "Feature",
+                        geometry: {
+                            type: "Point",
+                            coordinates: [latlng.lng, latlng.lat]
+                        },
+                        // Area is declared by the user, not measurable from a point
+                        properties: area === null ? {} : { Area: area }
+                    });
+                    
+                    pointCount++;
+                    if (area !== null) totalArea += area;
                 }
             });
             
             document.getElementById('feature-count').textContent = features.length;
+            document.getElementById('polygon-count').textContent = polygonCount;
             document.getElementById('vertex-count').textContent = totalVertices;
+            document.getElementById('point-count').textContent = pointCount;
             document.getElementById('total-area').textContent = totalArea.toFixed(2) + ' ha';
             
             currentFeatures = features;
@@ -826,34 +1227,57 @@
             }
         }
         
+        function round6(coord) {
+            return [
+                Math.round(coord[0] * 1000000) / 1000000,
+                Math.round(coord[1] * 1000000) / 1000000
+            ];
+        }
+        
         function exportGeoJSON() {
             if (currentFeatures.length === 0) {
-                showValidation('No shapes to export. Please draw on the map or add coordinates first.', 'error');
+                showValidation('Nothing to export. Please draw on the map or add coordinates first.', 'error');
                 return;
             }
             
             // Run validation
             let errors = [];
+            let polygonNumber = 0;
+            let pointNumber = 0;
             
-            currentFeatures.forEach((feature, index) => {
-                const vertices = feature.geometry.coordinates[0].length;
-                if (vertices > 1000) {
-                    errors.push(`Shape ${index + 1}: Too many points (${vertices}). Use "Reduce Points" button.`);
-                }
-                if (vertices < 4) {
-                    errors.push(`Shape ${index + 1}: Not enough points`);
+            currentFeatures.forEach(feature => {
+                if (feature.geometry.type === 'Point') {
+                    pointNumber++;
+                    const area = feature.properties.Area;
+                    
+                    if (typeof area !== 'number' || isNaN(area) || area <= 0) {
+                        errors.push(`Point ${pointNumber}: Needs a plot area in hectares. Click the point on the map to fill it in.`);
+                    } else if (area > MAX_POINT_AREA_HA) {
+                        errors.push(`Point ${pointNumber}: ${area} ha is over the ${MAX_POINT_AREA_HA} ha limit for single points. Draw this plot as a polygon instead.`);
+                    }
+                    return;
                 }
                 
-                const first = feature.geometry.coordinates[0][0];
-                const last = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length - 1];
+                polygonNumber++;
+                const ring = feature.geometry.coordinates[0];
+                
+                if (ring.length > 1000) {
+                    errors.push(`Shape ${polygonNumber}: Too many points (${ring.length}). Use "Reduce Points" button.`);
+                }
+                if (ring.length < 4) {
+                    errors.push(`Shape ${polygonNumber}: Not enough points`);
+                }
+                
+                const first = ring[0];
+                const last = ring[ring.length - 1];
                 if (first[0] !== last[0] || first[1] !== last[1]) {
-                    errors.push(`Shape ${index + 1}: Not closed properly`);
+                    errors.push(`Shape ${polygonNumber}: Not closed properly`);
                 }
                 
                 try {
                     const kinks = turf.kinks(feature);
                     if (kinks.features.length > 0) {
-                        errors.push(`Shape ${index + 1}: Lines cross each other`);
+                        errors.push(`Shape ${polygonNumber}: Lines cross each other`);
                     }
                 } catch (e) {
                     // Skip check if it fails
@@ -861,18 +1285,18 @@
                 
                 const area = turf.area(feature) / 10000;
                 if (area === 0) {
-                    errors.push(`Shape ${index + 1}: No area`);
+                    errors.push(`Shape ${polygonNumber}: No area`);
                 }
             });
             
             if (currentFeatures.length > 200) {
-                errors.push(`Too many shapes (${currentFeatures.length}). Maximum is 200.`);
+                errors.push(`Too many plots (${currentFeatures.length}). Maximum is 200.`);
             }
             
             const jsonStr = JSON.stringify({ type: "FeatureCollection", features: currentFeatures });
             const mb = new TextEncoder().encode(jsonStr).length / (1024 * 1024);
             if (mb > 10) {
-                errors.push(`File too large. Use "Reduce Points" or remove some shapes.`);
+                errors.push(`File too large. Use "Reduce Points" or remove some plots.`);
             }
             
             if (errors.length > 0) {
@@ -892,13 +1316,14 @@
                 if (producerCountry) newFeature.properties.ProducerCountry = producerCountry.toUpperCase();
                 if (productionPlace) newFeature.properties.ProductionPlace = productionPlace;
                 
-                const area = turf.area(feature) / 10000;
-                newFeature.properties.Area = Math.round(area * 100) / 100;
-                
-                newFeature.geometry.coordinates[0] = newFeature.geometry.coordinates[0].map(coord => [
-                    Math.round(coord[0] * 1000000) / 1000000,
-                    Math.round(coord[1] * 1000000) / 1000000
-                ]);
+                if (newFeature.geometry.type === 'Point') {
+                    // Area comes from the user; keep it precise enough for small plots
+                    newFeature.properties.Area = Math.round(newFeature.properties.Area * 10000) / 10000;
+                    newFeature.geometry.coordinates = round6(newFeature.geometry.coordinates);
+                } else {
+                    newFeature.properties.Area = Math.round((turf.area(feature) / 10000) * 100) / 100;
+                    newFeature.geometry.coordinates[0] = newFeature.geometry.coordinates[0].map(round6);
+                }
                 
                 return newFeature;
             });
