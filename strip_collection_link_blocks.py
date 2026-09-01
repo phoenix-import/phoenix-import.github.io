@@ -427,6 +427,18 @@ class Shopify:
         if errs:
             raise ShopifyError(json.dumps(errs))
 
+    def remove_translations(self, resource_id, locales, key=TARGET_KEY):
+        mutation = """
+        mutation($resourceId: ID!, $keys: [String!]!, $locales: [String!]!) {
+          translationsRemove(resourceId: $resourceId, translationKeys: $keys, locales: $locales) {
+            userErrors { field message }
+          }
+        }"""
+        result = self.gql(mutation, {"resourceId": resource_id, "keys": [key], "locales": locales})
+        errs = result["translationsRemove"]["userErrors"]
+        if errs:
+            raise ShopifyError(json.dumps(errs))
+
     def register_translations(self, resource_id, entries):
         """entries: [{locale, value, digest}]"""
         mutation = """
@@ -465,6 +477,7 @@ def build_plan(api, args, locales):
             "title": coll["title"],
             "primary": None,
             "translations": [],
+            "link_only": [],
         }
 
         after, blocks = strip_link_blocks(coll["body_html"], args.min_links, args.min_collection_ratio)
@@ -481,22 +494,36 @@ def build_plan(api, args, locales):
         for loc, tr in sorted(coll["translations"].items()):
             t_after, t_blocks = strip_link_blocks(tr.get("value") or "",
                                                   args.min_links, args.min_collection_ratio)
-            if t_blocks:
-                entry["translations"].append({
-                    "locale": loc,
-                    "key": TARGET_KEY,
-                    "before": tr.get("value") or "",
-                    "after": t_after,
-                    "outdated": bool(tr.get("outdated")),
-                    "blocks": [{"tag": b["tag"], "html": b["html"], "links": b["links"]} for b in t_blocks],
-                })
+            if not t_blocks:
+                continue
+            row = {
+                "locale": loc,
+                "key": TARGET_KEY,
+                "before": tr.get("value") or "",
+                "after": t_after,
+                "outdated": bool(tr.get("outdated")),
+                "link_only": t_after == "",
+                "action": "write",
+                "blocks": [{"tag": b["tag"], "html": b["html"], "links": b["links"]} for b in t_blocks],
+            }
+            if t_after == "":
+                # The whole translated description IS the link block. Stripping it
+                # leaves nothing, so the storefront falls back to the primary
+                # language. That is a content decision, not a mechanical strip.
+                row["action"] = {"skip": "skip", "clear": "write", "remove": "remove"}[args.on_empty]
+                if row["action"] == "skip":
+                    entry["link_only"].append(row)
+                    continue
+            entry["translations"].append(row)
 
-        if entry["primary"] or entry["translations"]:
+        if entry["primary"] or entry["translations"] or entry["link_only"]:
             plan.append(entry)
         if args.verbose and seen % 50 == 0:
             print("  scanned %d collections…" % seen, file=sys.stderr)
 
     stats = {
+        "on_empty_policy": args.on_empty,
+        "link_only_descriptions": sum(len(e["link_only"]) for e in plan),
         "collections_scanned": seen,
         "collections_with_blocks": len(plan),
         "primary_descriptions_changed": sum(1 for e in plan if e["primary"]),
@@ -564,13 +591,19 @@ def push_changes(api, plan, verbose=False, value_key="after"):
         try:
             if entry.get("primary"):
                 api.update_description(entry["resource_id"], entry["primary"][value_key])
-            if entry.get("translations"):
+            # Restoring always writes the old text back, even where stripping deleted it.
+            removing = [t for t in entry.get("translations", [])
+                        if value_key == "after" and t.get("action") == "remove"]
+            writing = [t for t in entry.get("translations", []) if t not in removing]
+            if removing:
+                api.remove_translations(entry["resource_id"], [t["locale"] for t in removing])
+            if writing:
                 digest = api.fresh_digest(entry["resource_id"])
                 if not digest:
                     raise ShopifyError("no %s digest returned" % TARGET_KEY)
                 api.register_translations(entry["resource_id"], [
                     {"locale": t["locale"], "value": t[value_key], "digest": digest}
-                    for t in entry["translations"]
+                    for t in writing
                 ])
             ok += 1
             if verbose or i % 25 == 0:
@@ -604,6 +637,14 @@ def cmd_scan_or_apply(args):
           "\n  %(primary_descriptions_changed)d primary descriptions to change"
           "\n  %(translations_changed)d translated descriptions to change"
           "\n  %(blocks_removed)d blocks / %(links_removed)d links total" % stats)
+    if stats["link_only_descriptions"]:
+        print("\n  %d translated descriptions are NOTHING BUT the link block."
+              "\n  --on-empty=%s: %s"
+              % (stats["link_only_descriptions"], args.on_empty,
+                 {"skip": "left untouched, listed under 'link_only' in the dump",
+                  "clear": "emptied — the page falls back to the primary language",
+                  "remove": "translation deleted — the page falls back to the primary language",
+                  }[args.on_empty]))
 
     write_dump(args.out, api, args, others, plan, stats)
     print("\nDump written to %s" % args.out)
@@ -648,7 +689,7 @@ def cmd_restore(args):
         if entry.get("primary") and live["__primary__"] != entry["primary"]["after"]:
             changed.append(args.primary_locale or dump.get("primary_locale") or "primary")
         for t in entry["translations"]:
-            if live.get(t["locale"]) != t["after"]:
+            if (live.get(t["locale"]) or "") != (t["after"] or ""):
                 changed.append(t["locale"])
         if changed and not args.force:
             drifted.append({"handle": entry["handle"], "locales": changed})
@@ -670,6 +711,57 @@ def cmd_restore(args):
     ok, failed = push_changes(api, safe, args.verbose, value_key="before")
     print("\nDone. %d collections restored, %d failed." % (ok, len(failed)))
     return 1 if failed else 0
+
+
+def visible_text(html):
+    """Rough plain-text of an HTML description, for eyeballing what is in it."""
+    txt = re.sub(r"(?is)<(script|style).*?</\1>", " ", html or "")
+    txt = re.sub(r"<[^>]+>", " ", txt)
+    txt = txt.replace("&nbsp;", " ").replace("\xa0", " ")
+    txt = re.sub(r"&[a-z]+;", " ", txt)
+    return " ".join(txt.split())
+
+
+def cmd_audit(args):
+    """Read-only: what does each locale actually hold for these collections?"""
+    api = Shopify(args.shop, args.token, args.api_version, args.verbose)
+    primary, others = api.locales()
+    if primary is None and others is None:
+        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
+    if args.locales:
+        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
+        others = [l for l in others if l in wanted]
+    want = {h.strip() for h in (args.handles or "").split(",") if h.strip()}
+
+    def describe(html, present=True):
+        if not present:
+            return "NO TRANSLATION", 0, ""
+        text = visible_text(html)
+        if not (html or "").strip():
+            return "EMPTY", 0, ""
+        stripped, blocks = strip_link_blocks(html, args.min_links, args.min_collection_ratio)
+        if blocks and not stripped:
+            return "BLOCK ONLY", len(text), text[:70]
+        if blocks:
+            return "prose + block", len(visible_text(stripped)), visible_text(stripped)[:70]
+        return "prose", len(text), text[:70]
+
+    rows = 0
+    for coll in api.collections(others, page_size=args.page_size):
+        if want and coll["handle"] not in want:
+            continue
+        rows += 1
+        print("\n%s  (%s)" % (coll["handle"], coll["title"]))
+        state, n, snip = describe(coll["body_html"])
+        print("  %-4s %-14s %5d chars  %s" % (primary + "*", state, n, snip))
+        for loc in others:
+            tr = coll["translations"].get(loc)
+            state, n, snip = describe((tr or {}).get("value") or "", present=tr is not None)
+            print("  %-4s %-14s %5d chars  %s" % (loc, state, n, snip))
+    if not rows:
+        print("No collections matched.")
+    print("\n%d collection(s) audited. Nothing was written." % rows)
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -757,9 +849,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("command", nargs="?", default="scan",
-                        choices=["scan", "apply", "restore"],
+                        choices=["scan", "apply", "restore", "audit"],
                         help="scan = read-only dry run (default); apply = strip; "
-                             "restore = put the blocks back from a dump")
+                             "restore = put the blocks back from a dump; "
+                             "audit = read-only, report what each locale actually holds")
     parser.add_argument("--shop", default=os.environ.get("SHOPIFY_SHOP", DEFAULT_SHOP))
     parser.add_argument("--token", default=os.environ.get("SHOPIFY_TOKEN", ""),
                         help="Admin API token (shpat_...); or set SHOPIFY_TOKEN")
@@ -779,6 +872,13 @@ def main():
                         help="minimum collection links for a block to qualify (default 2)")
     parser.add_argument("--min-collection-ratio", type=float, default=0.75,
                         help="minimum share of a block's links that must be collection links")
+    parser.add_argument("--on-empty", choices=["remove", "clear", "skip"], default="remove",
+                        help="what to do when the link block IS the whole translated "
+                             "description — nothing but the block is ever removed, so this "
+                             "only decides what to leave behind: remove = delete the now-empty "
+                             "translation (default); clear = keep it as an empty string; "
+                             "skip = leave the block in place, recorded under link_only in "
+                             "the dump")
     parser.add_argument("--force", action="store_true",
                         help="restore even over descriptions edited since the dump")
     parser.add_argument("-y", "--yes", action="store_true", help="skip the confirmation prompt")
@@ -792,6 +892,8 @@ def main():
         return self_test()
     if not args.token:
         parser.error("no Admin API token — pass --token or set SHOPIFY_TOKEN")
+    if args.command == "audit":
+        return cmd_audit(args)
     if args.command == "restore":
         if not args.backup:
             parser.error("restore needs --backup <dump.json>")
