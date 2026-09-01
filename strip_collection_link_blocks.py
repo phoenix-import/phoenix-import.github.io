@@ -713,6 +713,57 @@ def cmd_restore(args):
     return 1 if failed else 0
 
 
+def visible_text(html):
+    """Rough plain-text of an HTML description, for eyeballing what is in it."""
+    txt = re.sub(r"(?is)<(script|style).*?</\1>", " ", html or "")
+    txt = re.sub(r"<[^>]+>", " ", txt)
+    txt = txt.replace("&nbsp;", " ").replace("\xa0", " ")
+    txt = re.sub(r"&[a-z]+;", " ", txt)
+    return " ".join(txt.split())
+
+
+def cmd_audit(args):
+    """Read-only: what does each locale actually hold for these collections?"""
+    api = Shopify(args.shop, args.token, args.api_version, args.verbose)
+    primary, others = api.locales()
+    if primary is None and others is None:
+        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
+    if args.locales:
+        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
+        others = [l for l in others if l in wanted]
+    want = {h.strip() for h in (args.handles or "").split(",") if h.strip()}
+
+    def describe(html, present=True):
+        if not present:
+            return "NO TRANSLATION", 0, ""
+        text = visible_text(html)
+        if not (html or "").strip():
+            return "EMPTY", 0, ""
+        stripped, blocks = strip_link_blocks(html, args.min_links, args.min_collection_ratio)
+        if blocks and not stripped:
+            return "BLOCK ONLY", len(text), text[:70]
+        if blocks:
+            return "prose + block", len(visible_text(stripped)), visible_text(stripped)[:70]
+        return "prose", len(text), text[:70]
+
+    rows = 0
+    for coll in api.collections(others, page_size=args.page_size):
+        if want and coll["handle"] not in want:
+            continue
+        rows += 1
+        print("\n%s  (%s)" % (coll["handle"], coll["title"]))
+        state, n, snip = describe(coll["body_html"])
+        print("  %-4s %-14s %5d chars  %s" % (primary + "*", state, n, snip))
+        for loc in others:
+            tr = coll["translations"].get(loc)
+            state, n, snip = describe((tr or {}).get("value") or "", present=tr is not None)
+            print("  %-4s %-14s %5d chars  %s" % (loc, state, n, snip))
+    if not rows:
+        print("No collections matched.")
+    print("\n%d collection(s) audited. Nothing was written." % rows)
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Self-test
 # ---------------------------------------------------------------------------
@@ -798,9 +849,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("command", nargs="?", default="scan",
-                        choices=["scan", "apply", "restore"],
+                        choices=["scan", "apply", "restore", "audit"],
                         help="scan = read-only dry run (default); apply = strip; "
-                             "restore = put the blocks back from a dump")
+                             "restore = put the blocks back from a dump; "
+                             "audit = read-only, report what each locale actually holds")
     parser.add_argument("--shop", default=os.environ.get("SHOPIFY_SHOP", DEFAULT_SHOP))
     parser.add_argument("--token", default=os.environ.get("SHOPIFY_TOKEN", ""),
                         help="Admin API token (shpat_...); or set SHOPIFY_TOKEN")
@@ -839,6 +891,8 @@ def main():
         return self_test()
     if not args.token:
         parser.error("no Admin API token — pass --token or set SHOPIFY_TOKEN")
+    if args.command == "audit":
+        return cmd_audit(args)
     if args.command == "restore":
         if not args.backup:
             parser.error("restore needs --backup <dump.json>")
