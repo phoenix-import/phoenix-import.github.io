@@ -872,12 +872,13 @@ def main():
                         help="minimum collection links for a block to qualify (default 2)")
     parser.add_argument("--min-collection-ratio", type=float, default=0.75,
                         help="minimum share of a block's links that must be collection links")
-    parser.add_argument("--on-empty", choices=["skip", "clear", "remove"], default="skip",
+    parser.add_argument("--on-empty", choices=["remove", "clear", "skip"], default="remove",
                         help="what to do when the link block IS the whole translated "
-                             "description: skip = leave it alone (default, recorded under "
-                             "link_only in the dump); clear = write an empty description; "
-                             "remove = delete the translation so the page falls back to the "
-                             "primary language")
+                             "description — nothing but the block is ever removed, so this "
+                             "only decides what to leave behind: remove = delete the now-empty "
+                             "translation (default); clear = keep it as an empty string; "
+                             "skip = leave the block in place, recorded under link_only in "
+                             "the dump")
     parser.add_argument("--force", action="store_true",
                         help="restore even over descriptions edited since the dump")
     parser.add_argument("-y", "--yes", action="store_true", help="skip the confirmation prompt")
