@@ -98,6 +98,9 @@ from html.parser import HTMLParser
 DEFAULT_SHOP = "manibhadra-phoeniximport.myshopify.com"
 DEFAULT_API_VERSION = "2025-10"
 TARGET_KEY = "body_html"          # the collection description
+# Used when the token lacks read_locales; override with --primary-locale/--locales.
+FALLBACK_PRIMARY_LOCALE = "nl"
+FALLBACK_LOCALES = ["en", "de", "fr", "it", "es"]
 CONTAINER_TAGS = ("p", "div", "strong", "b")
 
 # ---------------------------------------------------------------------------
@@ -302,7 +305,13 @@ class Shopify:
 
     # -- reads ------------------------------------------------------------
     def locales(self):
-        data = self.gql("{ shopLocales { locale primary published } }")
+        """(primary, [others]), or (None, None) if the token can't read locales."""
+        try:
+            data = self.gql("{ shopLocales { locale primary published } }")
+        except ShopifyError as exc:
+            if "read_locales" in str(exc) or "read_markets_home" in str(exc):
+                return None, None          # caller falls back to the defaults
+            raise
         rows = data.get("shopLocales") or []
         primary = next((r["locale"] for r in rows if r.get("primary")), None)
         others = [r["locale"] for r in rows if not r.get("primary") and r.get("published")]
@@ -564,7 +573,13 @@ def push_changes(api, plan, verbose=False, value_key="after"):
 def cmd_scan_or_apply(args):
     api = Shopify(args.shop, args.token, args.api_version, args.verbose)
     primary, others = api.locales()
-    args.primary_locale = args.primary_locale or primary or "nl"
+    if primary is None and others is None:
+        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
+        print("Note: token can't read shopLocales (no read_locales scope), so falling\n"
+              "      back to the standard set — primary '%s', translated %s.\n"
+              "      Override with --primary-locale / --locales if that's not right."
+              % (primary, ", ".join(others)))
+    args.primary_locale = args.primary_locale or primary or FALLBACK_PRIMARY_LOCALE
     if args.locales:
         wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
         others = [l for l in others if l in wanted]
