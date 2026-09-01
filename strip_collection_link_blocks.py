@@ -31,20 +31,38 @@ That last rule is what makes this safe to run store-wide: a real sentence with
 a link in it always leaves words behind and is rejected.  Use `--self-test` to
 see the detector's behaviour on a set of positive and negative samples.
 
-Usage
------
-  export SHOPIFY_TOKEN=shpat_xxxxxxxx          # needs read/write_products
-                                               # + read/write_translations
+Usage (PowerShell — the usual way we run this)
+----------------------------------------------
+  cd C:\path\to\phoenix-import.github.io
+
+  # Set the token for THIS window only (it disappears when you close it).
+  # Needs an Admin API token with read/write_products + read/write_translations.
+  $env:SHOPIFY_TOKEN = "shpat_xxxxxxxxxxxxxxxxxxxxxxxx"
+
   # 1. Look first — writes the JSON dump, changes nothing in the store.
-  python3 strip_collection_link_blocks.py scan --out collection-link-blocks.json
+  python strip_collection_link_blocks.py scan --report found.csv
 
   # 2. Strip for real (same dump is written, then the store is updated).
-  python3 strip_collection_link_blocks.py apply --out collection-link-blocks.json
+  python strip_collection_link_blocks.py apply
 
   # 3. If we ever want them back.
-  python3 strip_collection_link_blocks.py restore --backup collection-link-blocks.json
+  python strip_collection_link_blocks.py restore --backup collection-link-blocks.json
+
+  # No token needed for this one — checks the detector against sample HTML.
+  python strip_collection_link_blocks.py --self-test
+
+If `python` is not recognised, try `py` instead. On macOS/Linux the token line
+is `export SHOPIFY_TOKEN=shpat_...` and the command is `python3`.
 
 Handy flags: --handles a,b,c   --limit 20   --locales de,fr   --report out.csv
+             --token shpat_...  (instead of the environment variable)
+
+Where the token comes from
+--------------------------
+  Shopify admin > Settings > Apps and sales channels > Develop apps >
+  (the app we use for these scripts) > API credentials > Admin API access
+  token.  Same shpat_... token the console scripts prompt for, as long as the
+  translation scopes are ticked under Configuration > Admin API integration.
 
 Notes / limitations
 -------------------
