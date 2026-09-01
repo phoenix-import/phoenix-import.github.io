@@ -31,9 +31,12 @@ That last rule is what makes this safe to run store-wide: a real sentence with
 a link in it always leaves words behind and is rejected.  Use `--self-test` to
 see the detector's behaviour on a set of positive and negative samples.
 
-Usage (PowerShell — the usual way we run this)
-----------------------------------------------
-  cd C:\path\to\phoenix-import.github.io
+Usage (PowerShell, run from Downloads — the usual way we run this)
+------------------------------------------------------------------
+  cd $env:USERPROFILE\Downloads
+
+  # Grab the latest copy of this script from GitHub into Downloads:
+  #   iwr https://raw.githubusercontent.com/phoenix-import/phoenix-import.github.io/main/strip_collection_link_blocks.py -OutFile strip_collection_link_blocks.py
 
   # Set the token for THIS window only (it disappears when you close it).
   # Needs an Admin API token with read/write_products + read/write_translations.
@@ -53,6 +56,11 @@ Usage (PowerShell — the usual way we run this)
 
 If `python` is not recognised, try `py` instead. On macOS/Linux the token line
 is `export SHOPIFY_TOKEN=shpat_...` and the command is `python3`.
+
+IMPORTANT: the JSON dump is written next to wherever you run this, so from
+Downloads it lands in Downloads. That file is the ONLY way to put the blocks
+back — move it somewhere safe once the run is done, or point --out at a proper
+folder from the start.
 
 Handy flags: --handles a,b,c   --limit 20   --locales de,fr   --report out.csv
              --token shpat_...  (instead of the environment variable)
