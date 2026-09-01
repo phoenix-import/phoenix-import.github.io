@@ -20,8 +20,9 @@ What counts as a link block
 The pipe is the anchor, exactly as intended.  A container (<p>, then <div>,
 then <strong>/<b>) qualifies when ALL of these hold:
 
-  * it contains at least --min-links links to /collections/<handle>
-    (relative, locale-prefixed like /de/collections/..., or absolute),
+  * it contains at least --min-links links to a collection — /collections/<handle>
+    (relative, locale-prefixed like /de/collections/..., or absolute), or the
+    bare handle the migration-era blocks use, e.g. href="kaarsen-en-sfeerlichten",
   * at least --min-collection-ratio of its links are collection links,
   * its text OUTSIDE the links contains no letters or digits — only
     separators/whitespace, so running prose with inline links is never touched,
@@ -111,6 +112,10 @@ COLLECTION_HREF_RE = re.compile(
     r"^(?:https?:)?(?://[^/]+)?(?:/[a-z]{2}(?:-[a-z]{2})?)?/collections/[^/?#\s]+",
     re.I,
 )
+# Legacy migration blocks link with the bare handle and no /collections/ prefix,
+# e.g. href="kaarsen-en-sfeerlichten". Handle-shaped means: no scheme, no slash,
+# no dot, no query — which rules out page/file links like "register.aspx".
+BARE_HANDLE_HREF_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*/?$", re.I)
 ALNUM_RE = re.compile(r"[^\W_]", re.UNICODE)
 
 
@@ -171,7 +176,8 @@ def _tag_spans(html, tag):
 
 
 def is_collection_href(href):
-    return bool(COLLECTION_HREF_RE.match((href or "").strip()))
+    href = (href or "").strip()
+    return bool(COLLECTION_HREF_RE.match(href) or BARE_HANDLE_HREF_RE.match(href))
 
 
 def qualifies(chunk, min_links, min_ratio):
@@ -197,7 +203,7 @@ def qualifies(chunk, min_links, min_ratio):
 
 def find_link_blocks(html, min_links=2, min_ratio=0.75):
     """All link blocks in `html`, as dicts with start/end/html/links."""
-    if not html or "/collections/" not in html:
+    if not html or "<a" not in html or "|" not in html:
         return []
     found = []
     for tag in CONTAINER_TAGS:
@@ -526,6 +532,11 @@ def write_dump(path, api, args, locales, plan, stats):
         "stats": stats,
         "collections": plan,
     }
+    if os.path.exists(path):
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        kept = "%s.%s.bak%s" % (os.path.splitext(path)[0], stamp, os.path.splitext(path)[1])
+        os.replace(path, kept)
+        print("Existing dump kept as %s (it is the only way to restore an earlier run)" % kept)
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(dump, fh, ensure_ascii=False, indent=2)
     return dump
@@ -686,6 +697,12 @@ SAMPLES = [
     (True, "block with one non-collection link mixed in",
      '<p><a href="/collections/a">A</a> | <a href="/collections/b">B</a> | '
      '<a href="/collections/c">C</a> | <a href="/pages/over-ons">Over ons</a></p>'),
+    (True, "bare handle hrefs, <strong> per link, pipes outside (migration-era)",
+     '<p><strong><a href="kaarsen-en-sfeerlichten">Kaarsen en sfeerlichten</a></strong> | '
+     '<strong><a href="wierook-witte-salie-en-houtskool">Wierook, witte salie en houtskool</a></strong> | '
+     '<strong><a href="yoga">Yoga</a></strong> | <strong><a href="sieraden">Sieraden</a></strong></p>'),
+    (False, "pipe-separated file/page links, not collections",
+     '<p><a href="register.aspx">Registreren</a> | <a href="login.aspx">Inloggen</a></p>'),
     (False, "prose with inline links",
      '<p>Bekijk ook onze <a href="/collections/edelsteen-armbanden">edelsteen armbanden</a> en '
      '<a href="/collections/edelsteen-oorbellen">oorbellen</a> voor de complete set.</p>'),
