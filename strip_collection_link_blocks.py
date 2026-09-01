@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 strip_collection_link_blocks.py
 --------------------------------
 Removes the pipe-separated "collection link block" from every Shopify
