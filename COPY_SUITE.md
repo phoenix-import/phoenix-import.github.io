@@ -230,7 +230,8 @@ segments in order, disclaimers injected canonically, joined with `<br>`. Gated:
 required before generating the console-script.
 
 **Proofread re-ingest (Finalize):** the Finalize section is a 3-step flow —
-**1. download for proofread** (CSV/XLSX = `buildFinalRows`), **2. upload proofread
+**1. download for proofread** (XLSX = `buildFinalRows`; the `/proofread` skill
+expects xlsx, so there is no CSV export here), **2. upload proofread
 final** (the file after the chat `/proofread` skill), **3. generate** script +
 Paragon imports. The upload sets `proofreadFinal = {rows,name,count}` (parsed via
 `readRows`, same `SKU,LANG,TITLE,COPY` shape); **`buildParsed` then sources from

@@ -398,7 +398,6 @@
   </div>
   <div class="fin-row">
     <span class="fin-step">1. Proofread:</span>
-    <button class="secondary" id="finalCsvBtn" title="Download the assembled SKU/LANG/TITLE/COPY file to run through /proofread">Download for proofread (CSV)</button>
     <button class="secondary" id="finalXlsxBtn" title="Download the assembled file (XLSX) to run through /proofread">Download for proofread (XLSX)</button>
     <span class="ctrl-sep"></span>
     <button class="secondary" id="uploadProofBtn" title="Upload the proofread SKU/LANG/TITLE/COPY file — the script & Paragon imports are then built from it, not the live project">2. Upload proofread final…</button>
@@ -2765,9 +2764,6 @@ document.getElementById('clearProofBtn').addEventListener('click', () => {
   updateOutputs(); updateFinSource();
 });
 
-document.getElementById('finalCsvBtn').addEventListener('click', () => {
-  download(exportName('proofread', 'csv'), toCSV(buildFinalRows()), 'text/csv;charset=utf-8;');
-});
 document.getElementById('finalXlsxBtn').addEventListener('click', () => {
   downloadXlsx(buildFinalRows(), 'Import', exportName('proofread', 'xlsx'));
 });
