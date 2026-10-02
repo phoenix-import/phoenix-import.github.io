@@ -121,6 +121,10 @@
   .boot-card .boot-error { color: #b00; font-size: 13px; margin-top: 10px; }
   .boot-card code.path { background: #f3eef6; color: var(--purple); padding: 2px 6px; border-radius: 3px; font-size: 12px; word-break: break-all; }
   .save-status { font-size: 12px; color: var(--muted); }
+  #loadModal textarea { width: 100%; font: 12px/1.5 Consolas, monospace; padding: 8px; border: 1px solid var(--border); border-radius: 3px; resize: vertical; }
+  .product-head .loaded-info { font-size: 12px; color: var(--muted); }
+  .product-head .loaded-info strong { color: var(--ok); font-weight: 600; }
+  .notice { padding: 8px 14px; font-size: 12px; background: #fcf6e3; border-bottom: 1px solid var(--border); color: var(--text); }
   .save-status.saving { color: var(--warn); }
   .save-status.saved { color: var(--ok); }
 </style>
@@ -156,6 +160,7 @@
   <div id="productList"></div>
   <div style="display:flex; gap:10px; padding:6px 0 18px;">
     <button id="btnAddProduct">+ Add another product</button>
+    <button id="btnLoadExisting">Load existing products from Shopify</button>
     <span class="help">Each product gets its own card. The same script will fill them all in one run.</span>
   </div>
   <div class="footer-actions">
@@ -173,6 +178,26 @@
     <div class="modal-actions">
       <button id="btnAddBankCancel">Cancel</button>
       <button class="primary" id="btnAddBankSave">Save to bank</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="loadModal">
+  <div class="modal" style="width: 720px;">
+    <h2>Load existing products from Shopify</h2>
+    <div class="modal-sub"><strong>Step 1.</strong> Enter the SKUs to load, one per line or separated by commas, and generate the read script. Paste it into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com) and run it. It changes nothing in Shopify; it downloads a <code>phoenix-spec-load-&hellip;.json</code> file and also copies the result to your clipboard.</div>
+    <textarea id="loadSkus" rows="3" placeholder="100996&#10;100997"></textarea>
+    <div class="modal-actions" style="margin-top:8px">
+      <button id="btnCopyReadScript">Copy read script</button>
+      <button id="btnDownloadReadScript">Download .js</button>
+    </div>
+    <div class="modal-sub" style="margin-top:16px"><strong>Step 2.</strong> Paste the result here, or pick the downloaded file. Each SKU becomes a card with its current specs filled in. Change what you need and generate the write script as usual: it overwrites the values, and any field you emptied on a loaded product is deleted from Shopify.</div>
+    <textarea id="loadResult" rows="4" placeholder="Paste the JSON result here"></textarea>
+    <div class="modal-help" id="loadMessage" style="display:none"></div>
+    <div class="modal-actions">
+      <button id="btnCloseLoad">Close</button>
+      <button id="btnPickLoadFile">Pick result file</button>
+      <button class="primary" id="btnImportLoad">Load into cards</button>
     </div>
   </div>
 </div>
@@ -361,15 +386,33 @@ function renderProductCard(product, idx) {
   head.className = 'product-head';
   head.innerHTML = '<span class="label">SKU</span>'
     + '<input class="sku" type="text" value="' + escapeAttr(product.sku) + '" placeholder="e.g. 100996">'
+    + '<span class="loaded-info"></span>'
     + '<span class="spacer"></span>'
     + '<button class="tiny danger" data-act="remove">Remove product</button>';
-  head.querySelector('input.sku').addEventListener('input', (e) => { product.sku = e.target.value.trim(); });
+  const infoEl = head.querySelector('.loaded-info');
+  const refreshInfo = () => {
+    infoEl.innerHTML = product.loaded
+      ? '<strong>Loaded from Shopify</strong> &middot; ' + escapeHtml(product.loaded.title) + ' &middot; generating will overwrite this product'
+      : '';
+  };
+  refreshInfo();
+  head.querySelector('input.sku').addEventListener('input', (e) => {
+    product.sku = e.target.value.trim();
+    // A different SKU is a different product: never clear fields on it based on what was loaded here.
+    if (product.loaded && product.sku !== product.loaded.sku) { product.loaded = null; product.notices = []; refreshInfo(); }
+  });
   head.querySelector('[data-act="remove"]').addEventListener('click', () => {
     if (products.length === 1) products = [emptyProduct()];
     else products.splice(idx, 1);
     render();
   });
   card.appendChild(head);
+  (product.notices || []).forEach((n) => {
+    const el = document.createElement('div');
+    el.className = 'notice';
+    el.textContent = n;
+    card.appendChild(el);
+  });
 
   GROUPS.forEach((g) => {
     const groupEl = document.createElement('div');
@@ -408,10 +451,18 @@ function renderField(container, specKey, def, product) {
   }
 }
 
+function optionsHtml(def, current, placeholder) {
+  let html = '<option value="">' + placeholder + '</option>'
+    + def.values.map(v => '<option value="' + escapeAttr(v.nl) + '"' + (v.nl===current?' selected':'') + '>' + escapeHtml(v.nl) + '</option>').join('');
+  if (current && !def.values.some(v => v.nl === current)) {
+    html += '<option value="' + escapeAttr(current) + '" selected>' + escapeHtml(current) + ' (not in bank)</option>';
+  }
+  return html;
+}
+
 function renderBankSingle(container, specKey, def, product, current) {
   const select = document.createElement('select');
-  select.innerHTML = '<option value="">— select —</option>'
-    + def.values.map(v => '<option value="' + escapeAttr(v.nl) + '"' + (v.nl===current?' selected':'') + '>' + escapeHtml(v.nl) + '</option>').join('');
+  select.innerHTML = optionsHtml(def, current, '— select —');
   select.addEventListener('change', () => {
     if (select.value) product.specs[specKey] = select.value; else delete product.specs[specKey];
   });
@@ -435,7 +486,8 @@ function renderBankMulti(container, specKey, def, product, current) {
     arr.forEach((v, i) => {
       const ch = document.createElement('span');
       ch.className = 'chip';
-      ch.innerHTML = '<span>' + escapeHtml(v) + '</span><button>×</button>';
+      const inBank = def.values.some(x => x.nl === v);
+      ch.innerHTML = '<span>' + escapeHtml(v) + (inBank ? '' : ' (not in bank)') + '</span><button>×</button>';
       ch.querySelector('button').addEventListener('click', () => { arr.splice(i,1); update(); });
       chips.appendChild(ch);
     });
@@ -467,8 +519,7 @@ function renderBankMulti(container, specKey, def, product, current) {
 
 function renderEnumSingle(container, specKey, def, product, current) {
   const select = document.createElement('select');
-  select.innerHTML = '<option value="">— select —</option>'
-    + def.values.map(v => '<option value="' + escapeAttr(v.nl) + '"' + (v.nl===current?' selected':'') + '>' + escapeHtml(v.nl) + '</option>').join('');
+  select.innerHTML = optionsHtml(def, current, '— select —');
   select.addEventListener('change', () => {
     if (select.value) product.specs[specKey] = select.value; else delete product.specs[specKey];
   });
@@ -602,6 +653,10 @@ document.getElementById('btnGenerate').addEventListener('click', () => {
       ? 'Token from <code>token.txt</code> baked in &mdash; paste this into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com) and run.'
       : 'Paste this into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com). Replace <code>PASTE_TOKEN_HERE</code> with the admin app token first, or drop a <code>token.txt</code> in the folder and reload.';
   }
+  const clearCount = products.reduce((n, p) => n + clearedKeys(p).length, 0);
+  if (subEl && clearCount) {
+    subEl.innerHTML += '<br><strong>' + clearCount + ' emptied field' + (clearCount === 1 ? '' : 's') + ' on loaded products will be deleted from Shopify.</strong>';
+  }
   document.getElementById('scriptModal').classList.add('open');
 });
 
@@ -614,9 +669,15 @@ function validateProducts() {
     if (!p.sku) errors.push(tag + ': SKU is empty.');
     else if (skus.has(p.sku)) errors.push(tag + ': duplicate SKU "' + p.sku + '".');
     skus.add(p.sku);
-    if (!Object.keys(p.specs).length) errors.push(tag + ': no specs filled in.');
+    if (!Object.keys(p.specs).length && !clearedKeys(p).length) errors.push(tag + ': no specs filled in.');
   });
   return errors;
+}
+
+// Fields that existed on the product when it was loaded but are now empty: the write script deletes them.
+function clearedKeys(p) {
+  if (!p.loaded) return [];
+  return p.loaded.keys.filter(k => !(k in p.specs));
 }
 
 function buildScript(productsList, config) {
@@ -653,7 +714,7 @@ function buildScript(productsList, config) {
         ['en','de','fr','it','es'].forEach(lang => translations[key][lang] = formatVal(transByLang[lang]));
       }
     });
-    return { sku: p.sku, nl, translations };
+    return { sku: p.sku, nl, translations, clear: clearedKeys(p) };
   });
   return SCRIPT_TEMPLATE.replace('__PAYLOAD__', JSON.stringify(payload, null, 2));
 }
@@ -694,11 +755,26 @@ const SCRIPT_TEMPLATE = `// Phoenix Spec Writer
     const metafields = Object.values(p.nl).map(m => ({
       ownerId: productGid, namespace: m.namespace, key: m.key, type: m.type, value: m.value
     }));
-    log('Setting ' + metafields.length + ' NL metafields...');
-    const setRes = await gql(\`mutation($mfs:[MetafieldsSetInput!]!){metafieldsSet(metafields:$mfs){metafields{id namespace key} userErrors{field message}}}\`, { mfs: metafields });
-    if (setRes.metafieldsSet.userErrors.length) console.error('[SKU ' + p.sku + '] set errors:', setRes.metafieldsSet.userErrors);
-    const setMfs = setRes.metafieldsSet.metafields;
-    log('Set ' + setMfs.length + ' metafields ok.');
+    let setMfs = [];
+    if (metafields.length) {
+      log('Setting ' + metafields.length + ' NL metafields...');
+      const setRes = await gql(\`mutation($mfs:[MetafieldsSetInput!]!){metafieldsSet(metafields:$mfs){metafields{id namespace key} userErrors{field message}}}\`, { mfs: metafields });
+      if (!setRes) { console.error('[SKU ' + p.sku + '] set failed'); results.push({sku:p.sku, error:'set failed'}); continue; }
+      if (setRes.metafieldsSet.userErrors.length) console.error('[SKU ' + p.sku + '] set errors:', setRes.metafieldsSet.userErrors);
+      setMfs = setRes.metafieldsSet.metafields || [];
+      log('Set ' + setMfs.length + ' metafields ok.');
+    }
+
+    for (const fullKey of (p.clear || [])) {
+      const ns = fullKey.substring(0, fullKey.indexOf('.'));
+      const key = fullKey.substring(fullKey.indexOf('.') + 1);
+      const q = await gql(\`query($id:ID!,$ns:String!,$key:String!){product(id:$id){metafield(namespace:$ns,key:$key){id}}}\`, { id: productGid, ns, key });
+      const mf = q && q.product && q.product.metafield;
+      if (!mf) { log(fullKey + ' already empty.'); continue; }
+      const del = await gql(\`mutation($input:MetafieldDeleteInput!){metafieldDelete(input:$input){deletedId userErrors{field message}}}\`, { input: { id: mf.id } });
+      if (del && del.metafieldDelete.userErrors.length) console.error('[SKU ' + p.sku + '] delete errors for ' + fullKey + ':', del.metafieldDelete.userErrors);
+      else log('Cleared ' + fullKey + '.');
+    }
 
     const translatableKeys = Object.keys(p.translations);
     if (translatableKeys.length) {
@@ -725,6 +801,128 @@ const SCRIPT_TEMPLATE = `// Phoenix Spec Writer
   console.table(results);
 })();
 `;
+
+const READ_SCRIPT_TEMPLATE = `// Phoenix Spec Reader (read-only, changes nothing)
+// Run on https://manibhadra-phoeniximport.myshopify.com/ (storefront, NOT admin)
+// Open DevTools console, paste the entire file, press Enter.
+// Downloads phoenix-spec-load-<time>.json and copies the same JSON to the clipboard.
+
+(async () => {
+  const TOKEN = 'PASTE_TOKEN_HERE';
+  const API = 'https://manibhadra-phoeniximport.myshopify.com/admin/api/2024-01/graphql.json';
+  if (TOKEN === 'PASTE_TOKEN_HERE') { console.error('Set TOKEN at the top of the script.'); return; }
+
+  const SKUS = __SKUS__;
+
+  async function gql(query, variables) {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': TOKEN },
+      body: JSON.stringify({ query, variables })
+    });
+    const j = await res.json();
+    if (j.errors) console.error('GraphQL errors:', j.errors);
+    return j.data;
+  }
+
+  const out = { phoenix_spec_load: 1, loaded_at: new Date().toISOString(), products: [], not_found: [] };
+  for (const sku of SKUS) {
+    const data = await gql(\`query($q:String!){productVariants(first:5,query:$q){edges{node{sku product{id title}}}}}\`, { q: 'sku:' + sku });
+    const variant = data && data.productVariants.edges.map(e=>e.node).find(v => v.sku === sku);
+    if (!variant) { console.error('[SKU ' + sku + '] not found'); out.not_found.push(sku); continue; }
+    const mfData = await gql(\`query($id:ID!){product(id:$id){metafields(first:100,namespace:"custom"){edges{node{namespace key type value}}}}}\`, { id: variant.product.id });
+    const metafields = {};
+    ((mfData && mfData.product && mfData.product.metafields.edges) || []).forEach(e => {
+      metafields[e.node.namespace + '.' + e.node.key] = { type: e.node.type, value: e.node.value };
+    });
+    console.log('[SKU ' + sku + '] ' + variant.product.title + ': ' + Object.keys(metafields).length + ' specs');
+    out.products.push({ sku, title: variant.product.title, productGid: variant.product.id, metafields });
+  }
+
+  const text = JSON.stringify(out, null, 2);
+  window._phoenixSpecLoad = out;
+  try { copy(text); console.log('Copied to clipboard.'); } catch (e) { console.warn('Clipboard copy unavailable; use the downloaded file.'); }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  a.download = 'phoenix-spec-load-' + Date.now() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  console.log('Done: ' + out.products.length + ' loaded, ' + out.not_found.length + ' not found. Paste or pick the file in the Spec Entry Tool.');
+})();
+`;
+
+function parseSkuList(text) {
+  return [...new Set(text.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean))];
+}
+
+function buildReadScript(skus) {
+  const script = READ_SCRIPT_TEMPLATE.replace('__SKUS__', JSON.stringify(skus));
+  return cachedToken ? script.replace("'PASTE_TOKEN_HERE'", JSON.stringify(cachedToken)) : script;
+}
+
+// Turns one product from the read script's output into a card.
+function productFromShopify(entry, config) {
+  const product = { sku: String(entry.sku), specs: {}, loaded: { sku: String(entry.sku), title: entry.title || '', keys: [] }, notices: [] };
+  const notInBank = [];
+  const untouched = [];
+  Object.entries(entry.metafields || {}).forEach(([key, mf]) => {
+    const def = config.specs[key];
+    if (!def) { untouched.push(key); return; }
+    let raw = mf.value;
+    if (raw == null || raw === '') return;
+    let val;
+    const isList = String(mf.type || def.type).startsWith('list.');
+    let list = null;
+    if (isList) { try { list = JSON.parse(raw); } catch (e) { list = [raw]; } if (!Array.isArray(list)) list = [String(list)]; }
+    switch (def.input_kind) {
+      case 'boolean':
+        val = String(raw).toLowerCase() === 'true'; break;
+      case 'lang_codes_multi': {
+        const parts = (list || String(raw).split(def.separator || '|')).map(x => x.trim()).filter(Boolean);
+        const unknown = parts.filter(c => !(def.options || []).includes(c));
+        if (unknown.length) product.notices.push(def.name + ': ' + unknown.join(', ') + ' is not an option in the tool and will be dropped if you write this product.');
+        val = parts.filter(c => (def.options || []).includes(c));
+        if (!val.length) val = undefined;
+        break;
+      }
+      case 'bank_multi':
+        val = list || [String(raw)];
+        val.forEach(v => { if (!def.values.some(x => x.nl === v)) notInBank.push(def.name + ' "' + v + '"'); });
+        break;
+      case 'bank_single':
+      case 'enum_single':
+        val = list ? list[0] : String(raw);
+        if (!def.values.some(x => x.nl === val)) notInBank.push(def.name + ' "' + val + '"');
+        break;
+      default:
+        val = list ? list.join(', ') : String(raw);
+    }
+    product.loaded.keys.push(key);
+    if (val !== undefined) product.specs[key] = val;
+  });
+  if (notInBank.length) product.notices.push('Not in the bank: ' + notInBank.join(', ') + '. These are kept as they are, but no translations are written for them. Pick a bank value or add it with "+ add new" to fix that.');
+  if (untouched.length) product.notices.push('Other fields on this product that the tool does not manage are left untouched: ' + untouched.join(', ') + '.');
+  return product;
+}
+
+function importLoaded(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { throw new Error('That is not valid JSON: ' + e.message); }
+  if (!data || !Array.isArray(data.products)) throw new Error('That is not a result from the read script.');
+  const isBlank = (p) => !p.sku && !Object.keys(p.specs).length;
+  products = products.filter(p => !isBlank(p));
+  let replaced = 0;
+  data.products.forEach(entry => {
+    const loaded = productFromShopify(entry, CONFIG);
+    const i = products.findIndex(p => p.sku === loaded.sku);
+    if (i >= 0) { products[i] = loaded; replaced++; } else products.push(loaded);
+  });
+  if (!products.length) products = [emptyProduct()];
+  render();
+  let msg = 'Loaded ' + data.products.length + ' product' + (data.products.length === 1 ? '' : 's') + '.';
+  if (replaced) msg += ' ' + replaced + ' existing card' + (replaced === 1 ? ' was' : 's were') + ' replaced.';
+  if (data.not_found && data.not_found.length) msg += ' Not found in Shopify: ' + data.not_found.join(', ') + '.';
+  return msg;
+}
 
 function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
@@ -775,6 +973,62 @@ document.getElementById('btnFallbackImport').addEventListener('click', () => {
         setSaveStatus('Read-only — switch folder to enable saving', 'saving');
       } catch (e) { document.getElementById('bootError').textContent = 'Import failed: ' + e.message; }
     };
+    r.readAsText(f);
+  });
+  inp.click();
+});
+
+function showLoadMessage(text) {
+  const el = document.getElementById('loadMessage');
+  el.textContent = text; el.style.display = text ? '' : 'none';
+}
+function readScriptOrWarn() {
+  const skus = parseSkuList(document.getElementById('loadSkus').value);
+  if (!skus.length) { alert('Enter at least one SKU.'); return null; }
+  if (!cachedToken) showLoadMessage('No token.txt loaded: replace PASTE_TOKEN_HERE in the script with the admin app token before running it.');
+  return buildReadScript(skus);
+}
+document.getElementById('btnLoadExisting').addEventListener('click', () => {
+  const skus = products.map(p => p.sku).filter(Boolean);
+  if (!document.getElementById('loadSkus').value.trim() && skus.length) document.getElementById('loadSkus').value = skus.join('\n');
+  showLoadMessage('');
+  document.getElementById('loadModal').classList.add('open');
+  document.getElementById('loadSkus').focus();
+});
+document.getElementById('btnCloseLoad').addEventListener('click', () => document.getElementById('loadModal').classList.remove('open'));
+document.getElementById('btnCopyReadScript').addEventListener('click', async () => {
+  const script = readScriptOrWarn(); if (!script) return;
+  try {
+    await navigator.clipboard.writeText(script);
+    document.getElementById('btnCopyReadScript').textContent = 'Copied ✓';
+    setTimeout(() => document.getElementById('btnCopyReadScript').textContent = 'Copy read script', 1800);
+  } catch (e) { alert('Copy failed: ' + e.message); }
+});
+document.getElementById('btnDownloadReadScript').addEventListener('click', () => {
+  const script = readScriptOrWarn(); if (!script) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([script], { type: 'application/javascript' }));
+  a.download = 'phoenix-spec-read-' + Date.now() + '.js';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+function doImport(text) {
+  try {
+    showLoadMessage(importLoaded(text));
+    document.getElementById('loadResult').value = '';
+  } catch (e) { showLoadMessage(e.message); }
+}
+document.getElementById('btnImportLoad').addEventListener('click', () => {
+  const text = document.getElementById('loadResult').value.trim();
+  if (!text) { alert('Paste the result first, or pick the result file.'); return; }
+  doImport(text);
+});
+document.getElementById('btnPickLoadFile').addEventListener('click', () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.addEventListener('change', () => {
+    const f = inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => doImport(r.result);
     r.readAsText(f);
   });
   inp.click();
