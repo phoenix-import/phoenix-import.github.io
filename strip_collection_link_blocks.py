@@ -102,9 +102,11 @@ from html.parser import HTMLParser
 DEFAULT_SHOP = "manibhadra-phoeniximport.myshopify.com"
 DEFAULT_API_VERSION = "2025-10"
 TARGET_KEY = "body_html"          # the collection description
-# Used when the token lacks read_locales; override with --primary-locale/--locales.
-FALLBACK_PRIMARY_LOCALE = "nl"
-FALLBACK_LOCALES = ["en", "de", "fr", "it", "es"]
+# The shop's locales. Reading them from the API needs a read_locales scope the
+# console-script tokens do not carry, so they are simply known here; override
+# with --primary-locale / --locales, or pass --probe-locales to ask the shop.
+SHOP_PRIMARY_LOCALE = "nl"
+SHOP_LOCALES = ["en", "de", "fr", "it", "es"]
 CONTAINER_TAGS = ("p", "div", "strong", "b")
 
 # ---------------------------------------------------------------------------
@@ -546,6 +548,22 @@ class Shopify:
 # Commands
 # ---------------------------------------------------------------------------
 
+def resolve_locales(api, args):
+    """(primary, others). Uses the known set unless --probe-locales is given."""
+    primary, others = SHOP_PRIMARY_LOCALE, list(SHOP_LOCALES)
+    if args.probe_locales:
+        got_primary, got_others = api.locales()
+        if got_primary is None and got_others is None:
+            print("--probe-locales: token lacks read_locales, using the known set.")
+        else:
+            primary, others = got_primary or primary, got_others
+    primary = args.primary_locale or primary
+    if args.locales:
+        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
+        others = [l for l in others if l in wanted]
+    return primary, others
+
+
 def build_plan(api, args, locales):
     """Read every collection, work out what would change. -> (plan, stats)."""
     wanted = {h.strip() for h in (args.handles or "").split(",") if h.strip()}
@@ -703,17 +721,7 @@ def push_changes(api, plan, verbose=False, value_key="after"):
 
 def cmd_scan_or_apply(args):
     api = Shopify(args.shop, args.token, args.api_version, args.verbose)
-    primary, others = api.locales()
-    if primary is None and others is None:
-        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
-        print("Note: token can't read shopLocales (no read_locales scope), so falling\n"
-              "      back to the standard set — primary '%s', translated %s.\n"
-              "      Override with --primary-locale / --locales if that's not right."
-              % (primary, ", ".join(others)))
-    args.primary_locale = args.primary_locale or primary or FALLBACK_PRIMARY_LOCALE
-    if args.locales:
-        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
-        others = [l for l in others if l in wanted]
+    args.primary_locale, others = resolve_locales(api, args)
     print("Shop %s — primary '%s', translated %s"
           % (api.shop, args.primary_locale, ", ".join(others) or "(none)"))
 
@@ -812,12 +820,7 @@ def visible_text(html):
 def cmd_audit(args):
     """Read-only: what does each locale actually hold for these collections?"""
     api = Shopify(args.shop, args.token, args.api_version, args.verbose)
-    primary, others = api.locales()
-    if primary is None and others is None:
-        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
-    if args.locales:
-        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
-        others = [l for l in others if l in wanted]
+    primary, others = resolve_locales(api, args)
     want = {h.strip() for h in (args.handles or "").split(",") if h.strip()}
 
     def describe(html, present=True):
@@ -854,13 +857,7 @@ def cmd_audit(args):
 def cmd_suspects(args):
     """Read-only: link clusters the strict pass leaves behind, and why."""
     api = Shopify(args.shop, args.token, args.api_version, args.verbose)
-    primary, others = api.locales()
-    if primary is None and others is None:
-        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
-    args.primary_locale = args.primary_locale or primary
-    if args.locales:
-        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
-        others = [l for l in others if l in wanted]
+    args.primary_locale, others = resolve_locales(api, args)
     want = {h.strip() for h in (args.handles or "").split(",") if h.strip()}
 
     rows, seen = [], 0
@@ -1015,7 +1012,10 @@ def main():
     parser.add_argument("--handles", help="comma-separated handles to limit the run to")
     parser.add_argument("--locales", help="comma-separated locales to touch (default: all published)")
     parser.add_argument("--primary-locale", default=None,
-                        help="override the shop's primary locale label")
+                        help="override the shop's primary locale (default %s)" % SHOP_PRIMARY_LOCALE)
+    parser.add_argument("--probe-locales", action="store_true",
+                        help="ask the shop for its locales instead of using the known "
+                             "set (%s); needs a read_locales scope" % ", ".join(SHOP_LOCALES))
     parser.add_argument("--limit", type=int, default=0, help="stop after N collections")
     parser.add_argument("--page-size", type=int, default=25, help="collections per API page")
     parser.add_argument("--min-links", type=int, default=2,
