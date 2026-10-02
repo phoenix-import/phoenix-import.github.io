@@ -185,7 +185,7 @@
 <div class="modal-bg" id="loadModal">
   <div class="modal" style="width: 720px;">
     <h2>Load existing products from Shopify</h2>
-    <div class="modal-sub"><strong>Step 1.</strong> Enter the SKUs to load, one per line or separated by commas, and generate the read script. Paste it into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com) and run it. It changes nothing in Shopify; it downloads a <code>phoenix-spec-load-&hellip;.json</code> file and also copies the result to your clipboard.</div>
+    <div class="modal-sub"><strong>Step 1.</strong> Enter the SKUs to load, one per line or separated by commas, and generate the read script. Paste it into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com) and run it. It changes nothing in Shopify; it downloads a <code>phoenix-spec-load-&hellip;.json</code> file. To copy the result instead, type <code>copy(specLoad)</code> in the console when it is done.</div>
     <textarea id="loadSkus" rows="3" placeholder="100996&#10;100997"></textarea>
     <div class="modal-actions" style="margin-top:8px">
       <button id="btnCopyReadScript">Copy read script</button>
@@ -805,7 +805,7 @@ const SCRIPT_TEMPLATE = `// Phoenix Spec Writer
 const READ_SCRIPT_TEMPLATE = `// Phoenix Spec Reader (read-only, changes nothing)
 // Run on https://manibhadra-phoeniximport.myshopify.com/ (storefront, NOT admin)
 // Open DevTools console, paste the entire file, press Enter.
-// Downloads phoenix-spec-load-<time>.json and copies the same JSON to the clipboard.
+// Downloads phoenix-spec-load-<time>.json. To copy the result instead, type copy(specLoad) in the console afterwards.
 
 (async () => {
   const TOKEN = 'PASTE_TOKEN_HERE';
@@ -840,13 +840,13 @@ const READ_SCRIPT_TEMPLATE = `// Phoenix Spec Reader (read-only, changes nothing
   }
 
   const text = JSON.stringify(out, null, 2);
-  window._phoenixSpecLoad = out;
-  try { copy(text); console.log('Copied to clipboard.'); } catch (e) { console.warn('Clipboard copy unavailable; use the downloaded file.'); }
+  window.specLoad = text;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   a.download = 'phoenix-spec-load-' + Date.now() + '.json';
   document.body.appendChild(a); a.click(); a.remove();
-  console.log('Done: ' + out.products.length + ' loaded, ' + out.not_found.length + ' not found. Paste or pick the file in the Spec Entry Tool.');
+  console.log('Done: ' + out.products.length + ' loaded, ' + out.not_found.length + ' not found.');
+  console.log('%cPick the downloaded phoenix-spec-load file in the Spec Entry Tool, or type  copy(specLoad)  here and press Enter to copy the result, then paste it in the tool.', 'font-weight:bold;color:#68437B');
 })();
 `;
 
@@ -905,6 +905,13 @@ function productFromShopify(entry, config) {
 }
 
 function importLoaded(text) {
+  text = String(text).trim();
+  if (text.startsWith('// Phoenix Spec')) {
+    throw new Error('That is the script itself, not its result. After running the read script, pick the downloaded phoenix-spec-load file, or type copy(specLoad) in the console, press Enter, and paste again.');
+  }
+  // Tolerate stray text around the JSON (e.g. copied from the console output).
+  const start = text.indexOf('{'), end = text.lastIndexOf('}');
+  if (start > 0 || (end >= 0 && end < text.length - 1)) text = text.slice(start, end + 1);
   let data;
   try { data = JSON.parse(text); } catch (e) { throw new Error('That is not valid JSON: ' + e.message); }
   if (!data || !Array.isArray(data.products)) throw new Error('That is not a result from the read script.');
