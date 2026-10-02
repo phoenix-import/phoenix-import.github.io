@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phoenix Spec Entry Tool</title>
+<style>
+  :root {
+    --purple: #68437B;
+    --pink: #ca427e;
+    --bg: #faf7fb;
+    --card: #fff;
+    --border: #e3dee5;
+    --text: #2a1f30;
+    --muted: #6e6075;
+    --ok: #2f7d5b;
+    --warn: #b15600;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.45 Calibri, "Segoe UI", system-ui, sans-serif;
+    color: var(--text); background: var(--bg);
+  }
+  header {
+    background: var(--purple); color: #fff;
+    padding: 14px 22px; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0,0,0,.08);
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .actions { display: flex; gap: 8px; align-items: center; }
+  header .folder-info { font-size: 12px; color: rgba(255,255,255,.85); margin-right: 6px; }
+  button {
+    font: inherit; padding: 7px 13px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); border-radius: 4px; cursor: pointer;
+  }
+  button:hover { background: #f3eef6; }
+  button.primary { background: var(--pink); color: #fff; border-color: var(--pink); }
+  button.primary:hover { background: #b03a6e; }
+  button.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+  button.ghost:hover { background: rgba(255,255,255,.12); }
+  button.tiny { padding: 3px 7px; font-size: 12px; }
+  button.danger { color: #b00; border-color: #f3c8c8; }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px; }
+
+  .product-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .product-head {
+    padding: 10px 14px; background: #f7f3f9; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .product-head input.sku {
+    font: inherit; padding: 5px 8px; border: 1px solid var(--border); border-radius: 3px;
+    width: 140px;
+  }
+  .product-head .label { font-weight: 600; color: var(--purple); }
+  .product-head .spacer { flex: 1; }
+
+  .group { border-top: 1px solid var(--border); }
+  .group:first-child { border-top: none; }
+  .group h3 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--muted); margin: 0; padding: 10px 14px 6px; background: #fdfcfd;
+    cursor: pointer; user-select: none;
+  }
+  .group h3::before { content: "\25BE  "; font-size: 10px; color: var(--muted); }
+  .group.collapsed h3::before { content: "\25B8  "; }
+  .group.collapsed .group-body { display: none; }
+  .group-body { padding: 8px 14px 14px; display: grid; grid-template-columns: 220px 1fr; gap: 8px 14px; align-items: start; }
+
+  label.field-label { padding: 6px 0; color: var(--text); font-weight: 500; }
+  .field-control { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
+  .field-control input[type="text"], .field-control input[type="number"], .field-control select {
+    font: inherit; padding: 5px 8px; border: 1px solid var(--border); border-radius: 3px;
+    background: #fff; min-width: 220px;
+  }
+  .field-control .unit { color: var(--muted); padding: 6px 4px; font-size: 12px; }
+  .field-control .add-new { color: var(--pink); border-color: var(--pink); }
+  .lang-codes { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 4px 0; }
+  .lang-codes label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .bool-toggle { display: inline-flex; gap: 0; }
+  .bool-toggle button { border-radius: 0; border-right-width: 0; }
+  .bool-toggle button:first-child { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
+  .bool-toggle button:last-child { border-top-right-radius: 3px; border-bottom-right-radius: 3px; border-right-width: 1px; }
+  .bool-toggle button.on { background: var(--purple); color: #fff; border-color: var(--purple); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip {
+    background: #efe7f3; color: var(--purple);
+    padding: 3px 8px 3px 10px; border-radius: 11px; font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip button { border: 0; background: transparent; color: var(--purple); padding: 0 0 0 2px; cursor: pointer; font-size: 14px; line-height: 1; }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(20,10,30,.45); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 6px; padding: 22px 24px; width: 540px; max-width: 96vw; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .modal h2 { font-size: 16px; margin: 0 0 4px; color: var(--purple); }
+  .modal .modal-sub { color: var(--muted); margin-bottom: 14px; font-size: 13px; }
+  .modal .lang-row { display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .modal .lang-row .lang-label { font-weight: 600; color: var(--purple); font-size: 13px; }
+  .modal .lang-row input { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 3px; font: inherit; }
+  .modal .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .modal-help { font-size: 12px; color: var(--muted); margin: 8px 0 12px; padding: 8px 10px; background: #fcf6e3; border-left: 3px solid #e8c14b; border-radius: 3px; }
+
+  #scriptOutput { background: #1c1426; color: #f5e6f5; font: 12px/1.5 Consolas, monospace; padding: 14px; border-radius: 4px; max-height: 360px; overflow: auto; white-space: pre; }
+
+  .footer-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 0; position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); margin-top: 14px; }
+  .help { color: var(--muted); font-size: 12px; padding: 2px 0; }
+  .small { font-size: 12px; color: var(--muted); }
+
+  #bootScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  #bootScreen.hidden { display: none; }
+  .boot-card { max-width: 560px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 30px 32px; }
+  .boot-card h2 { color: var(--purple); margin: 0 0 8px; font-size: 22px; }
+  .boot-card p { color: var(--muted); margin: 0 0 16px; }
+  .boot-card .boot-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .boot-card .boot-error { color: #b00; font-size: 13px; margin-top: 10px; }
+  .boot-card code.path { background: #f3eef6; color: var(--purple); padding: 2px 6px; border-radius: 3px; font-size: 12px; word-break: break-all; }
+  .save-status { font-size: 12px; color: var(--muted); }
+  .save-status.saving { color: var(--warn); }
+  .save-status.saved { color: var(--ok); }
+</style>
+</head>
+<body>
+
+<div id="bootScreen">
+  <div class="boot-card">
+    <h2>Phoenix Spec Entry Tool</h2>
+    <p>Pick the folder where <code>spec-bank.json</code> lives. The tool reads and writes that file directly &mdash; no localStorage, no per-browser drift.</p>
+    <p class="small">Expected location: <code class="path">C:\Users\&hellip;\Phoenix import - D2322\Data - Documenten\Inkoop\Shopify specificatie beheer</code></p>
+    <p class="small">First time in this folder? The tool will create <code>spec-bank.json</code> seeded with the embedded default. From then on, edits go straight to that file.</p>
+    <div class="boot-actions">
+      <button class="primary" id="btnPickFolder">Pick bank folder</button>
+      <button id="btnFallbackImport">Or import a bank file (read-only)</button>
+    </div>
+    <div class="boot-error" id="bootError"></div>
+    <p class="small" id="browserNote" style="margin-top:14px"></p>
+  </div>
+</div>
+
+<header style="display:none" id="appHeader">
+  <h1>Phoenix Spec Entry Tool</h1>
+  <div class="actions">
+    <span class="folder-info" id="folderInfo"></span>
+    <span class="save-status" id="saveStatus"></span>
+    <button class="ghost" id="btnReload">Reload bank</button>
+    <button class="ghost" id="btnSwitchFolder">Switch folder</button>
+  </div>
+</header>
+
+<main id="appMain" style="display:none">
+  <div id="productList"></div>
+  <div style="display:flex; gap:10px; padding:6px 0 18px;">
+    <button id="btnAddProduct">+ Add another product</button>
+    <span class="help">Each product gets its own card. The same script will fill them all in one run.</span>
+  </div>
+  <div class="footer-actions">
+    <span id="status" class="small"></span>
+    <button id="btnGenerate" class="primary">Generate console script</button>
+  </div>
+</main>
+
+<div class="modal-bg" id="addBankModal">
+  <div class="modal">
+    <h2 id="addBankTitle">Add new value</h2>
+    <div class="modal-sub" id="addBankSub"></div>
+    <div class="modal-help">All 6 languages are required. If you don't speak a language, paste the Dutch into ChatGPT and ask for accurate translations into the others. Once saved, the value lands in <code>spec-bank.json</code> and is available for everyone.</div>
+    <div id="addBankInputs"></div>
+    <div class="modal-actions">
+      <button id="btnAddBankCancel">Cancel</button>
+      <button class="primary" id="btnAddBankSave">Save to bank</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="scriptModal">
+  <div class="modal" style="width: 720px;">
+    <h2>Console script ready</h2>
+    <div class="modal-sub">Paste this into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com). Replace <code>PASTE_TOKEN_HERE</code> with the admin app token first.</div>
+    <pre id="scriptOutput"></pre>
+    <div class="modal-actions">
+      <button id="btnCloseScript">Close</button>
+      <button id="btnCopyScript">Copy to clipboard</button>
+      <button class="primary" id="btnDownloadScript">Download .js</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMBEDDED_CONFIG = {"meta":{"shop":"manibhadra-phoeniximport.myshopify.com","locales":["nl","en","de","fr","it","es"],"default_locale":"nl"},"specs":{"custom.materiaal":{"name":"Materiaal","type":"list.single_line_text_field","input_kind":"bank_multi","translatable":true,"values":[{"nl":"Edelsteen","en":"Gemstone","de":"Edelstein","fr":"Pierre précieuse","it":"Pietra preziosa","es":"Piedra preciosa"},{"nl":"Brons","en":"Bronze","de":"Bronze","fr":"Bronze","it":"Bronzo","es":"Bronce"},{"nl":"Katoen","en":"Cotton","de":"Baumwolle","fr":"Coton","it":"Cotone","es":"Algodón"},{"nl":"Messing","en":"Brass","de":"Messing","fr":"Laiton","it":"Ottone","es":"Latón"},{"nl":"Hout","en":"Wood","de":"Holz","fr":"Bois","it":"Legno","es":"Madera"},{"nl":"Kristal","en":"Crystal","de":"Kristall","fr":"Cristal","it":"Cristallo","es":"Cristal"},{"nl":"Glas","en":"Glass","de":"Glas","fr":"Verre","it":"Vetro","es":"Vidrio"},{"nl":"Polyresin","en":"Polyresin","de":"Polyresin","fr":"Polyrésin","it":"Poliresin","es":"Poliresina"},{"nl":"Polyester","en":"Polyester","de":"Polyester","fr":"Polyester","it":"Poliestere","es":"Poliéster"},{"nl":"Seleniet","en":"Selenite","de":"Selenit","fr":"Sélénite","it":"Selenite","es":"Selenita"},{"nl":"Mineraal","en":"Mineral","de":"Mineral","fr":"Minéral","it":"Minerale","es":"Mineral"},{"nl":"Koper","en":"Copper","de":"Kupfer","fr":"Cuivre","it":"Rame","es":"Cobre"},{"nl":"Karton","en":"Cardboard","de":"Karton","fr":"Carton","it":"Cartone","es":"Cartón"},{"nl":"Fluweel","en":"Velvet","de":"Samt","fr":"Velours","it":"Velluto","es":"Terciopelo"},{"nl":"Aluminium","en":"Aluminium","de":"Aluminium","fr":"Aluminium","it":"Alluminio","es":"Aluminio"},{"nl":"Zeepsteen","en":"Soapstone","de":"Seifenstein","fr":"Pierre de savon","it":"Pietra di sapone","es":"Piedra de jabón"},{"nl":"Schelp","en":"Shell","de":"Muschel","fr":"Coquille","it":"Conchiglia","es":"Concha"},{"nl":"IJzer","en":"Iron","de":"Eisen","fr":"Fer","it":"Ferro","es":"Hierro"},{"nl":"Keramiek","en":"Ceramic","de":"Keramik","fr":"Céramique","it":"Ceramica","es":"Cerámica"},{"nl":"Papier","en":"Paper","de":"Papier","fr":"Papier","it":"Carta","es":"Papel"},{"nl":"Beenderporselein","en":"Bone porcelain","de":"Knochenporzellan","fr":"porcelaine osseuse","it":"Porcellana d'osso","es":"Porcelana de Hueso"},{"nl":"Kunsthars","en":"Synthetic resin","de":"Kunstharz","fr":"Résine","it":"Resina","es":"Resina sintética"},{"nl":"Metaal","en":"Metal","de":"Metall","fr":"Métal","it":"Metallo","es":"Metal"},{"nl":"Messing|Edelsteen","en":"Brass|Gemstone","de":"Messing|Edelstein","fr":"Laiton|Pierre précieuse","it":"Ottone|Pietra dura","es":"Latón|Piedra preciosa"},{"nl":"Zink legering|Edelsteen","en":"Zinc alloy|Gemstone","de":"Zink Legierung|Edelstein","fr":"Alliage de zinc|Pierre précieuse","it":"Lega di zinco|Pietra preziosa","es":"Aleación de zinc|Piedra preciosa"},{"nl":"Zaad","en":"Seed","de":"Samen","fr":"Graine","it":"Seme","es":"Semilla"},{"nl":"Zink legering","en":"Zinc alloy","de":"Zinklegierung","fr":"Alliage de zinc","it":"Lega di zinco","es":"Aleación de zinc"},{"nl":"Vilt","en":"Felt","de":"Filz","fr":"Feutre","it":"Feltro","es":"Fieltro"},{"nl":"Acryl","en":"Acrylic","de":"Acryl","fr":"Acrylique","it":"Acrilico","es":"Acrílico"},{"nl":"Staal","en":"Steel","de":"Stahl","fr":"Acier","it":"Acciaio","es":"Acero"},{"nl":"Wol","en":"Wool","de":"Wolle","fr":"Laine","it":"Lana","es":"Lana"},{"nl":"Papier|Fluweel","en":"Paper|Velvet","de":"Papier|Samt","fr":"Papier|Velours","it":"Carta|Velluto","es":"Papel|Terciopelo"},{"nl":"Kurk","en":"Cork","de":"Kork","fr":"Liège","it":"Sughero","es":"Corcho"},{"nl":"Rubber","en":"Rubber","de":"Gummi","fr":"Caoutchouc","it":"Gomma","es":"Caucho"},{"nl":"Veer","en":"Feather","de":"Feder","fr":"Plume","it":"Piuma","es":"Pluma"},{"nl":"Steen","en":"Stone","de":"Stein","fr":"Pierre","it":"Pietra","es":"Piedra"},{"nl":"Edelsteen|Zink legering","en":"Gemstone|Zinc alloy","de":"Edelstein|Zinklegierung","fr":"Gemme|Alliage de zinc","it":"Gemma|Lega di zinco","es":"Gema|Aleación de zinc"},{"nl":"Verguld","en":"Gold-plated","de":"Vergoldet","fr":"Doré","it":"Placcato oro","es":"Chapado en oro"},{"nl":"Kunststof","en":"Plastic","de":"Kunststoff","fr":"Plastique","it":"Plastica","es":"Plástico"},{"nl":"MDF","en":"MDF","de":"MDF","fr":"MDF","it":"MDF","es":"MDF"},{"nl":"Zijde","en":"Silk","de":"Seide","fr":"Soie","it":"Seta","es":"Seda"},{"nl":"Suede","en":"Suede","de":"Suede","fr":"Daim","it":"Scamosciato","es":"Ante"},{"nl":"Zandsteen","en":"Sandstone","de":"Sandstein","fr":"Grès","it":"Pietra di sabbia","es":"Piedra de arena"},{"nl":"PVC","en":"PVC","de":"PVC","fr":"PVC","it":"PVC","es":"PVC"},{"nl":"TPE","en":"TPE","de":"TPE","fr":"TPE","it":"TPE","es":"TPE"},{"nl":"Metaal|Mineraal","en":"Metal|Mineral","de":"Metall|Mineral","fr":"Métal|Minéral","it":"Metallo|Minerale","es":"Metal|Mineral"},{"nl":"Was","en":"Wax","de":"Wachs","fr":"Cire","it":"Cera","es":"Cera"},{"nl":"Roestvrijstaal","en":"Stainless steel","de":"Edelstahl","fr":"Acier inoxydable","it":"Acciaio inossidabile","es":"Acero inoxidable"},{"nl":"Organza","en":"Organza","de":"Organza","fr":"Organza","it":"Organza","es":"Organza"},{"nl":"Kunstleer (polyurethaan)","en":"Synthetic leather (polyurethane)","de":"Kunstleder (Polyurethan)","fr":"Simili-cuir (polyuréthane)","it":"Similpelle (poliuretano)","es":"Cuero sintético (poliuretano)"},{"nl":"Nylon","en":"Nylon","de":"Nylon","fr":"Nylon","it":"Nylon","es":"Nylon"},{"nl":"Verchroomd","en":"Chrome-plated","de":"Verchromt","fr":"Chromé","it":"Cromato","es":"Cromado"},{"nl":"Verzilverd brons","en":"Silver-plated bronze","de":"Versilberte Bronze","fr":"Bronze argenté","it":"bronzo placcato in argento","es":"Bronce plateado en plata"},{"nl":"Brokaat","en":"Brocade","de":"Brokat","fr":"Brocart","it":"Broccato","es":"Brocado"},{"nl":"Gietijzer","en":"Cast iron","de":"Gusseisen","fr":"Fonte","it":"Ghisa","es":"Hierro fundido"},{"nl":"Hennep","en":"Hemp","de":"Hanf","fr":"Chanvre","it":"Canapa","es":"Cáñamo"},{"nl":"Polypropyleen","en":"Polypropylene","de":"Polypropylen","fr":"Polypropylène","it":"Polypropyleen","es":"Polypropyleen"},{"nl":"Leer","en":"Leather","de":"Leder","fr":"Cuir","it":"Pelle","es":"Cuero"},{"nl":"Goud","en":"Gold","de":"Gold","fr":"Or","it":"Oro","es":"Oro"},{"nl":"Beendermeel","en":"Bone meal","de":"Knochenmehl","fr":"Farine d'os","it":"Farina di Ossa","es":"Harina de hueso"},{"nl":"Zink","en":"Zinc","de":"Zink","fr":"Zinc","it":"Zinco","es":"Zinc"},{"nl":"Silicoon","en":"Silicone","de":"Silikon","fr":"Silicone","it":"Silicone","es":"Silicona"},{"nl":"Polyresin zand","en":"Polyresin sand","de":"Polyresin Sand","fr":"Polyrésinne sable","it":"Polyresin Sabbia","es":"Polyresin arena"},{"nl":"Witmetaal","en":"White metal","de":"Weißmetall","fr":"Métal blanc","it":"Metallo bianco","es":"Metal Blanco"},{"nl":"Bamboe","en":"Bamboo","de":"Bambus","fr":"Bambou","it":"Bambù","es":"Bambú"},{"nl":"Platina","en":"Platinum","de":"Platin","fr":"Platine","it":"Platino","es":"Platino"},{"nl":"Bezemgras","en":"Broomcorn","de":"Besengras","fr":"Herbe de balai","it":"Erba di scopa","es":"Paja de escoba"},{"nl":"Marmer","en":"Marble","de":"Marmor","fr":"Marbre","it":"Marmo","es":"Mármol"},{"nl":"Cement","en":"Cement","de":"Zement","fr":"Ciment","it":"Cemento","es":"Cemento"},{"nl":"Leisteen","en":"Slate","de":"Schiefer","fr":"Ardoise","it":"Ardesia","es":"Pizarra"},{"nl":"Fluweel|Papier","en":"Velvet|Paper","de":"Samt|Papier","fr":"Velours|Papier","it":"Velluto|Carta","es":"Terciopelo|Papel"},{"nl":"Viscose","en":"Viscose","de":"Viscose","fr":"Viscose","it":"Viscosa","es":"Viscosa"},{"nl":"Zilver","en":"Silver","de":"Silber","fr":"Argent","it":"Argento","es":"Plata"},{"nl":"Metaal|Edelsteen|Koper","en":"Metal|Gemstone|Copper","de":"Metall|Edelstein|Kupfer","fr":"Métal|Pierre précieuse|Cuivre","it":"Metallo|Pietra preziosa|Rame","es":"Metal|Piedra preciosa|Cobre"},{"nl":"Verkoperd","en":"Copper-plated","de":"Verkupfert","fr":"Cuivré","it":"Ramato","es":"Cobreado"},{"nl":"Veer|Hennep","en":"Feather|Hemp","de":"Feder|Hanf","fr":"Plume|Chanvre","it":"Piuma|Canapa","es":"Pluma|Cáñamo"},{"nl":"Travertijn","en":"Travertine","de":"Travertin","fr":"Travertin","it":"Travertino","es":"Travertino"},{"nl":"Metaal|Koper|Edelsteen","en":"Metal|Copper|Gemstone","de":"Metall|Kupfer|Edelstein","fr":"Métal|Cuivre|Pierre précieuse","it":"Metallo|Rame|Pietra preziosa","es":"Metal|Cobre|Piedra preciosa"},{"nl":"Zink legering|Hout","en":"Zinc alloy|Wood","de":"Zink-Legierung|Holz","fr":"Alliage de zinc|Bois","it":"Lega di zinco|Legno","es":"Aleación de cinc|Madera"},{"nl":"Edelsteen|Polyester","en":"Gemstone|Polyester","de":"Edelstein|Polyester","fr":"Pierre précieuse|Polyester","it":"Pietra preziosa|Poliestere","es":"Piedra Preciosa|Poliéster"},{"nl":"Messing|Glas","en":"Brass|Glass","de":"Messing|Glas","fr":"Laiton|Verre","it":"Ottone|Vetro","es":"Latón|Vidrio"},{"nl":"Glas|Metaal","en":"Glass|Metal","de":"Glas|Metall","fr":"Verre|Métal","it":"Vetro|Metallo","es":"Vidrio|Metal"},{"nl":"Leer|Edelsteen","en":"Leather|Gemstone","de":"Leder|Edelstein","fr":"Cuir|Pierre précieuse","it":"Pelle|Pietra preziosa","es":"Cuero|Piedra preciosa"},{"nl":"Edelsteen|Mineraal","en":"Gemstone|Mineral","de":"Edelstein|Mineral","fr":"Pierre précieuse|Minéral","it":"Pietra preziosa|Minerale","es":"Piedra Preciosa|Mineral"},{"nl":"Verzilverd","en":"Silver-plated","de":"Versilbert","fr":"Argenté","it":"Placcato in argento","es":"Plateado"},{"nl":"Mineraal|Edelsteen","en":"Mineral|Gemstone","de":"Mineral|Edelstein","fr":"Minéral|Pierre précieuse","it":"Minerale|Pietra preziosa","es":"Mineral|Piedra Preciosa"},{"nl":"Koraal","en":"Coral","de":"Koralle","fr":"corail","it":"Corallo","es":"Coral"},{"nl":"Parel","en":"Pearl","de":"Perle","fr":"Perle","it":"Perla","es":"Perla"},{"nl":"Kadam","en":"Kadam","de":"Kadam","fr":"Kadam","it":"Kadam","es":"Kadam"},{"nl":"Kunstwol","en":"Synthetic wool","de":"Kunstwolle","fr":"Laine synthétique","it":"Lana Sintetica","es":"Lana sintética"},{"nl":"Tin","en":"Tin","de":"Zinn","fr":"Étain","it":"Stagno","es":"Estaño"},{"nl":"Polyacryl","en":"Polyacrylic","de":"Polyacryl","fr":"Polyacryl","it":"Poliacrilico","es":"Poliacrilo"},{"nl":"Edelsteen|Zaad","en":"Gemstone|Seed","de":"Edelstein|Samen","fr":"Pierre précieuse|Graine","it":"Pietra dura|Seme","es":"Piedra preciosa|Semilla"},{"nl":"Polyamide","en":"Polyamide","de":"Polyamid","fr":"Polyamide","it":"Poliammide","es":"Poliamida"},{"nl":"Hennep|Veer","en":"Hemp|Feather","de":"Hanf|Feder","fr":"Chanvre|Plume","it":"Canapa|Piuma","es":"Cáñamo|Pluma"},{"nl":"Edelsteen|Leer","en":"Gemstone|Leather","de":"Edelstein|Leder","fr":"Pierre précieuse|Cuir","it":"Gemma|Pelle","es":"Gema|Cuero"},{"nl":"Metaal|Edelsteen","en":"Metal|Gemstone","de":"Metall|Edelstein","fr":"Métal|Pierre précieuse","it":"Metallo|Pietra dura","es":"Metal|Piedra preciosa"},{"nl":"Edelsteen|Hout|Zink","en":"Gemstone|Wood|Zinc","de":"Edelstein|Holz|Zink","fr":"Pierre précieuse|Bois|Zinc","it":"Pietra dura|Legno|Zinco","es":"Piedra preciosa|Madera|Zinc"},{"nl":"Metaal|Kristal|Mineraal","en":"Metal|Crystal|Mineral","de":"Metall|Kristall|Mineral","fr":"Métal|Cristal|Minéral","it":"Metallo|Cristallo|Minerale","es":"Metal|Cristal|Mineral"},{"nl":"Hout|Glas","en":"Wood|Glass","de":"Holz|Glas","fr":"Bois|Verre","it":"Legno|Vetro","es":"Madera|Vidrio"},{"nl":"Koper|Steen","en":"Copper|Stone","de":"Kupfer|Stein","fr":"Cuivre|Pierre","it":"Rame|Pietra","es":"Cobre|Piedra"},{"nl":"Jute","en":"Jute","de":"Jute","fr":"Jute","it":"Iuta","es":"Yute"},{"nl":"Loofah","en":"Loofah","de":"Luffa","fr":"loofah","it":"Loofah","es":"Loofah"},{"nl":"Zaad|Schelp","en":"Seed|Shell","de":"Samen|Schnecke","fr":"Graine|Coquillage","it":"Seme|conchiglia","es":"Semilla|Concha"},{"nl":"Edelsteen|Zink|Hout","en":"Gemstone|Zinc|Wood","de":"Edelstein|Zink|Holz","fr":"Pierre précieuse|Zinc|Bois","it":"Pietra dura|Zinco|Legno","es":"Piedra preciosa|Zinc|Madera"},{"nl":"Koper|Edelsteen","en":"Copper|Gemstone","de":"Kupfer|Edelstein","fr":"Cuivre|Pierre précieuse","it":"Rame|Pietra dura","es":"Cobre|Piedra preciosa"},{"nl":"Polyether","en":"Polyether","de":"Polyether","fr":"Polyéther","it":"Polietere","es":"Poliéter"},{"nl":"Sandelhout|Zink legering","en":"Sandalwood|Zinc alloy","de":"Sandelholz|Zinklegierung","fr":"Bois de santal|Alliage de zinc","it":"legno di sandalo|zinco lega","es":"Sándalo|Aleación de zinc"},{"nl":"IJzer|Hout","en":"Iron|Wood","de":"Eisen|Holz","fr":"Fer|Bois","it":"Ferro|Legno","es":"Hierro|Madera"},{"nl":"Zilver|Edelsteen","en":"Silver|Gemstone","de":"Silber|Edelstein","fr":"Argent|Pierre précieuse","it":"Argento|Pietra preziosa","es":"Plata|Piedra preciosa"},{"nl":"Staal|Koper","en":"Steel|Copper","de":"Stahl|Kupfer","fr":"Acier|Cuivre","it":"Acciaio|Rame","es":"Acero|Cobre"},{"nl":"Messing|Kurk","en":"Brass|Cork","de":"Messing|Kork","fr":"Laiton|Liège","it":"Ottone|Sughero","es":"Latón|Corcho"},{"nl":"Katoen|Wol|Polyester","en":"Cotton|Wool|Polyester","de":"Baumwolle|Wolle|Polyester","fr":"Coton|Laine|Polyester","it":"Cotone|Lana|Poliestere","es":"Algodón|Lana|Poliéster"},{"nl":"Edelsteen|Metaal","en":"Gemstone|Metal","de":"Edelstein|Metall","fr":"Pierre précieuse|Métal","it":"Pietra dura|Metallo","es":"Piedra preciosa|Metal"},{"nl":"Seleniet|Mineraal","en":"Selenite|Mineral","de":"Selenit|Mineral","fr":"Sélénite|Minéral","it":"Selenite|Minerale","es":"Selenita|Mineral"},{"nl":"Elasthaan","en":"Elastane","de":"Elasthan","fr":"Élasthanne","it":"Elastan","es":"Elastano"},{"nl":"Jersey|Hennep","en":"Jersey|Hemp","de":"Jersey|Hanf","fr":"Jersey|Chanvre","it":"Jersey|Canapa","es":"Jersey|Cáñamo"},{"nl":"Jersey","en":"Jersey","de":"Jersey","fr":"Jersey","it":"Jersey","es":"Jersey"},{"nl":"Edelsteen|Hout|Roestvrijstaal","en":"Gemstone|Wood|Stainless Steel","de":"Edelstein|Holz|Edelstahl","fr":"Pierre précieuse|Bois|Acier inoxydable","it":"Pietra dura|Legno|Acciaio inossidabile","es":"Piedra preciosa|Madera|Acero inoxidable"},{"nl":"Kokosschaal","en":"Coconut shell","de":"Kokosnussschale","fr":"Bol en coco","it":"Ciotola di cocco","es":"Concha de coco"},{"nl":"Polystone","en":"Polystone","de":"Polystone","fr":"Polystone","it":"Polystone","es":"Polistone"},{"nl":"Legering","en":"Alloy","de":"Legierung","fr":"Alliage","it":"Legatura","es":"Aleación"},{"nl":"Glas|Hout","en":"Glass|Wood","de":"Glas|Holz","fr":"Verre|Bois","it":"Vetro|Legno","es":"Vidrio|Madera"},{"nl":"Terracotta","en":"Terracotta","de":"Terracotta","fr":"Terracotta","it":"Terracotta","es":"Terracota"}]},"custom.kleur":{"name":"Kleur","type":"list.single_line_text_field","input_kind":"bank_multi","translatable":true,"values":[{"nl":"Goud","en":"Gold","de":"Gold","fr":"Or","it":"Oro","es":"Oro"},{"nl":"Meerkleurig","en":"Multicolour","de":"mehrfarbig","fr":"Multicolore","it":"Multicolore","es":"Multicolor"},{"nl":"Wit","en":"White","de":"Weiß","fr":"Blanc","it":"Bianco","es":"Blanco"},{"nl":"Transparant","en":"Transparent","de":"Transparent","fr":"Transparent","it":"Trasparente","es":"Transparente"},{"nl":"Messing","en":"Brass","de":"Messing","fr":"Laiton","it":"Ottone","es":"Latón"},{"nl":"Koper","en":"Copper","de":"Kupfer","fr":"Cuivre","it":"Rame","es":"Cobre"},{"nl":"Blauw","en":"Blue","de":"Blau","fr":"Bleu","it":"Blu","es":"Azul"},{"nl":"Zwart","en":"Black","de":"Schwarz","fr":"Noir","it":"Nero","es":"Negro"},{"nl":"Roze","en":"Pink","de":"Rosa","fr":"Rose","it":"Rosa","es":"Rosa"},{"nl":"Groen","en":"Green","de":"Grün","fr":"Vert","it":"Verde","es":"Verde"},{"nl":"Paars","en":"Purple","de":"Lila","fr":"Violet","it":"Viola","es":"Púrpura"},{"nl":"Brons","en":"Bronze","de":"Bronze","fr":"Bronze","it":"Bronzo","es":"Bronce"},{"nl":"Naturel","en":"Natural","de":"Natur","fr":"Naturel","it":"Naturale","es":"Natural"},{"nl":"Oranje","en":"Orange","de":"Orange","fr":"Orange","it":"Arancione","es":"Naranja"},{"nl":"Grijs","en":"Grey","de":"Grau","fr":"Gris","it":"Grigio","es":"Gris"},{"nl":"Zilver","en":"Silver","de":"Silber","fr":"Argent","it":"Argento","es":"Plata"},{"nl":"Rood","en":"Red","de":"Rot","fr":"Rouge","it":"Rosso","es":"Rojo"},{"nl":"Naturel|Beige","en":"Natural|Beige","de":"Natur|Beige","fr":"Naturel|Beige","it":"Naturale|Beige","es":"Natural|Beige"},{"nl":"Turquoise","en":"Turquoise","de":"Türkis","fr":"Turquoise","it":"Turchese","es":"Turquesa"},{"nl":"Wit|Goud","en":"White|Gold","de":"Weiß|Gold","fr":"Blanc|Or","it":"Bianco|Oro","es":"Blanco|Oro"},{"nl":"Donker blauw","en":"Dark blue","de":"Dunkelblau","fr":"bleu foncé","it":"Blu scuro","es":"Azul Oscuro"},{"nl":"Goud|Wit","en":"Gold|White","de":"Gold|Weiß","fr":"Or|Blanc","it":"Oro|Bianco","es":"Oro|Blanco"},{"nl":"Geel","en":"Yellow","de":"Gelb","fr":"Jaune","it":"Giallo","es":"Amarillo"},{"nl":"Donker grijs","en":"Dark gray","de":"Dunkelgrau","fr":"Gris foncé","it":"Grigio scuro","es":"Gris oscuro"},{"nl":"Zwart|Goud","en":"Black|Gold","de":"Schwarz|Gold","fr":"Noir|Or","it":"Nero|Oro","es":"Negro|Oro"},{"nl":"Bruin","en":"Brown","de":"Braun","fr":"Brun","it":"Marrone","es":"Marrón"},{"nl":"Indigo","en":"Indigo","de":"Indigo","fr":"Indigo","it":"Indaco","es":"Índigo"},{"nl":"Creme","en":"Cream","de":"Creme","fr":"Crème","it":"Crema","es":"Crema"},{"nl":"Paars|Violet","en":"Purple|Violet","de":"Lila|Violett","fr":"Pourpre|Violet","it":"Viola|Violetto","es":"Púrpura|Violeta"},{"nl":"Beige","en":"Beige","de":"Beige","fr":"Beige","it":"Beige","es":"Beige"},{"nl":"Champagne","en":"Champagne","de":"Champagner","fr":"Champagne","it":"Champagne","es":"Champagne"},{"nl":"Antraciet","en":"Anthracite","de":"Anthrazit","fr":"Anthracite","it":"Antracite","es":"Antracita"},{"nl":"Bordeaux","en":"Bordeaux","de":"Bordeaux","fr":"Bordeaux","it":"Bordeaux","es":"Burdeos"},{"nl":"Goud|Zwart","en":"Gold|Black","de":"Gold|Schwarz","fr":"Or|Noir","it":"Oro|Nero","es":"Oro|Negro"},{"nl":"Licht paars","en":"Light purple","de":"Hellviolett","fr":"Violet clair","it":"Viola chiaro","es":"Morado claro"},{"nl":"Blauw/Violet","en":"Blue/Violet","de":"Blau/Violett","fr":"Bleu/Violet","it":"Blu/Viola","es":"Azul/Violeta"},{"nl":"Licht groen","en":"Light green","de":"Hellgrün","fr":"Vert Clair","it":"Verde Chiaro","es":"Verde Claro"},{"nl":"Licht blauw","en":"Light blue","de":"Hellblau","fr":"Bleu clair","it":"Azzurro chiaro","es":"Azul claro"},{"nl":"Olijfgroen","en":"Olive green","de":"Olivgrün","fr":"Vert olive","it":"Verde oliva","es":"Verde oliva"},{"nl":"Goud|Beige","en":"Gold|Beige","de":"Gold|Beige","fr":"Or|Beige","it":"Oro|Beige","es":"Oro|Beige"},{"nl":"Rood/Roze/Oranje","en":"Red/Pink/Orange","de":"Rot/Rosa/Orange","fr":"Rouge/Rose/Orange","it":"Rosso/Rosa/Arancione","es":"Rojo/Rosa/Naranja"},{"nl":"Roze goud","en":"Rose Gold","de":"Roségold","fr":"Or rose","it":"Oro rosa","es":"Oro rosa"},{"nl":"Oudroze","en":"Dusty pink","de":"Altrosa","fr":"Vieux rose","it":"Rosa antico","es":"Rosa viejo"},{"nl":"Lavendel","en":"Lavender","de":"Lavendel","fr":"Lavande","it":"Lavanda","es":"Lavanda"},{"nl":"Mint","en":"Mint","de":"Minze","fr":"Menthe","it":"Menta","es":"Menta"},{"nl":"Petrol","en":"Petrol","de":"Petrol","fr":"Pétrol","it":"Petrolio","es":"Petróleo"},{"nl":"Goud|Roze","en":"Gold|Pink","de":"Gold|Rosa","fr":"Or|Rose","it":"Oro|Rosa","es":"Oro|Rosa"},{"nl":"Naturel|Oranje","en":"Natural|Orange","de":"Natur|Orange","fr":"Naturel|Orange","it":"Naturale|Arancione","es":"Natural|Naranja"},{"nl":"Taupe","en":"Taupe","de":"Taupe","fr":"Taupe","it":"Taupe","es":"Taupe"}]},"custom.land_van_herkomst":{"name":"Land van herkomst","type":"single_line_text_field","input_kind":"bank_single","translatable":true,"values":[{"nl":"India","en":"India","de":"Indien","fr":"Inde","it":"India","es":"India"},{"nl":"China","en":"China","de":"China","fr":"Chine","it":"Cina","es":"China"},{"nl":"Nepal","en":"Nepal","de":"Nepal","fr":"Népal","it":"Nepal","es":"Nepal"},{"nl":"Brasil","en":"Brazil","de":"Brasilien","fr":"Brésil","it":"Brasile","es":"Brasil"},{"nl":"Argentina","en":"Argentina","de":"Argentinien","fr":"Argentine","it":"Argentina","es":"Argentina"},{"nl":"France","en":"France","de":"Frankreich","fr":"France","it":"Francia","es":"Francia"},{"nl":"Germany","en":"Germany","de":"Deutschland","fr":"Allemagne","it":"Germania","es":"Alemania"},{"nl":"Indonesia","en":"Indonesia","de":"Indonesien","fr":"Indonésie","it":"Indonesia","es":"Indonesia"},{"nl":"Netherlands","en":"Netherlands","de":"Niederlande","fr":"Pays-Bas","it":"Paesi Bassi","es":"Países Bajos"},{"nl":"Morocco","en":"Morocco","de":"Marokko","fr":"Maroc","it":"Marocco","es":"Marruecos"},{"nl":"Latvia","en":"Latvia","de":"Lettland","fr":"Lettonie","it":"Lettonia","es":"Letonia"},{"nl":"Italy","en":"Italy","de":"Italien","fr":"Italie","it":"Italia","es":"Italia"},{"nl":"Mexico","en":"Mexico","de":"Mexiko","fr":"Mexique","it":"Messico","es":"México"},{"nl":"Pakistan","en":"Pakistan","de":"Pakistan","fr":"Pakistan","it":"Pakistan","es":"Pakistán"},{"nl":"Philippines","en":"Philippines","de":"Philippinen","fr":"Philippines","it":"Filippine","es":"Filipinas"},{"nl":"Vietnam","en":"Vietnam","de":"Vietnam","fr":"Viêt Nam","it":"Vietnam","es":"Vietnam"},{"nl":"Peru","en":"Peru","de":"Peru","fr":"Pérou","it":"Perù","es":"Perú"},{"nl":"Austria","en":"Austria","de":"Österreich","fr":"Autriche","it":"Austria","es":"Austria"},{"nl":"Taiwan","en":"Taiwan","de":"Taiwan","fr":"Taïwan","it":"Taiwan","es":"Taiwán"},{"nl":"Japan","en":"Japan","de":"Japan","fr":"Japon","it":"Giappone","es":"Japón"},{"nl":"Turkey","en":"Turkey","de":"Türkei","fr":"Turquie","it":"Turchia","es":"Turquía"},{"nl":"Syria","en":"Syria","de":"Syrien","fr":"Syrie","it":"Siria","es":"Siria"},{"nl":"Lithuana","en":"Lithuania","de":"Litauen","fr":"Lituanie","it":"Lituania","es":"Lituania"},{"nl":"USA","en":"USA","de":"USA","fr":"USA","it":"USA","es":"Estados Unidos"},{"nl":"Portugal","en":"Portugal","de":"Portugal","fr":"Portugal","it":"Portogallo","es":"Portugal"},{"nl":"Bulgaria","en":"Bulgaria","de":"Bulgarien","fr":"Bulgarie","it":"Bulgaria","es":"Bulgaria"},{"nl":"Australia","en":"Australia","de":"Australien","fr":"Australie","it":"Australia","es":"Australia"},{"nl":"Poland","en":"Poland","de":"Polen","fr":"Pologne","it":"Polonia","es":"Polonia"},{"nl":"Croatia","en":"Croatia","de":"Kroatien","fr":"Croatie","it":"Croazia","es":"Croacia"},{"nl":"Hungary","en":"Hungary","de":"Ungarn","fr":"Hongrie","it":"Ungheria","es":"Hungría"},{"nl":"Great Britain","en":"Great Britain","de":"Großbritannien","fr":"Grande-Bretagne","it":"Gran Bretagna","es":"Gran Bretaña"},{"nl":"Czech Republic","en":"Czech Republic","de":"Tschechische Republik","fr":"République Tchèque","it":"Repubblica Ceca","es":"República Checa"},{"nl":"Spain","en":"Spain","de":"Spanien","fr":"Espagne","it":"Spagna","es":"España"},{"nl":"Jordan","en":"Jordan","de":"Jordanien","fr":"Jordanie","it":"Giordania","es":"Jordania"},{"nl":"South Africa","en":"South Africa","de":"Südafrika","fr":"Afrique du Sud","it":"Sudafrica","es":"Sudáfrica"},{"nl":"New Zealand","en":"New Zealand","de":"Neuseeland","fr":"Nouvelle-Zélande","it":"Nuova Zelanda","es":"Nueva Zelanda"},{"nl":"Thailand","en":"Thailand","de":"Thailand","fr":"Thaïlande","it":"Tailandia","es":"Tailandia"},{"nl":"Egypt","en":"Egypt","de":"Ägypten","fr":"Égypte","it":"Egitto","es":"Egipto"},{"nl":"Slovakia","en":"Slovakia","de":"Slowakei","fr":"Slovaquie","it":"Slovacchia","es":"Eslovaquia"},{"nl":"Ghana","en":"Ghana","de":"Ghana","fr":"Ghana","it":"Ghana","es":"Ghana"},{"nl":"French Polynesia","en":"French Polynesia","de":"Französisch-Polynesien","fr":"Polynésie française","it":"Polinesia Francese","es":"Polinesia Francesa"},{"nl":"Belgium","en":"Belgium","de":"Belgien","fr":"Belgique","it":"Belgio","es":"Bélgica"}]},"custom.verpakking":{"name":"Verpakking","type":"single_line_text_field","input_kind":"bank_single","translatable":true,"values":[{"nl":"Kartonnen doos","en":"Cardboard box","de":"Kartonbox","fr":"Boîte en carton","it":"Scatola di cartone","es":"Caja de cartón"},{"nl":"Papier","en":"Paper","de":"Papier","fr":"Papier","it":"Carta","es":"Papel"},{"nl":"Papieren zak","en":"Paper bag","de":"Papiertüte","fr":"Sac en papier","it":"Sacchetto di carta","es":"Bolsa de papel"},{"nl":"Plastic","en":"Plastic","de":"Kunststoff","fr":"Plastique","it":"Plastica","es":"Plástico"},{"nl":"Bioplastic zak","en":"Bioplastic bag","de":"Bioplastik-Tasche","fr":"Sac Bioplastique","it":"Sacchetto Bioplastica","es":"Bolsa de Bioplástico"},{"nl":"Karton","en":"Cardboard","de":"Karton","fr":"Carton","it":"Cartone","es":"Cartón"},{"nl":"Glazen fles","en":"Glass bottle","de":"Glasflasche","fr":"Bouteille en verre","it":"Bottiglia di vetro","es":"Botella de vidrio"},{"nl":"Kartonnen giftbox","en":"Cardboard gift box","de":"Karton-Geschenkbox","fr":"Boîte-cadeau en carton","it":"Scatola regalo in cartone","es":"Caja de regalo de cartón"},{"nl":"Textielen zakje","en":"Textile pouch","de":"Textil-Säckchen","fr":"Petit sac en textile","it":"Sacchetto tessile","es":"Bolsita de tela"},{"nl":"Gerecycled kunststof pot","en":"Recycled plastic pot","de":"Recycelter Kunststofftopf","fr":"Pot en plastique recyclé","it":"Vaso in plastica riciclata","es":"Maceta de plástico reciclado"},{"nl":"Kunststof pot","en":"Plastic pot","de":"Kunststofftopf","fr":"Pot en plastique","it":"Vaso di plastica","es":"Bote de plástico"},{"nl":"Kartonnen displaydoos","en":"Cardboard display box","de":"Karton-Displaybox","fr":"Boîte d'exposition en carton","it":"Scatola espositiva in cartone","es":"Caja de cartón de exposición"},{"nl":"Kartonnen vensterdoos","en":"Cardboard window box","de":"Fensterkarton","fr":"boîte en carton avec fenêtre","it":"Scatola di cartone con finestra","es":"Caja de Cartón con Ventana"},{"nl":"Kartonnen koker","en":"Cardboard tube","de":"Kartonrohr","fr":"Tube en Carton","it":"Tubo Cartone","es":"Tubo de Cartón"},{"nl":"Plastic zak","en":"Plastic bag","de":"Kunststoffbeutel","fr":"Sac en plastique","it":"Sacchetto di plastica","es":"Bolsa de plástico"},{"nl":"Kunststof fles","en":"Plastic bottle","de":"Kunststoff-Flasche","fr":"Bouteille en plastique","it":"Bottiglia in plastica","es":"Botella de plástico"},{"nl":"Bioplastic","en":"Bioplastic","de":"Bioplastik","fr":"Bioplastique","it":"Bioplastica","es":"Bioplástico"},{"nl":"Aluminium pot","en":"Aluminium pot","de":"Aluminium Topf","fr":"Pot en aluminium","it":"Vaso di alluminio","es":"Olla de aluminio"},{"nl":"Kunststof pompflacon","en":"Plastic pump bottle","de":"Kunststoff-Pumpflasche","fr":"Flacon pompe en plastique","it":"Flacone con pompa in plastica","es":"Botella con bomba de plástico"},{"nl":"Noppenfolie plastic","en":"Bubble wrap plastic","de":"Luftpolsterfolie Kunststoff","fr":"Film à bulles plastique","it":"Pluriball in plastica","es":"Plástico de burbujas"},{"nl":"Gerecycled kunststof fles","en":"Recycled plastic bottle","de":"Recycelte Kunststoffflasche","fr":"Bouteille en plastique recyclé","it":"Bottiglia in plastica riciclata","es":"Botella de plástico reciclado"},{"nl":"Glazen pot","en":"Glass jar","de":"Glasgefäß","fr":"Pot en verre","it":"Vaso di vetro","es":"Tarro de vidrio"},{"nl":"Aluminium blik","en":"Aluminium can","de":"Aluminium Dose","fr":"Boîte en aluminium","it":"Scatola di alluminio","es":"Lata de aluminio"},{"nl":"Palmblad","en":"Palm leaf","de":"Palmblatt","fr":"Feuille de palme","it":"Foglia di palma","es":"Hoja de palma"},{"nl":"Aluminiumvensterpotje","en":"Aluminum window pot","de":"Aluminium-Fensterbox","fr":"Petit pot fenêtre aluminium","it":"Vasetto Finestra Alluminio","es":"Maceta de aluminio con ventana"},{"nl":"Tinlegering vensterpotje","en":"Tin alloy window pot","de":"Zinnlegierungsfensterdose","fr":"Petit pot vitré en alliage d'étain","it":"Vasetto di stagno","es":"Bote pequeño aleación de estaño"},{"nl":"Gerecycled plastic","en":"Recycled plastic","de":"Recycelter Kunststoff","fr":"Plastique recyclé","it":"Plastica riciclata","es":"Plástico reciclado"},{"nl":"Bioplastic fles","en":"Bioplastic bottle","de":"Bioplastik-Flasche","fr":"Bouteille en bioplastique","it":"Bottiglia in bioplastica","es":"Botella de bioplástico"},{"nl":"Gerecycled glas","en":"Recycled glass","de":"Recyceltes Glas","fr":"Verre recyclé","it":"Vetro riciclato","es":"Vidrio Reciclado"},{"nl":"Organza zakje","en":"Organza bag","de":"Organza Säckchen","fr":"Sachet organza","it":"Sacchetto organza","es":"Bolsa de organza"},{"nl":"Kunststof tas","en":"Plastic bag","de":"Kunststofftasche","fr":"Sac en plastique","it":"Borsa in plastica","es":"Bolsa de plástico"},{"nl":"Kunststof tube","en":"Plastic tube","de":"Kunststoffrohr","fr":"Tube en plastique","it":"Tubo di plastica","es":"Tubo de plástico"},{"nl":"Bioplastic pompflacon","en":"Bioplastic pump bottle","de":"Bioplastik-Pumpflasche","fr":"Flacon pompe en bioplastique","it":"Flacone pompa in bioplastica","es":"Botella dosificadora de bioplástico"},{"nl":"Katoenen zak","en":"Cotton bag","de":"Baumwoll-Tasche","fr":"Sac en coton","it":"Sacchetto di cotone","es":"Bolsa de algodón"},{"nl":"Kunststof sprayflacon","en":"Plastic spray bottle","de":"Kunststoff Sprühflasche","fr":"Flacon pulvérisateur plastique","it":"Flacone spray plastica","es":"Frasco spray plástico"},{"nl":"Gerecycled kunststof","en":"Recycled plastic","de":"Recycelter Kunststoff","fr":"Plastique recyclé","it":"Plastica riciclata","es":"Plástico reciclado"},{"nl":"Bio kunststof jerrycan","en":"Bioplastic jerry can","de":"Bio-Kunststoff-Kanister","fr":"Jerrycan en plastique bio","it":"Tanica in bioplastica","es":"Bidón de bioplástico"},{"nl":"Composteerbare verpakking","en":"Compostable packaging","de":"Kompostierbare Verpackung","fr":"Emballage compostable","it":"Imballaggio compostabile","es":"Embalaje compostable"},{"nl":"Katoenen tas","en":"Cotton bag","de":"Baumwolltasche","fr":"Sac en coton","it":"Sacchetto di cotone","es":"Bolsa de algodón"},{"nl":"Aluminium pompflacon","en":"Aluminium pump bottle","de":"Aluminium Pumpflasche","fr":"flacon pompe aluminium","it":"Flacone pompante alluminio","es":"Frasco dispensador de aluminio"}]},"custom.grondstof":{"name":"Grondstof","type":"single_line_text_field","input_kind":"bank_single","translatable":true,"values":[{"nl":"Palmpitwas","en":"Palm wax","de":"Palmkernwachs","fr":"Cire de palmiste","it":"Cera di noce di palma","es":"Cera de Palma"},{"nl":"Sojawas","en":"Soya wax","de":"Sojawachs","fr":"Cire de soja","it":"Cera di soia","es":"Cera de soja"},{"nl":"Himalaya zout","en":"Himalayan salt","de":"Himalaya-Salz","fr":"Sel de l'Himalaya","it":"Sale dell'Himalaya","es":"Sal del Himalaya"},{"nl":"Sojawas|Palmpitwas","en":"Soy wax|Palm kernel wax","de":"Sojawachs|Palmkernwachs","fr":"Cire de soja|Cire de palme","it":"Cera di soia|Cera di nocciolo di palma","es":"Cera de soja|Cera de palmiste"},{"nl":"Seleniet","en":"Selenite","de":"Selenit","fr":"Sélénite","it":"Selenite","es":"Selenita"},{"nl":"Kokoswas","en":"Coconut wax","de":"Kokoswachs","fr":"cire de coco","it":"Cera di cocco","es":"Cera de coco"},{"nl":"Schelp","en":"Shell","de":"Muschel","fr":"Coquille","it":"Conchiglia","es":"Concha"},{"nl":"Bijenwas","en":"Beeswax","de":"Bienenwachs","fr":"Cire d'abeille","it":"Cera d'api","es":"Cera de abeja"},{"nl":"Koolzaadwas","en":"Rapeseed wax","de":"Rapswachs","fr":"Cire de colza","it":"Cera di colza","es":"Cera de colza"},{"nl":"Kokoswas|Zand|Schelp","en":"Coconut wax|Sand|Shell","de":"Kokoswachs|Sand|Muschel","fr":"Cire de coco|Sable|Coquille","it":"Cera di cocco|Sabbia|Conchiglia","es":"Cera de coco|Arena|Concha"},{"nl":"Kokosboter","en":"Coconut butter","de":"Kokosbutter","fr":"Beurre de coco","it":"Burro di cocco","es":"Mantequilla de coco"},{"nl":"Zand","en":"Sand","de":"Sand","fr":"Sable","it":"Sabbia","es":"Arena"}]},"custom.prijs_per":{"name":"Prijs per","type":"single_line_text_field","input_kind":"bank_single","translatable":true,"values":[{"nl":"1 pakje","en":"1 pack","de":"1 Päckchen","fr":"1 paquet","it":"1 confezione","es":"1 paquete"},{"nl":"1 potje","en":"1 jar","de":"1 Töpfchen","fr":"1 pot","it":"1 vasetto","es":"1 frasco"},{"nl":"12 pakjes","en":"12 packages","de":"12 Packungen","fr":"12 paquets","it":"12 pacchetti","es":"12 paquetes"},{"nl":"6 pakjes","en":"6 packs","de":"6 Packungen","fr":"6 paquets","it":"6 pacchetti","es":"6 paquetes"},{"nl":"10 rolletjes","en":"10 rolls","de":"10 Rollen","fr":"10 petits rouleaux","it":"10 rotolini","es":"10 rollos"},{"nl":"25 pakjes","en":"25 packs","de":"25 Packungen","fr":"25 paquets","it":"25 pacchetti","es":"25 paquetes"},{"nl":"7 pakjes","en":"7 packs","de":"7 Pakete","fr":"7 paquets","it":"7 pacchetti","es":"7 paquetes"},{"nl":"42 pakjes","en":"42 packs","de":"42 Packungen","fr":"42 paquets","it":"42 pacchetti","es":"42 paquetes"},{"nl":"14 pakjes","en":"14 packs","de":"14 Päckchen","fr":"14 paquets","it":"14 pacchetti","es":"14 paquetes"},{"nl":"3 pakjes","en":"3 packages","de":"3 Päckchen","fr":"3 paquets","it":"3 pacchetti","es":"3 paquetes"},{"nl":"1 rolletje","en":"1 roll","de":"1 Rolle","fr":"1 petit rouleau","it":"1 rotolino","es":"1 rollito"},{"nl":"5 pakjes","en":"5 packages","de":"5 Päckchen","fr":"5 paquets","it":"5 pacchetti","es":"5 paquetes"},{"nl":"5 rolletjes","en":"5 rolls","de":"5 Röllchen","fr":"5 petits rouleaux","it":"5 rotoli","es":"5 rollitos"},{"nl":"18 pakjes","en":"18 packages","de":"18 Packungen","fr":"18 paquets","it":"18 pacchetti","es":"18 paquetes"}]},"custom.rand":{"name":"Rand","type":"single_line_text_field","input_kind":"bank_single","translatable":true,"values":[{"nl":"Goudkleurig","en":"Gold-coloured","de":"Goldfarben","fr":"Doré","it":"Dorato","es":"Dorado"},{"nl":"Zilverkleurig","en":"Silver-colored","de":"Silberfarben","fr":"couleur argent","it":"Color argento","es":"Color Plata"}]},"custom.toon":{"name":"Toon","type":"single_line_text_field","input_kind":"enum_single","translatable":true,"values":[{"nl":"A","en":"A","de":"A","fr":"La","it":"La","es":"La"},{"nl":"A#","en":"A#","de":"A#","fr":"La#","it":"La#","es":"La#"},{"nl":"B","en":"B","de":"H","fr":"Si","it":"Si","es":"Si"},{"nl":"C","en":"C","de":"C","fr":"Do","it":"Do","es":"Do"},{"nl":"C#","en":"C#","de":"C#","fr":"Do#","it":"Do#","es":"Do#"},{"nl":"D","en":"D","de":"D","fr":"Ré","it":"Re","es":"Re"},{"nl":"D#","en":"D#","de":"D#","fr":"Ré#","it":"Re#","es":"Re#"},{"nl":"E","en":"E","de":"E","fr":"Mi","it":"Mi","es":"Mi"},{"nl":"F","en":"F","de":"F","fr":"Fa","it":"Fa","es":"Fa"},{"nl":"F#","en":"F#","de":"F#","fr":"Fa#","it":"Fa#","es":"Fa#"},{"nl":"G","en":"G","de":"G","fr":"Sol","it":"Sol","es":"Sol"},{"nl":"G#","en":"G#","de":"G#","fr":"Sol#","it":"Sol#","es":"Sol#"}]},"custom.kledingmaat":{"name":"Kledingmaat","type":"single_line_text_field","input_kind":"enum_single","translatable":false,"values":[{"nl":"XS","en":"XS","de":"XS","fr":"XS","it":"XS","es":"XS"},{"nl":"S","en":"S","de":"S","fr":"S","it":"S","es":"S"},{"nl":"M","en":"M","de":"M","fr":"M","it":"M","es":"M"},{"nl":"L","en":"L","de":"L","fr":"L","it":"L","es":"L"},{"nl":"XL","en":"XL","de":"XL","fr":"XL","it":"XL","es":"XL"},{"nl":"XXL","en":"XXL","de":"XXL","fr":"XXL","it":"XXL","es":"XXL"},{"nl":"3XL","en":"3XL","de":"3XL","fr":"3XL","it":"3XL","es":"3XL"},{"nl":"4XL","en":"4XL","de":"4XL","fr":"4XL","it":"4XL","es":"4XL"},{"nl":"XS-S","en":"XS-S","de":"XS-S","fr":"XS-S","it":"XS-S","es":"XS-S"},{"nl":"S-M","en":"S-M","de":"S-M","fr":"S-M","it":"S-M","es":"S-M"},{"nl":"M-L","en":"M-L","de":"M-L","fr":"M-L","it":"M-L","es":"M-L"},{"nl":"L-XL","en":"L-XL","de":"L-XL","fr":"L-XL","it":"L-XL","es":"L-XL"},{"nl":"XL-XXL","en":"XL-XXL","de":"XL-XXL","fr":"XL-XXL","it":"XL-XXL","es":"XL-XXL"},{"nl":"XXL-3XL","en":"XXL-3XL","de":"XXL-3XL","fr":"XXL-3XL","it":"XXL-3XL","es":"XXL-3XL"},{"nl":"One size","en":"One size","de":"One size","fr":"One size","it":"One size","es":"One size"}]},"custom.schoenmaat":{"name":"Schoenmaat","type":"single_line_text_field","input_kind":"enum_single","translatable":false,"values":[{"nl":"35","en":"35","de":"35","fr":"35","it":"35","es":"35"},{"nl":"36","en":"36","de":"36","fr":"36","it":"36","es":"36"},{"nl":"37","en":"37","de":"37","fr":"37","it":"37","es":"37"},{"nl":"38","en":"38","de":"38","fr":"38","it":"38","es":"38"},{"nl":"39","en":"39","de":"39","fr":"39","it":"39","es":"39"},{"nl":"40","en":"40","de":"40","fr":"40","it":"40","es":"40"},{"nl":"41","en":"41","de":"41","fr":"41","it":"41","es":"41"},{"nl":"42","en":"42","de":"42","fr":"42","it":"42","es":"42"},{"nl":"43","en":"43","de":"43","fr":"43","it":"43","es":"43"},{"nl":"44","en":"44","de":"44","fr":"44","it":"44","es":"44"},{"nl":"45","en":"45","de":"45","fr":"45","it":"45","es":"45"},{"nl":"46","en":"46","de":"46","fr":"46","it":"46","es":"46"},{"nl":"47","en":"47","de":"47","fr":"47","it":"47","es":"47"},{"nl":"48","en":"48","de":"48","fr":"48","it":"48","es":"48"},{"nl":"35-36","en":"35-36","de":"35-36","fr":"35-36","it":"35-36","es":"35-36"},{"nl":"37-38","en":"37-38","de":"37-38","fr":"37-38","it":"37-38","es":"37-38"},{"nl":"39-40","en":"39-40","de":"39-40","fr":"39-40","it":"39-40","es":"39-40"},{"nl":"41-42","en":"41-42","de":"41-42","fr":"41-42","it":"41-42","es":"41-42"},{"nl":"43-44","en":"43-44","de":"43-44","fr":"43-44","it":"43-44","es":"43-44"},{"nl":"45-46","en":"45-46","de":"45-46","fr":"45-46","it":"45-46","es":"45-46"},{"nl":"47-48","en":"47-48","de":"47-48","fr":"47-48","it":"47-48","es":"47-48"}]},"custom.productlabel_in":{"name":"Productlabel in","type":"single_line_text_field","input_kind":"lang_codes_multi","translatable":false,"options":["NL","EN","DE","FR","IT","ES"],"separator":"|"},"custom.met_flyer_in":{"name":"Met flyer in","type":"single_line_text_field","input_kind":"lang_codes_multi","translatable":false,"options":["NL","EN","DE","FR","IT","ES"],"separator":"|"},"custom.gewicht_g":{"name":"Gewicht g","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"g"},"custom.netto_gewicht_g":{"name":"Netto gewicht g","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"g"},"custom.totaalgewicht_g":{"name":"Totaalgewicht g","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"g"},"custom.inhoud_ml":{"name":"Inhoud ml","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"ml"},"custom.brandduur_min":{"name":"Brandduur (min)","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"min"},"custom.brandduur_uur":{"name":"Brandduur (uur)","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"uur"},"custom.diameter_kraal_cm":{"name":"Diameter kraal cm","type":"single_line_text_field","input_kind":"numeric","translatable":false,"unit":"cm"},"custom.afmeting_cm":{"name":"Afmeting cm","type":"single_line_text_field","input_kind":"dimension_text","translatable":false,"unit":"cm","hint":"e.g. 26 or 26x26x10"},"custom.biologisch":{"name":"Biologisch","type":"boolean","input_kind":"boolean","translatable":false},"custom.vegan":{"name":"Vegan","type":"boolean","input_kind":"boolean","translatable":false},"custom.cafeine":{"name":"Cafeïne","type":"boolean","input_kind":"boolean","translatable":false}}};
+const BANK_FILENAME = 'spec-bank.json';
+
+const IDB_NAME = 'phoenix-spec-tool';
+const IDB_STORE = 'handles';
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(val, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function idbDel(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+let dirHandle = null;
+let bankFileHandle = null;
+let CONFIG = null;
+let readOnly = false;
+let cachedToken = null;
+let products = [emptyProduct()];
+
+const TOKEN_FILENAME = 'token.txt';
+
+function emptyProduct() { return { sku: '', specs: {} }; }
+
+async function reloadToken() {
+  cachedToken = null;
+  if (!dirHandle) return;
+  try {
+    const handle = await dirHandle.getFileHandle(TOKEN_FILENAME);
+    const file = await handle.getFile();
+    const text = (await file.text()).trim();
+    if (text) cachedToken = text;
+  } catch (e) {
+    // token.txt missing or unreadable — leave cachedToken null
+  }
+  refreshTokenStatus();
+}
+
+function refreshTokenStatus() {
+  const el = document.getElementById('folderInfo');
+  if (!el) return;
+  const folderTxt = readOnly ? '(read-only)' : (dirHandle ? dirHandle.name + '/' + BANK_FILENAME : '');
+  const tokenTxt = cachedToken ? ' · ● token loaded' : (dirHandle ? ' · ● token.txt missing' : '');
+  el.textContent = folderTxt + tokenTxt;
+}
+
+async function ensurePermission(handle, mode = 'readwrite') {
+  const opts = { mode };
+  if ((await handle.queryPermission(opts)) === 'granted') return true;
+  if ((await handle.requestPermission(opts)) === 'granted') return true;
+  return false;
+}
+
+async function loadFromDirHandle(handle) {
+  if (!await ensurePermission(handle, 'readwrite')) {
+    throw new Error('Permission to read/write the folder was denied.');
+  }
+  dirHandle = handle;
+  try {
+    bankFileHandle = await dirHandle.getFileHandle(BANK_FILENAME);
+  } catch (e) {
+    bankFileHandle = await dirHandle.getFileHandle(BANK_FILENAME, { create: true });
+    await writeBank(EMBEDDED_CONFIG);
+  }
+  await reloadBank();
+  await reloadToken();
+  await idbSet('dirHandle', dirHandle);
+  showApp();
+  setSaveStatus('Bank loaded from ' + dirHandle.name + '/' + BANK_FILENAME, 'saved');
+}
+
+async function reloadBank() {
+  if (!bankFileHandle) return;
+  const file = await bankFileHandle.getFile();
+  const text = await file.text();
+  if (!text.trim()) {
+    CONFIG = JSON.parse(JSON.stringify(EMBEDDED_CONFIG));
+  } else {
+    try { CONFIG = JSON.parse(text); }
+    catch (e) { throw new Error('spec-bank.json is corrupt: ' + e.message); }
+  }
+  if (!CONFIG.specs) CONFIG = JSON.parse(JSON.stringify(EMBEDDED_CONFIG));
+  render();
+}
+
+async function writeBank(config) {
+  if (!bankFileHandle) throw new Error('No bank file open');
+  setSaveStatus('Saving…', 'saving');
+  const writable = await bankFileHandle.createWritable();
+  await writable.write(JSON.stringify(config, null, 2));
+  await writable.close();
+  setSaveStatus('Saved to disk', 'saved');
+  setTimeout(() => setSaveStatus('Bank loaded from ' + dirHandle.name + '/' + BANK_FILENAME, 'saved'), 1800);
+}
+
+async function persistConfig() {
+  if (readOnly) {
+    setSaveStatus('Read-only — pick a folder to enable saving', 'saving');
+    return;
+  }
+  try { await writeBank(CONFIG); }
+  catch (e) { setSaveStatus('Save failed: ' + e.message, 'saving'); }
+}
+
+function setSaveStatus(text, klass = '') {
+  const el = document.getElementById('saveStatus');
+  el.textContent = text;
+  el.className = 'save-status ' + klass;
+}
+
+function showApp() {
+  document.getElementById('bootScreen').classList.add('hidden');
+  document.getElementById('appHeader').style.display = '';
+  document.getElementById('appMain').style.display = '';
+  refreshTokenStatus();
+}
+
+const GROUPS = [
+  { title: 'Sizes & dimensions', keys: ['custom.afmeting_cm','custom.diameter_kraal_cm','custom.kledingmaat','custom.schoenmaat','custom.inhoud_ml'] },
+  { title: 'Weight',             keys: ['custom.gewicht_g','custom.netto_gewicht_g','custom.totaalgewicht_g'] },
+  { title: 'Burn time',          keys: ['custom.brandduur_min','custom.brandduur_uur'] },
+  { title: 'Materials & colour', keys: ['custom.materiaal','custom.kleur','custom.grondstof','custom.verpakking'] },
+  { title: 'Origin & labelling', keys: ['custom.land_van_herkomst','custom.productlabel_in','custom.met_flyer_in'] },
+  { title: 'Sound & finish',     keys: ['custom.toon','custom.rand'] },
+  { title: 'Properties',         keys: ['custom.biologisch','custom.vegan','custom.cafeine'] },
+  { title: 'Pricing unit',       keys: ['custom.prijs_per'] },
+];
+
+function render() {
+  const root = document.getElementById('productList');
+  root.innerHTML = '';
+  if (!CONFIG) return;
+  products.forEach((p, idx) => root.appendChild(renderProductCard(p, idx)));
+}
+
+function renderProductCard(product, idx) {
+  const card = document.createElement('div');
+  card.className = 'product-card';
+  const head = document.createElement('div');
+  head.className = 'product-head';
+  head.innerHTML = '<span class="label">SKU</span>'
+    + '<input class="sku" type="text" value="' + escapeAttr(product.sku) + '" placeholder="e.g. 100996">'
+    + '<span class="spacer"></span>'
+    + '<button class="tiny danger" data-act="remove">Remove product</button>';
+  head.querySelector('input.sku').addEventListener('input', (e) => { product.sku = e.target.value.trim(); });
+  head.querySelector('[data-act="remove"]').addEventListener('click', () => {
+    if (products.length === 1) products = [emptyProduct()];
+    else products.splice(idx, 1);
+    render();
+  });
+  card.appendChild(head);
+
+  GROUPS.forEach((g) => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'group';
+    groupEl.innerHTML = '<h3>' + g.title + '</h3><div class="group-body"></div>';
+    groupEl.querySelector('h3').addEventListener('click', () => groupEl.classList.toggle('collapsed'));
+    const body = groupEl.querySelector('.group-body');
+    g.keys.forEach((specKey) => {
+      const def = CONFIG.specs[specKey];
+      if (!def) return;
+      const labelEl = document.createElement('label');
+      labelEl.className = 'field-label';
+      labelEl.textContent = def.name;
+      body.appendChild(labelEl);
+      const ctrlEl = document.createElement('div');
+      ctrlEl.className = 'field-control';
+      renderField(ctrlEl, specKey, def, product);
+      body.appendChild(ctrlEl);
+    });
+    card.appendChild(groupEl);
+  });
+  return card;
+}
+
+function renderField(container, specKey, def, product) {
+  const current = product.specs[specKey];
+  switch (def.input_kind) {
+    case 'bank_single':       return renderBankSingle(container, specKey, def, product, current);
+    case 'bank_multi':        return renderBankMulti(container, specKey, def, product, current);
+    case 'enum_single':       return renderEnumSingle(container, specKey, def, product, current);
+    case 'lang_codes_multi':  return renderLangCodes(container, specKey, def, product, current);
+    case 'numeric':           return renderNumeric(container, specKey, def, product, current);
+    case 'dimension_text':    return renderDimensionText(container, specKey, def, product, current);
+    case 'boolean':           return renderBoolean(container, specKey, def, product, current);
+    default: container.textContent = '(unsupported field type: ' + def.input_kind + ')';
+  }
+}
+
+function renderBankSingle(container, specKey, def, product, current) {
+  const select = document.createElement('select');
+  select.innerHTML = '<option value="">— select —</option>'
+    + def.values.map(v => '<option value="' + escapeAttr(v.nl) + '"' + (v.nl===current?' selected':'') + '>' + escapeHtml(v.nl) + '</option>').join('');
+  select.addEventListener('change', () => {
+    if (select.value) product.specs[specKey] = select.value; else delete product.specs[specKey];
+  });
+  container.appendChild(select);
+  const addBtn = document.createElement('button');
+  addBtn.className = 'tiny add-new'; addBtn.textContent = '+ add new';
+  addBtn.addEventListener('click', () => openAddBankModal(specKey, def, (entry) => {
+    select.innerHTML += '<option value="' + escapeAttr(entry.nl) + '" selected>' + escapeHtml(entry.nl) + '</option>';
+    product.specs[specKey] = entry.nl;
+  }));
+  container.appendChild(addBtn);
+}
+
+function renderBankMulti(container, specKey, def, product, current) {
+  const arr = Array.isArray(current) ? [...current] : [];
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.gap = '6px'; wrap.style.flex = '1';
+  const chips = document.createElement('div'); chips.className = 'chips';
+  function refreshChips() {
+    chips.innerHTML = '';
+    arr.forEach((v, i) => {
+      const ch = document.createElement('span');
+      ch.className = 'chip';
+      ch.innerHTML = '<span>' + escapeHtml(v) + '</span><button>×</button>';
+      ch.querySelector('button').addEventListener('click', () => { arr.splice(i,1); update(); });
+      chips.appendChild(ch);
+    });
+  }
+  function update() {
+    if (arr.length) product.specs[specKey] = arr; else delete product.specs[specKey];
+    refreshChips();
+  }
+  const select = document.createElement('select');
+  select.innerHTML = '<option value="">— add value —</option>'
+    + def.values.map(v => '<option value="' + escapeAttr(v.nl) + '">' + escapeHtml(v.nl) + '</option>').join('');
+  select.addEventListener('change', () => {
+    if (select.value && !arr.includes(select.value)) { arr.push(select.value); update(); }
+    select.value = '';
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'tiny add-new'; addBtn.textContent = '+ add new';
+  addBtn.addEventListener('click', () => openAddBankModal(specKey, def, (entry) => {
+    select.innerHTML += '<option value="' + escapeAttr(entry.nl) + '">' + escapeHtml(entry.nl) + '</option>';
+    if (!arr.includes(entry.nl)) { arr.push(entry.nl); update(); }
+  }));
+  const row = document.createElement('div');
+  row.style.display='flex'; row.style.gap='6px'; row.style.alignItems='center';
+  row.appendChild(select); row.appendChild(addBtn);
+  wrap.appendChild(chips); wrap.appendChild(row);
+  refreshChips();
+  container.appendChild(wrap);
+}
+
+function renderEnumSingle(container, specKey, def, product, current) {
+  const select = document.createElement('select');
+  select.innerHTML = '<option value="">— select —</option>'
+    + def.values.map(v => '<option value="' + escapeAttr(v.nl) + '"' + (v.nl===current?' selected':'') + '>' + escapeHtml(v.nl) + '</option>').join('');
+  select.addEventListener('change', () => {
+    if (select.value) product.specs[specKey] = select.value; else delete product.specs[specKey];
+  });
+  container.appendChild(select);
+}
+
+function renderLangCodes(container, specKey, def, product, current) {
+  const arr = Array.isArray(current) ? [...current] : [];
+  const wrap = document.createElement('div'); wrap.className = 'lang-codes';
+  def.options.forEach((code) => {
+    const lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox"' + (arr.includes(code)?' checked':'') + '> ' + code;
+    lab.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) { if (!arr.includes(code)) arr.push(code); }
+      else { const i = arr.indexOf(code); if (i>=0) arr.splice(i,1); }
+      arr.sort((a,b) => def.options.indexOf(a)-def.options.indexOf(b));
+      if (arr.length) product.specs[specKey] = arr.slice(); else delete product.specs[specKey];
+    });
+    wrap.appendChild(lab);
+  });
+  container.appendChild(wrap);
+}
+
+function renderNumeric(container, specKey, def, product, current) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current == null ? '' : current;
+  input.placeholder = 'number or range, e.g. 2300 or 26-28';
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    if (v) product.specs[specKey] = v; else delete product.specs[specKey];
+  });
+  container.appendChild(input);
+  if (def.unit) {
+    const u = document.createElement('span'); u.className = 'unit'; u.textContent = def.unit;
+    container.appendChild(u);
+  }
+}
+
+function renderDimensionText(container, specKey, def, product, current) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current == null ? '' : current;
+  input.placeholder = def.hint || 'e.g. 26 or 26x26x10';
+  input.style.minWidth = '260px';
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    if (v) product.specs[specKey] = v; else delete product.specs[specKey];
+  });
+  container.appendChild(input);
+  if (def.unit) {
+    const u = document.createElement('span'); u.className = 'unit'; u.textContent = def.unit;
+    container.appendChild(u);
+  }
+}
+
+function renderBoolean(container, specKey, def, product, current) {
+  const wrap = document.createElement('div'); wrap.className = 'bool-toggle';
+  [{v:true,l:'Ja'},{v:false,l:'Nee'},{v:null,l:'Niet ingevuld'}].forEach(s => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = s.l;
+    if (current === s.v || (s.v === null && current === undefined)) b.classList.add('on');
+    b.addEventListener('click', () => {
+      if (s.v === null) delete product.specs[specKey];
+      else product.specs[specKey] = s.v;
+      render();
+    });
+    wrap.appendChild(b);
+  });
+  container.appendChild(wrap);
+}
+
+let addBankCallback = null;
+let addBankSpecKey = null;
+
+function openAddBankModal(specKey, def, callback) {
+  if (readOnly) {
+    alert('Bank is read-only. Switch folder to enable saving.');
+    return;
+  }
+  addBankCallback = callback;
+  addBankSpecKey = specKey;
+  document.getElementById('addBankTitle').textContent = 'Add new value for "' + def.name + '"';
+  document.getElementById('addBankSub').textContent = 'New value will be written to spec-bank.json on disk.';
+  const inputsEl = document.getElementById('addBankInputs');
+  inputsEl.innerHTML = '';
+  ['nl','en','de','fr','it','es'].forEach(lang => {
+    const row = document.createElement('div');
+    row.className = 'lang-row';
+    row.innerHTML = '<span class="lang-label">' + lang.toUpperCase() + '</span><input data-lang="' + lang + '" type="text" placeholder="' + (lang==='nl'?'Dutch (default)':'') + '">';
+    inputsEl.appendChild(row);
+  });
+  document.getElementById('addBankModal').classList.add('open');
+  inputsEl.querySelector('input[data-lang="nl"]').focus();
+}
+function closeAddBankModal() {
+  document.getElementById('addBankModal').classList.remove('open');
+  addBankCallback = null; addBankSpecKey = null;
+}
+document.getElementById('btnAddBankCancel').addEventListener('click', closeAddBankModal);
+document.getElementById('btnAddBankSave').addEventListener('click', async () => {
+  const inputsEl = document.getElementById('addBankInputs');
+  const entry = {}; const missing = [];
+  ['nl','en','de','fr','it','es'].forEach(lang => {
+    const v = inputsEl.querySelector('input[data-lang="'+lang+'"]').value.trim();
+    if (!v) missing.push(lang.toUpperCase()); else entry[lang] = v;
+  });
+  if (missing.length) { alert('All 6 languages are required. Missing: ' + missing.join(', ')); return; }
+  const existing = CONFIG.specs[addBankSpecKey].values.find(x => x.nl.toLowerCase() === entry.nl.toLowerCase());
+  if (existing) {
+    if (!confirm('"' + entry.nl + '" already exists in the bank. Replace its translations?')) return;
+    Object.assign(existing, entry);
+  } else {
+    CONFIG.specs[addBankSpecKey].values.push(entry);
+  }
+  await persistConfig();
+  if (addBankCallback) addBankCallback(entry);
+  closeAddBankModal();
+});
+
+document.getElementById('btnGenerate').addEventListener('click', () => {
+  const errors = validateProducts();
+  if (errors.length) { alert('Please fix:\n\n' + errors.join('\n')); return; }
+  const rawScript = buildScript(products, CONFIG);
+  const finalScript = cachedToken
+    ? rawScript.replace("'PASTE_TOKEN_HERE'", JSON.stringify(cachedToken))
+    : rawScript;
+  document.getElementById('scriptOutput').textContent = finalScript;
+  const subEl = document.querySelector('#scriptModal .modal-sub');
+  if (subEl) {
+    subEl.innerHTML = cachedToken
+      ? 'Token from <code>token.txt</code> baked in &mdash; paste this into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com) and run.'
+      : 'Paste this into the storefront DevTools console (manibhadra-phoeniximport.myshopify.com). Replace <code>PASTE_TOKEN_HERE</code> with the admin app token first, or drop a <code>token.txt</code> in the folder and reload.';
+  }
+  document.getElementById('scriptModal').classList.add('open');
+});
+
+function validateProducts() {
+  const errors = [];
+  if (!products.length) errors.push('Add at least one product.');
+  const skus = new Set();
+  products.forEach((p, i) => {
+    const tag = 'Product ' + (i+1);
+    if (!p.sku) errors.push(tag + ': SKU is empty.');
+    else if (skus.has(p.sku)) errors.push(tag + ': duplicate SKU "' + p.sku + '".');
+    skus.add(p.sku);
+    if (!Object.keys(p.specs).length) errors.push(tag + ': no specs filled in.');
+  });
+  return errors;
+}
+
+function buildScript(productsList, config) {
+  const payload = productsList.map(p => {
+    const nl = {};
+    const translations = {};
+    Object.entries(p.specs).forEach(([key, val]) => {
+      const def = config.specs[key]; if (!def) return;
+      const ns = key.substring(0, key.indexOf('.'));
+      const k = key.substring(key.indexOf('.') + 1);
+      if (def.input_kind === 'boolean') {
+        nl[key] = { namespace: ns, key: k, type: 'boolean', value: String(!!val) }; return;
+      }
+      if (def.input_kind === 'lang_codes_multi') {
+        const sep = def.separator || '|';
+        nl[key] = { namespace: ns, key: k, type: def.type, value: Array.isArray(val) ? val.join(sep) : String(val) }; return;
+      }
+      if (def.input_kind === 'numeric' || def.input_kind === 'dimension_text') {
+        nl[key] = { namespace: ns, key: k, type: def.type, value: String(val) }; return;
+      }
+      const isList = def.type.startsWith('list.');
+      const valuesNL = isList ? (Array.isArray(val) ? val : [val]) : [val];
+      const transByLang = { en: [], de: [], fr: [], it: [], es: [] };
+      let transAvailable = !!def.translatable;
+      valuesNL.forEach(nlVal => {
+        const entry = (def.values || []).find(e => e.nl === nlVal);
+        if (!entry) { transAvailable = false; return; }
+        ['en','de','fr','it','es'].forEach(lang => transByLang[lang].push(entry[lang] != null ? entry[lang] : nlVal));
+      });
+      const formatVal = (arr) => isList ? JSON.stringify(arr) : arr[0];
+      nl[key] = { namespace: ns, key: k, type: def.type, value: formatVal(valuesNL) };
+      if (def.translatable && transAvailable) {
+        translations[key] = {};
+        ['en','de','fr','it','es'].forEach(lang => translations[key][lang] = formatVal(transByLang[lang]));
+      }
+    });
+    return { sku: p.sku, nl, translations };
+  });
+  return SCRIPT_TEMPLATE.replace('__PAYLOAD__', JSON.stringify(payload, null, 2));
+}
+
+const SCRIPT_TEMPLATE = `// Phoenix Spec Writer
+// Run on https://manibhadra-phoeniximport.myshopify.com/ (storefront, NOT admin)
+// 1) Replace PASTE_TOKEN_HERE with the admin app token.
+// 2) Open DevTools console, paste the entire file, press Enter.
+
+(async () => {
+  const TOKEN = 'PASTE_TOKEN_HERE';
+  const API = 'https://manibhadra-phoeniximport.myshopify.com/admin/api/2024-01/graphql.json';
+  if (TOKEN === 'PASTE_TOKEN_HERE') { console.error('Set TOKEN at the top of the script.'); return; }
+
+  const PRODUCTS = __PAYLOAD__;
+
+  async function gql(query, variables) {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': TOKEN },
+      body: JSON.stringify({ query, variables })
+    });
+    const j = await res.json();
+    if (j.errors) console.error('GraphQL errors:', j.errors);
+    return j.data;
+  }
+
+  const results = [];
+  for (const p of PRODUCTS) {
+    const log = (m) => console.log('[SKU ' + p.sku + '] ' + m);
+    log('Looking up product...');
+    const data = await gql(\`query($q:String!){productVariants(first:5,query:$q){edges{node{sku product{id title}}}}}\`, { q: 'sku:' + p.sku });
+    const variant = data && data.productVariants.edges.map(e=>e.node).find(v => v.sku === p.sku);
+    if (!variant) { console.error('[SKU ' + p.sku + '] not found'); results.push({sku:p.sku, error:'not found'}); continue; }
+    const productGid = variant.product.id;
+    log('Found ' + productGid + ' — ' + variant.product.title);
+
+    const metafields = Object.values(p.nl).map(m => ({
+      ownerId: productGid, namespace: m.namespace, key: m.key, type: m.type, value: m.value
+    }));
+    log('Setting ' + metafields.length + ' NL metafields...');
+    const setRes = await gql(\`mutation($mfs:[MetafieldsSetInput!]!){metafieldsSet(metafields:$mfs){metafields{id namespace key} userErrors{field message}}}\`, { mfs: metafields });
+    if (setRes.metafieldsSet.userErrors.length) console.error('[SKU ' + p.sku + '] set errors:', setRes.metafieldsSet.userErrors);
+    const setMfs = setRes.metafieldsSet.metafields;
+    log('Set ' + setMfs.length + ' metafields ok.');
+
+    const translatableKeys = Object.keys(p.translations);
+    if (translatableKeys.length) {
+      log('Registering translations for ' + translatableKeys.length + ' fields x 5 locales...');
+      for (const mf of setMfs) {
+        const fullKey = mf.namespace + '.' + mf.key;
+        const t = p.translations[fullKey];
+        if (!t) continue;
+        const dig = await gql(\`query($id:ID!){translatableResource(resourceId:$id){translatableContent{key digest value}}}\`, { id: mf.id });
+        const content = dig && dig.translatableResource && dig.translatableResource.translatableContent.find(c => c.key === 'value');
+        if (!content) { console.warn('[SKU ' + p.sku + '] no digest for ' + fullKey); continue; }
+        const trans = ['en','de','fr','it','es'].map(loc => ({
+          locale: loc, key: 'value', value: t[loc], translatableContentDigest: content.digest
+        }));
+        const reg = await gql(\`mutation($id:ID!,$trans:[TranslationInput!]!){translationsRegister(resourceId:$id,translations:$trans){translations{key locale value} userErrors{field message}}}\`, { id: mf.id, trans });
+        if (reg.translationsRegister.userErrors.length) console.error('[SKU ' + p.sku + '] translation errors for ' + fullKey + ':', reg.translationsRegister.userErrors);
+      }
+      log('Translations done.');
+    }
+    results.push({ sku: p.sku, productGid, ok: true });
+  }
+  window._phoenixSpecResults = results;
+  console.log('All done. Results on window._phoenixSpecResults');
+  console.table(results);
+})();
+`;
+
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+document.getElementById('btnAddProduct').addEventListener('click', () => {
+  products.push(emptyProduct()); render();
+});
+document.getElementById('btnReload').addEventListener('click', async () => {
+  try {
+    await reloadBank();
+    await reloadToken();
+    setSaveStatus('Reloaded ' + dirHandle.name + (cachedToken ? ' (token loaded)' : ' (token.txt missing)'), 'saved');
+  }
+  catch (e) { alert('Reload failed: ' + e.message); }
+});
+document.getElementById('btnSwitchFolder').addEventListener('click', async () => {
+  await idbDel('dirHandle');
+  dirHandle = null; bankFileHandle = null; CONFIG = null; readOnly = false; cachedToken = null;
+  document.getElementById('appHeader').style.display = 'none';
+  document.getElementById('appMain').style.display = 'none';
+  document.getElementById('bootScreen').classList.remove('hidden');
+});
+document.getElementById('btnPickFolder').addEventListener('click', async () => {
+  const errEl = document.getElementById('bootError'); errEl.textContent = '';
+  if (!window.showDirectoryPicker) {
+    errEl.textContent = 'This browser does not support direct folder access. Use Chrome or Edge.';
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await loadFromDirHandle(handle);
+  } catch (e) {
+    if (e.name !== 'AbortError') errEl.textContent = e.message;
+  }
+});
+document.getElementById('btnFallbackImport').addEventListener('click', () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json';
+  inp.addEventListener('change', () => {
+    const f = inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (!data.specs) throw new Error('Not a valid bank file');
+        CONFIG = data; readOnly = true; dirHandle = null; bankFileHandle = null;
+        showApp(); render();
+        setSaveStatus('Read-only — switch folder to enable saving', 'saving');
+      } catch (e) { document.getElementById('bootError').textContent = 'Import failed: ' + e.message; }
+    };
+    r.readAsText(f);
+  });
+  inp.click();
+});
+
+document.getElementById('btnCloseScript').addEventListener('click', () => document.getElementById('scriptModal').classList.remove('open'));
+document.getElementById('btnCopyScript').addEventListener('click', async () => {
+  const txt = document.getElementById('scriptOutput').textContent;
+  try {
+    await navigator.clipboard.writeText(txt);
+    document.getElementById('btnCopyScript').textContent = 'Copied ✓';
+    setTimeout(() => document.getElementById('btnCopyScript').textContent = 'Copy to clipboard', 1800);
+  } catch (e) { alert('Copy failed: ' + e.message); }
+});
+document.getElementById('btnDownloadScript').addEventListener('click', () => {
+  const txt = document.getElementById('scriptOutput').textContent;
+  const blob = new Blob([txt], { type: 'application/javascript' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'phoenix-spec-write-' + Date.now() + '.js';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+(async () => {
+  const note = document.getElementById('browserNote');
+  if (!window.showDirectoryPicker) {
+    note.innerHTML = 'Your browser does not support direct folder access. Use <strong>Chrome</strong> or <strong>Edge</strong>.';
+    document.getElementById('btnPickFolder').disabled = true;
+  } else {
+    note.textContent = 'Works in Chrome and Edge.';
+  }
+  try {
+    const stored = await idbGet('dirHandle');
+    if (stored) {
+      const ok = await ensurePermission(stored, 'readwrite');
+      if (ok) {
+        await loadFromDirHandle(stored);
+      } else {
+        document.getElementById('bootError').textContent = 'Folder permission was revoked — pick the folder again.';
+      }
+    }
+  } catch (e) {
+    console.warn('Boot restore failed:', e);
+    document.getElementById('bootError').textContent = e.message;
+  }
+})();
+</script>
+</body>
+</html>
