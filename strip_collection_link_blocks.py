@@ -26,7 +26,10 @@ then <strong>/<b>) qualifies when ALL of these hold:
   * at least --min-collection-ratio of its links are collection links,
   * its text OUTSIDE the links contains no letters or digits — only
     separators/whitespace, so running prose with inline links is never touched,
-  * that outside text holds at least (number of links - 1) pipe characters.
+  * every gap between consecutive links is either a pipe or nothing at all,
+    and at least one is a pipe. Gaps rather than a raw pipe count, because the
+    migration left .aspx links glued straight onto their replacements, so a
+    nine-link block can legitimately carry only seven pipes.
 
 That last rule is what makes this safe to run store-wide: a real sentence with
 a link in it always leaves words behind and is rejected.  Use `--self-test` to
@@ -124,8 +127,7 @@ class _BlockParser(HTMLParser):
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.links = []
-        self.residual = []
+        self.items = []                 # ordered ("text", str) | ("link", dict)
         self._depth = 0
         self._cur = None
 
@@ -139,21 +141,43 @@ class _BlockParser(HTMLParser):
         if tag == "a" and self._depth > 0:
             self._depth -= 1
             if self._depth == 0 and self._cur is not None:
-                self.links.append({
+                self.items.append(("link", {
                     "href": self._cur["href"],
                     "text": " ".join("".join(self._cur["text"]).split()),
-                })
+                }))
                 self._cur = None
 
     def handle_data(self, data):
         if self._depth > 0 and self._cur is not None:
             self._cur["text"].append(data)
         else:
-            self.residual.append(data)
+            self.items.append(("text", data))
+
+    @property
+    def links(self):
+        return [v for kind, v in self.items if kind == "link"]
 
     @property
     def residual_text(self):
-        return "".join(self.residual)
+        return "".join(v for kind, v in self.items if kind == "text")
+
+    @property
+    def gaps(self):
+        """The text between consecutive links — "" when two links are adjacent.
+
+        Migration-era blocks often have a leftover .aspx link glued straight onto
+        its replacement with no separator, so counting raw pipes against the link
+        count undercounts. Gaps are what the separator rule should look at.
+        """
+        out, buf, started = [], [], False
+        for kind, value in self.items:
+            if kind == "link":
+                if started:
+                    out.append("".join(buf))
+                buf, started = [], True
+            elif started:
+                buf.append(value)
+        return out
 
 
 def _tag_spans(html, tag):
@@ -197,9 +221,13 @@ def classify(chunk, min_links, min_ratio):
     if ALNUM_RE.search(residual):
         words = " ".join(residual.split())
         return links, "text around the links: %r" % (words[:60],)
-    pipes = residual.count("|") + residual.count("｜")
-    if pipes < len(links) - 1:
-        return links, "%d pipe(s) for %d links" % (pipes, len(links))
+    gaps = parser.gaps
+    is_pipe = lambda g: "|" in g or "｜" in g
+    if not any(is_pipe(g) for g in gaps):
+        return links, "no pipe between any of the %d links" % len(links)
+    odd = [g for g in gaps if not is_pipe(g) and g.strip()]
+    if odd:
+        return links, "separator %r is not a pipe" % (" ".join(odd[0].split())[:20],)
     return links, None
 
 
@@ -903,6 +931,16 @@ SAMPLES = [
      '<p><strong><a href="kaarsen-en-sfeerlichten">Kaarsen en sfeerlichten</a></strong> | '
      '<strong><a href="wierook-witte-salie-en-houtskool">Wierook, witte salie en houtskool</a></strong> | '
      '<strong><a href="yoga">Yoga</a></strong> | <strong><a href="sieraden">Sieraden</a></strong></p>'),
+    (True, "9 links / 7 pipes: a legacy .aspx link glued onto its replacement",
+     '<p data-mce-fragment="1"><strong data-mce-fragment="1">'
+     '<a href="all-meditation-cushions">Meditation cushions</a> | '
+     '<a href="all-metal-singing-bowls">Metal singing bowls</a> | '
+     '<a href="jewellery">Jewellery</a> | <a href="yoga-gear">Yoga</a> | '
+     '<a href="all-crystal-singing-bowls">Crystal singing bowls</a> | '
+     '<a href="incense-white-sage-and-charcoal">Incense, white sage and charcoal</a> | '
+     '<a href="minerals-and-gemstones">Minerals and gemstones</a>'
+     '<a href="https://www.phoeniximport.com/en/3/minerals-and-gemstones.aspx">Minerals and gemstones</a> | '
+     '<a href="candles-and-candle-holders">Candles and candle holders</a></strong></p>'),
     (False, "pipe-separated file/page links, not collections",
      '<p><a href="register.aspx">Registreren</a> | <a href="login.aspx">Inloggen</a></p>'),
     (False, "prose with inline links",
