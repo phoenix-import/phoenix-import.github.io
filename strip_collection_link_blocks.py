@@ -180,25 +180,33 @@ def is_collection_href(href):
     return bool(COLLECTION_HREF_RE.match(href) or BARE_HANDLE_HREF_RE.match(href))
 
 
-def qualifies(chunk, min_links, min_ratio):
-    """Return the link list if `chunk` is a pipe-separated collection link block."""
+def classify(chunk, min_links, min_ratio):
+    """-> (links, reason). reason is None when `chunk` IS a link block, else why not."""
     parser = _BlockParser()
     parser.feed(chunk)
     parser.close()
     links = parser.links
     if len(links) < min_links:
-        return None
+        return links, "only %d link(s), need %d" % (len(links), min_links)
     coll = [l for l in links if is_collection_href(l["href"])]
     if len(coll) < min_links:
-        return None
+        return links, "only %d of %d links are collection links" % (len(coll), len(links))
     if len(coll) / len(links) < min_ratio:
-        return None
+        return links, "collection-link ratio %.2f below %.2f" % (len(coll) / len(links), min_ratio)
     residual = parser.residual_text
     if ALNUM_RE.search(residual):
-        return None                            # prose around the links -> not a block
-    if residual.count("|") + residual.count("｜") < len(links) - 1:
-        return None                            # not pipe-separated
-    return links
+        words = " ".join(residual.split())
+        return links, "text around the links: %r" % (words[:60],)
+    pipes = residual.count("|") + residual.count("｜")
+    if pipes < len(links) - 1:
+        return links, "%d pipe(s) for %d links" % (pipes, len(links))
+    return links, None
+
+
+def qualifies(chunk, min_links, min_ratio):
+    """Return the link list if `chunk` is a pipe-separated collection link block."""
+    links, reason = classify(chunk, min_links, min_ratio)
+    return None if reason else links
 
 
 def find_link_blocks(html, min_links=2, min_ratio=0.75):
@@ -220,6 +228,57 @@ def find_link_blocks(html, min_links=2, min_ratio=0.75):
                     "links": links,
                 })
     return sorted(found, key=lambda b: b["start"])
+
+
+# Deliberately wider than CONTAINER_TAGS: what the strict pass will not even look at.
+CANDIDATE_TAGS = CONTAINER_TAGS + ("li", "ul", "ol", "span", "em", "td", "th",
+                                   "h1", "h2", "h3", "h4", "h5", "h6",
+                                   "section", "blockquote", "center", "font")
+SEGMENT_RE = re.compile(r"(?=<p\b)|(?=<div\b)|(?=<h[1-6]\b)|(?=<li\b)|<br\s*/?>", re.I)
+
+
+def find_near_misses(html, min_links=2, min_ratio=0.75):
+    """Link clusters the strict pass does NOT strip, with the reason each was rejected.
+
+    Looks in a wider set of tags; at segments split on block boundaries, so an
+    unclosed <p> still gets examined; and at the description as a whole, so a
+    cluster spread over several containers is still seen.
+    """
+    if not html or "<a" not in html:
+        return []
+    taken = find_link_blocks(html, min_links, min_ratio)
+    chunks = []
+    for tag in CANDIDATE_TAGS:
+        chunks += [(s, e, tag) for s, e in _tag_spans(html, tag)]
+    bounds = [m.end() for m in SEGMENT_RE.finditer(html)]
+    for a, b in zip([0] + bounds, bounds + [len(html)]):
+        if b > a:
+            chunks.append((a, b, "unclosed/loose markup"))
+    chunks.append((0, len(html), "whole description"))
+
+    out, seen = [], set()
+    for start, end, tag in sorted(set(chunks)):
+        if any(start < t["end"] and end > t["start"] for t in taken):
+            continue                       # already being stripped
+        links, reason = classify(html[start:end], min_links, min_ratio)
+        if len(links) < 2 or not any(is_collection_href(l["href"]) for l in links):
+            continue
+        if reason is None:
+            # It IS a link block by every rule — the strict pass just never looks here.
+            reason = ("looks like a block but sits in <%s>, which is not stripped" % tag
+                      if tag in CANDIDATE_TAGS else
+                      "looks like a block but %s means no container to remove" % tag)
+        elif reason.startswith("text around the links"):
+            # Only a short label ("Zie ook:") is interesting; real prose is not.
+            around = "".join(ALNUM_RE.findall(reason.split(": ", 1)[1]))
+            if len(around) >= 40:
+                continue
+        key = tuple(sorted(l["href"] for l in links))
+        if key in seen:
+            continue                       # same cluster seen via a nested tag
+        seen.add(key)
+        out.append({"tag": tag, "html": html[start:end], "links": links, "reason": reason})
+    return out
 
 
 def tidy(html):
@@ -764,6 +823,57 @@ def cmd_audit(args):
     return 0
 
 
+def cmd_suspects(args):
+    """Read-only: link clusters the strict pass leaves behind, and why."""
+    api = Shopify(args.shop, args.token, args.api_version, args.verbose)
+    primary, others = api.locales()
+    if primary is None and others is None:
+        primary, others = FALLBACK_PRIMARY_LOCALE, list(FALLBACK_LOCALES)
+    args.primary_locale = args.primary_locale or primary
+    if args.locales:
+        wanted = {l.strip() for l in args.locales.split(",") if l.strip()}
+        others = [l for l in others if l in wanted]
+    want = {h.strip() for h in (args.handles or "").split(",") if h.strip()}
+
+    rows, seen = [], 0
+    for coll in api.collections(others, page_size=args.page_size):
+        if want and coll["handle"] not in want:
+            continue
+        seen += 1
+        if args.limit and seen > args.limit:
+            break
+        for loc, html in [(args.primary_locale, coll["body_html"])] + \
+                         [(l, (coll["translations"].get(l) or {}).get("value") or "")
+                          for l in others]:
+            for nm in find_near_misses(html, args.min_links, args.min_collection_ratio):
+                rows.append({
+                    "handle": coll["handle"], "locale": loc, "reason": nm["reason"],
+                    "where": nm["tag"], "links": len(nm["links"]),
+                    "hrefs": " ".join(l["href"] for l in nm["links"]),
+                    "html": " ".join(nm["html"].split()),
+                })
+
+    print("Scanned %d collections across %s." % (seen, ", ".join([args.primary_locale] + others)))
+    if not rows:
+        print("No leftover link clusters found — the strict pass caught everything it could see.")
+        return 0
+    print("\n%d leftover cluster(s), %d links, in %d collection(s):\n"
+          % (len(rows), sum(r["links"] for r in rows), len({r["handle"] for r in rows})))
+    from collections import Counter
+    for reason, n in Counter(r["reason"] for r in rows).most_common():
+        print("  %4d  %s" % (n, reason))
+    print("\nWorst offenders:")
+    for r in sorted(rows, key=lambda r: -r["links"])[:8]:
+        print("  %-38s %-3s %2d links  %s" % (r["handle"][:38], r["locale"], r["links"], r["reason"][:44]))
+    path = args.report or "link-block-suspects.csv"
+    with open(path, "w", encoding="utf-8-sig", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=["handle", "locale", "reason", "where", "links", "hrefs", "html"])
+        w.writeheader()
+        w.writerows(rows)
+    print("\nFull list written to %s — nothing was changed in the store." % path)
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Self-test
 # ---------------------------------------------------------------------------
@@ -849,10 +959,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("command", nargs="?", default="scan",
-                        choices=["scan", "apply", "restore", "audit"],
+                        choices=["scan", "apply", "restore", "audit", "suspects"],
                         help="scan = read-only dry run (default); apply = strip; "
                              "restore = put the blocks back from a dump; "
-                             "audit = read-only, report what each locale actually holds")
+                             "audit = read-only, report what each locale actually holds; "
+                             "suspects = read-only, report link clusters the strict pass "
+                             "leaves behind and why")
     parser.add_argument("--shop", default=os.environ.get("SHOPIFY_SHOP", DEFAULT_SHOP))
     parser.add_argument("--token", default=os.environ.get("SHOPIFY_TOKEN", ""),
                         help="Admin API token (shpat_...); or set SHOPIFY_TOKEN")
@@ -892,6 +1004,8 @@ def main():
         return self_test()
     if not args.token:
         parser.error("no Admin API token — pass --token or set SHOPIFY_TOKEN")
+    if args.command == "suspects":
+        return cmd_suspects(args)
     if args.command == "audit":
         return cmd_audit(args)
     if args.command == "restore":
