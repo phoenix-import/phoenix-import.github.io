@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Paragon Product Launcher</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: Calibri, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#fff; color:#333; margin:0; padding:0; line-height:1.5; }
+    header { background:#68437B; color:#fff; padding:16px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:18px; font-weight:600; margin:0; }
+    header img { height:36px; }
+    .content { padding:20px 24px; max-width:860px; }
+    label { display:block; margin-top:14px; font-weight:600; color:#68437B; }
+    .hint { font-size:13px; color:#666; margin:2px 0 0; font-weight:400; }
+    textarea { width:100%; min-height:180px; font-family:Consolas, monospace; font-size:14px; padding:10px; border:1px solid #d1d5db; border-radius:8px; }
+    .row { display:flex; flex-wrap:wrap; gap:12px 20px; align-items:center; margin-top:6px; }
+    input[type="text"] { padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; }
+    .row label { margin:0; font-weight:400; color:#333; display:flex; align-items:center; gap:6px; }
+    button { margin-top:16px; padding:10px 14px; border:0; border-radius:8px; background:#ca427e; color:#fff; cursor:pointer; font-size:15px; }
+    button:hover { background:#b33a6f; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .stamp { font-size:22px; font-weight:600; color:#68437B; margin-top:4px; }
+    table { border-collapse:collapse; margin-top:14px; font-size:13px; width:100%; }
+    th, td { border:1px solid #e0e0e0; padding:4px 8px; text-align:left; }
+    th { background:#f7f2fa; color:#68437B; }
+    .ok { color:#2e7d32; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Paragon Product Launcher</h1>
+    <a href="index.html" style="margin-left:auto;line-height:0;"><img src="logo.png" alt="Phoenix Import"></a>
+  </header>
+  <div class="content">
+    <p>Paste product IDs, get the Paragon import file that puts them online: status Active, isProduct 1, web 1 and the start date filled in. Import it in Paragon like the old online_zetten file.</p>
+
+    <label for="ids">Product IDs</label>
+    <p class="hint">One per line, or separated by commas, spaces or semicolons. Duplicates are removed.</p>
+    <textarea id="ids" placeholder="606232&#10;606233&#10;606234"></textarea>
+
+    <label>Start date</label>
+    <div class="row">
+      <label><input type="radio" name="dateMode" value="minus2" checked> Now minus 2 hours (Amsterdam time)</label>
+      <label><input type="radio" name="dateMode" value="nine"> Today at 09:00</label>
+      <label><input type="radio" name="dateMode" value="custom"> Custom <input type="text" id="customDate" placeholder="07-10-2026 09:00" style="width:150px"></label>
+    </div>
+    <div class="stamp" id="stamp"></div>
+
+    <button id="go">Download import file</button>
+    <div id="msg"></div>
+    <table id="preview"></table>
+
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// Exact shape of the Paragon "online zetten" import
+const HEADERS = ['productID', 'status', 'isProduct', 'startdatum', 'web'];
+const DATE_FORMAT = 'm/d/yy h:mm';   // Excel built-in date-time format, displays in the local style
+const pad = n => String(n).padStart(2, '0');
+
+/* ---------- date ---------- */
+function amsterdamParts(date) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Amsterdam', year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hourCycle:'h23'
+  }).formatToParts(date);
+  const p = {};
+  parts.forEach(x => { if (x.type !== 'literal') p[x.type] = Number(x.value); });
+  return { y:p.year, mo:p.month, d:p.day, h:p.hour, mi:p.minute };
+}
+
+function parseCustom(str) {
+  const m = String(str).trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})(?:[ T]+(\d{1,2})[:.](\d{2}))?$/);
+  if (!m) return null;
+  let y = +m[3]; if (y < 100) y += 2000;
+  const p = { y, mo:+m[2], d:+m[1], h:m[4] ? +m[4] : 9, mi:m[5] ? +m[5] : 0 };
+  const check = new Date(Date.UTC(p.y, p.mo - 1, p.d));
+  if (check.getUTCMonth() !== p.mo - 1 || p.h > 23 || p.mi > 59) return null;
+  return p;
+}
+
+function getStart() {
+  const mode = document.querySelector('input[name="dateMode"]:checked').value;
+  if (mode === 'minus2') return amsterdamParts(new Date(Date.now() - 2 * 3600 * 1000));
+  if (mode === 'nine') return { ...amsterdamParts(new Date()), h:9, mi:0 };
+  return parseCustom($('customDate').value);
+}
+
+// Excel serial date (local wall-clock time, no time zone)
+const toSerial = p => Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi) / 86400000 + 25569;
+const showDate = p => `${pad(p.d)}-${pad(p.mo)}-${p.y} ${pad(p.h)}:${pad(p.mi)}`;
+
+/* ---------- ids ---------- */
+function getIds() {
+  const seen = new Set();
+  return $('ids').value.split(/[\s,;]+/).map(s => s.trim()).filter(s => s && !seen.has(s) && seen.add(s));
+}
+
+/* ---------- preview ---------- */
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function refresh() {
+  const start = getStart();
+  const ids = getIds();
+  $('stamp').textContent = start ? showDate(start) : 'Custom date not recognised (use dd-mm-yyyy hh:mm)';
+  $('go').disabled = !ids.length || !start;
+  $('go').textContent = ids.length ? `Download import file (${ids.length} product${ids.length === 1 ? '' : 's'})` : 'Download import file';
+  const tbl = $('preview');
+  tbl.innerHTML = '';
+  if (!ids.length || !start) return;
+  const head = '<tr>' + HEADERS.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  const rows = ids.slice(0, 8).map(id =>
+    `<tr><td>${esc(id)}</td><td>Active</td><td>1</td><td>${showDate(start)}</td><td>1</td></tr>`).join('');
+  const more = ids.length > 8 ? `<tr><td colspan="5" class="hint">…and ${ids.length - 8} more</td></tr>` : '';
+  tbl.innerHTML = head + rows + more;
+}
+
+/* ---------- build file ---------- */
+$('go').addEventListener('click', () => {
+  const ids = getIds();
+  const start = getStart();
+  if (!ids.length || !start) return;
+
+  const ws = {};
+  const put = (r, c, cell) => { ws[XLSX.utils.encode_cell({ r, c })] = cell; };
+  HEADERS.forEach((h, c) => put(0, c, { t:'s', v:h }));
+  ids.forEach((id, i) => {
+    const r = i + 1;
+    put(r, 0, /^\d+$/.test(id) ? { t:'n', v:Number(id) } : { t:'s', v:id });
+    put(r, 1, { t:'s', v:'Active', z:'@' });
+    put(r, 2, { t:'n', v:1 });
+    put(r, 3, { t:'n', v:toSerial(start), z:DATE_FORMAT });
+    put(r, 4, { t:'s', v:'1', z:'@' });
+  });
+  ws['!ref'] = XLSX.utils.encode_range({ s:{ r:0, c:0 }, e:{ r:ids.length, c:HEADERS.length - 1 } });
+  ws['!cols'] = [{ wch:12 }, { wch:10 }, { wch:10 }, { wch:16 }, { wch:6 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Blad1');
+  const now = amsterdamParts(new Date());
+  const name = `online_zetten_${now.y}${pad(now.mo)}${pad(now.d)}-${pad(now.h)}${pad(now.mi)}.xlsx`;
+  XLSX.writeFile(wb, name, { bookType:'xlsx' });
+  $('msg').innerHTML = `<p class="ok">Downloaded ${esc(name)} with ${ids.length} product${ids.length === 1 ? '' : 's'}, start ${showDate(start)}.</p>`;
+});
+
+$('ids').addEventListener('input', refresh);
+$('customDate').addEventListener('input', () => { document.querySelector('input[value="custom"]').checked = true; refresh(); });
+document.querySelectorAll('input[name="dateMode"]').forEach(r => r.addEventListener('change', refresh));
+setInterval(refresh, 30000);
+refresh();
+</script>
+</body>
+</html>
