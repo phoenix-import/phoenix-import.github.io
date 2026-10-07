@@ -1,0 +1,2881 @@
+{
+  "meta": {
+    "shop": "manibhadra-phoeniximport.myshopify.com",
+    "locales": [
+      "nl",
+      "en",
+      "de",
+      "fr",
+      "it",
+      "es"
+    ],
+    "default_locale": "nl"
+  },
+  "specs": {
+    "custom.materiaal": {
+      "name": "Materiaal",
+      "type": "list.single_line_text_field",
+      "input_kind": "bank_multi",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "Edelsteen",
+          "en": "Gemstone",
+          "de": "Edelstein",
+          "fr": "Pierre précieuse",
+          "it": "Pietra preziosa",
+          "es": "Piedra preciosa"
+        },
+        {
+          "nl": "Brons",
+          "en": "Bronze",
+          "de": "Bronze",
+          "fr": "Bronze",
+          "it": "Bronzo",
+          "es": "Bronce"
+        },
+        {
+          "nl": "Bamboekoraal",
+          "en": "Bamboo coral",
+          "de": "Bambuskoralle",
+          "fr": "Corail bambu",
+          "it": "Corallo bambù",
+          "es": "Coral bambú"
+        },
+        {
+          "nl": "Katoen",
+          "en": "Cotton",
+          "de": "Baumwolle",
+          "fr": "Coton",
+          "it": "Cotone",
+          "es": "Algodón"
+        },
+        {
+          "nl": "Messing",
+          "en": "Brass",
+          "de": "Messing",
+          "fr": "Laiton",
+          "it": "Ottone",
+          "es": "Latón"
+        },
+        {
+          "nl": "Hout",
+          "en": "Wood",
+          "de": "Holz",
+          "fr": "Bois",
+          "it": "Legno",
+          "es": "Madera"
+        },
+        {
+          "nl": "Kristal",
+          "en": "Crystal",
+          "de": "Kristall",
+          "fr": "Cristal",
+          "it": "Cristallo",
+          "es": "Cristal"
+        },
+        {
+          "nl": "Glas",
+          "en": "Glass",
+          "de": "Glas",
+          "fr": "Verre",
+          "it": "Vetro",
+          "es": "Vidrio"
+        },
+        {
+          "nl": "Polyresin",
+          "en": "Polyresin",
+          "de": "Polyresin",
+          "fr": "Polyrésin",
+          "it": "Poliresin",
+          "es": "Poliresina"
+        },
+        {
+          "nl": "Polyester",
+          "en": "Polyester",
+          "de": "Polyester",
+          "fr": "Polyester",
+          "it": "Poliestere",
+          "es": "Poliéster"
+        },
+        {
+          "nl": "Seleniet",
+          "en": "Selenite",
+          "de": "Selenit",
+          "fr": "Sélénite",
+          "it": "Selenite",
+          "es": "Selenita"
+        },
+        {
+          "nl": "Mineraal",
+          "en": "Mineral",
+          "de": "Mineral",
+          "fr": "Minéral",
+          "it": "Minerale",
+          "es": "Mineral"
+        },
+        {
+          "nl": "Koper",
+          "en": "Copper",
+          "de": "Kupfer",
+          "fr": "Cuivre",
+          "it": "Rame",
+          "es": "Cobre"
+        },
+        {
+          "nl": "Karton",
+          "en": "Cardboard",
+          "de": "Karton",
+          "fr": "Carton",
+          "it": "Cartone",
+          "es": "Cartón"
+        },
+        {
+          "nl": "Fluweel",
+          "en": "Velvet",
+          "de": "Samt",
+          "fr": "Velours",
+          "it": "Velluto",
+          "es": "Terciopelo"
+        },
+        {
+          "nl": "Aluminium",
+          "en": "Aluminium",
+          "de": "Aluminium",
+          "fr": "Aluminium",
+          "it": "Alluminio",
+          "es": "Aluminio"
+        },
+        {
+          "nl": "Zeepsteen",
+          "en": "Soapstone",
+          "de": "Seifenstein",
+          "fr": "Pierre de savon",
+          "it": "Pietra di sapone",
+          "es": "Piedra de jabón"
+        },
+        {
+          "nl": "Schelp",
+          "en": "Shell",
+          "de": "Muschel",
+          "fr": "Coquille",
+          "it": "Conchiglia",
+          "es": "Concha"
+        },
+        {
+          "nl": "IJzer",
+          "en": "Iron",
+          "de": "Eisen",
+          "fr": "Fer",
+          "it": "Ferro",
+          "es": "Hierro"
+        },
+        {
+          "nl": "Keramiek",
+          "en": "Ceramic",
+          "de": "Keramik",
+          "fr": "Céramique",
+          "it": "Ceramica",
+          "es": "Cerámica"
+        },
+        {
+          "nl": "Papier",
+          "en": "Paper",
+          "de": "Papier",
+          "fr": "Papier",
+          "it": "Carta",
+          "es": "Papel"
+        },
+        {
+          "nl": "Beenderporselein",
+          "en": "Bone porcelain",
+          "de": "Knochenporzellan",
+          "fr": "porcelaine osseuse",
+          "it": "Porcellana d'osso",
+          "es": "Porcelana de Hueso"
+        },
+        {
+          "nl": "Kunsthars",
+          "en": "Synthetic resin",
+          "de": "Kunstharz",
+          "fr": "Résine",
+          "it": "Resina",
+          "es": "Resina sintética"
+        },
+        {
+          "nl": "Metaal",
+          "en": "Metal",
+          "de": "Metall",
+          "fr": "Métal",
+          "it": "Metallo",
+          "es": "Metal"
+        },
+        {
+          "nl": "Messing|Edelsteen",
+          "en": "Brass|Gemstone",
+          "de": "Messing|Edelstein",
+          "fr": "Laiton|Pierre précieuse",
+          "it": "Ottone|Pietra dura",
+          "es": "Latón|Piedra preciosa"
+        },
+        {
+          "nl": "Zink legering|Edelsteen",
+          "en": "Zinc alloy|Gemstone",
+          "de": "Zink Legierung|Edelstein",
+          "fr": "Alliage de zinc|Pierre précieuse",
+          "it": "Lega di zinco|Pietra preziosa",
+          "es": "Aleación de zinc|Piedra preciosa"
+        },
+        {
+          "nl": "Zaad",
+          "en": "Seed",
+          "de": "Samen",
+          "fr": "Graine",
+          "it": "Seme",
+          "es": "Semilla"
+        },
+        {
+          "nl": "Zink legering",
+          "en": "Zinc alloy",
+          "de": "Zinklegierung",
+          "fr": "Alliage de zinc",
+          "it": "Lega di zinco",
+          "es": "Aleación de zinc"
+        },
+        {
+          "nl": "Vilt",
+          "en": "Felt",
+          "de": "Filz",
+          "fr": "Feutre",
+          "it": "Feltro",
+          "es": "Fieltro"
+        },
+        {
+          "nl": "Acryl",
+          "en": "Acrylic",
+          "de": "Acryl",
+          "fr": "Acrylique",
+          "it": "Acrilico",
+          "es": "Acrílico"
+        },
+        {
+          "nl": "Staal",
+          "en": "Steel",
+          "de": "Stahl",
+          "fr": "Acier",
+          "it": "Acciaio",
+          "es": "Acero"
+        },
+        {
+          "nl": "Wol",
+          "en": "Wool",
+          "de": "Wolle",
+          "fr": "Laine",
+          "it": "Lana",
+          "es": "Lana"
+        },
+        {
+          "nl": "Papier|Fluweel",
+          "en": "Paper|Velvet",
+          "de": "Papier|Samt",
+          "fr": "Papier|Velours",
+          "it": "Carta|Velluto",
+          "es": "Papel|Terciopelo"
+        },
+        {
+          "nl": "Kurk",
+          "en": "Cork",
+          "de": "Kork",
+          "fr": "Liège",
+          "it": "Sughero",
+          "es": "Corcho"
+        },
+        {
+          "nl": "Rubber",
+          "en": "Rubber",
+          "de": "Gummi",
+          "fr": "Caoutchouc",
+          "it": "Gomma",
+          "es": "Caucho"
+        },
+        {
+          "nl": "Veer",
+          "en": "Feather",
+          "de": "Feder",
+          "fr": "Plume",
+          "it": "Piuma",
+          "es": "Pluma"
+        },
+        {
+          "nl": "Steen",
+          "en": "Stone",
+          "de": "Stein",
+          "fr": "Pierre",
+          "it": "Pietra",
+          "es": "Piedra"
+        },
+        {
+          "nl": "Edelsteen|Zink legering",
+          "en": "Gemstone|Zinc alloy",
+          "de": "Edelstein|Zinklegierung",
+          "fr": "Gemme|Alliage de zinc",
+          "it": "Gemma|Lega di zinco",
+          "es": "Gema|Aleación de zinc"
+        },
+        {
+          "nl": "Verguld",
+          "en": "Gold-plated",
+          "de": "Vergoldet",
+          "fr": "Doré",
+          "it": "Placcato oro",
+          "es": "Chapado en oro"
+        },
+        {
+          "nl": "Kunststof",
+          "en": "Plastic",
+          "de": "Kunststoff",
+          "fr": "Plastique",
+          "it": "Plastica",
+          "es": "Plástico"
+        },
+        {
+          "nl": "MDF",
+          "en": "MDF",
+          "de": "MDF",
+          "fr": "MDF",
+          "it": "MDF",
+          "es": "MDF"
+        },
+        {
+          "nl": "Zijde",
+          "en": "Silk",
+          "de": "Seide",
+          "fr": "Soie",
+          "it": "Seta",
+          "es": "Seda"
+        },
+        {
+          "nl": "Suede",
+          "en": "Suede",
+          "de": "Suede",
+          "fr": "Daim",
+          "it": "Scamosciato",
+          "es": "Ante"
+        },
+        {
+          "nl": "Zandsteen",
+          "en": "Sandstone",
+          "de": "Sandstein",
+          "fr": "Grès",
+          "it": "Pietra di sabbia",
+          "es": "Piedra de arena"
+        },
+        {
+          "nl": "PVC",
+          "en": "PVC",
+          "de": "PVC",
+          "fr": "PVC",
+          "it": "PVC",
+          "es": "PVC"
+        },
+        {
+          "nl": "TPE",
+          "en": "TPE",
+          "de": "TPE",
+          "fr": "TPE",
+          "it": "TPE",
+          "es": "TPE"
+        },
+        {
+          "nl": "Metaal|Mineraal",
+          "en": "Metal|Mineral",
+          "de": "Metall|Mineral",
+          "fr": "Métal|Minéral",
+          "it": "Metallo|Minerale",
+          "es": "Metal|Mineral"
+        },
+        {
+          "nl": "Was",
+          "en": "Wax",
+          "de": "Wachs",
+          "fr": "Cire",
+          "it": "Cera",
+          "es": "Cera"
+        },
+        {
+          "nl": "Roestvrijstaal",
+          "en": "Stainless steel",
+          "de": "Edelstahl",
+          "fr": "Acier inoxydable",
+          "it": "Acciaio inossidabile",
+          "es": "Acero inoxidable"
+        },
+        {
+          "nl": "Organza",
+          "en": "Organza",
+          "de": "Organza",
+          "fr": "Organza",
+          "it": "Organza",
+          "es": "Organza"
+        },
+        {
+          "nl": "Kunstleer (polyurethaan)",
+          "en": "Synthetic leather (polyurethane)",
+          "de": "Kunstleder (Polyurethan)",
+          "fr": "Simili-cuir (polyuréthane)",
+          "it": "Similpelle (poliuretano)",
+          "es": "Cuero sintético (poliuretano)"
+        },
+        {
+          "nl": "Nylon",
+          "en": "Nylon",
+          "de": "Nylon",
+          "fr": "Nylon",
+          "it": "Nylon",
+          "es": "Nylon"
+        },
+        {
+          "nl": "Verchroomd",
+          "en": "Chrome-plated",
+          "de": "Verchromt",
+          "fr": "Chromé",
+          "it": "Cromato",
+          "es": "Cromado"
+        },
+        {
+          "nl": "Verzilverd brons",
+          "en": "Silver-plated bronze",
+          "de": "Versilberte Bronze",
+          "fr": "Bronze argenté",
+          "it": "bronzo placcato in argento",
+          "es": "Bronce plateado en plata"
+        },
+        {
+          "nl": "Brokaat",
+          "en": "Brocade",
+          "de": "Brokat",
+          "fr": "Brocart",
+          "it": "Broccato",
+          "es": "Brocado"
+        },
+        {
+          "nl": "Gietijzer",
+          "en": "Cast iron",
+          "de": "Gusseisen",
+          "fr": "Fonte",
+          "it": "Ghisa",
+          "es": "Hierro fundido"
+        },
+        {
+          "nl": "Hennep",
+          "en": "Hemp",
+          "de": "Hanf",
+          "fr": "Chanvre",
+          "it": "Canapa",
+          "es": "Cáñamo"
+        },
+        {
+          "nl": "Polypropyleen",
+          "en": "Polypropylene",
+          "de": "Polypropylen",
+          "fr": "Polypropylène",
+          "it": "Polypropyleen",
+          "es": "Polypropyleen"
+        },
+        {
+          "nl": "Leer",
+          "en": "Leather",
+          "de": "Leder",
+          "fr": "Cuir",
+          "it": "Pelle",
+          "es": "Cuero"
+        },
+        {
+          "nl": "Goud",
+          "en": "Gold",
+          "de": "Gold",
+          "fr": "Or",
+          "it": "Oro",
+          "es": "Oro"
+        },
+        {
+          "nl": "Beendermeel",
+          "en": "Bone meal",
+          "de": "Knochenmehl",
+          "fr": "Farine d'os",
+          "it": "Farina di Ossa",
+          "es": "Harina de hueso"
+        },
+        {
+          "nl": "Zink",
+          "en": "Zinc",
+          "de": "Zink",
+          "fr": "Zinc",
+          "it": "Zinco",
+          "es": "Zinc"
+        },
+        {
+          "nl": "Silicoon",
+          "en": "Silicone",
+          "de": "Silikon",
+          "fr": "Silicone",
+          "it": "Silicone",
+          "es": "Silicona"
+        },
+        {
+          "nl": "Polyresin zand",
+          "en": "Polyresin sand",
+          "de": "Polyresin Sand",
+          "fr": "Polyrésinne sable",
+          "it": "Polyresin Sabbia",
+          "es": "Polyresin arena"
+        },
+        {
+          "nl": "Witmetaal",
+          "en": "White metal",
+          "de": "Weißmetall",
+          "fr": "Métal blanc",
+          "it": "Metallo bianco",
+          "es": "Metal Blanco"
+        },
+        {
+          "nl": "Bamboe",
+          "en": "Bamboo",
+          "de": "Bambus",
+          "fr": "Bambou",
+          "it": "Bambù",
+          "es": "Bambú"
+        },
+        {
+          "nl": "Platina",
+          "en": "Platinum",
+          "de": "Platin",
+          "fr": "Platine",
+          "it": "Platino",
+          "es": "Platino"
+        },
+        {
+          "nl": "Bezemgras",
+          "en": "Broomcorn",
+          "de": "Besengras",
+          "fr": "Herbe de balai",
+          "it": "Erba di scopa",
+          "es": "Paja de escoba"
+        },
+        {
+          "nl": "Marmer",
+          "en": "Marble",
+          "de": "Marmor",
+          "fr": "Marbre",
+          "it": "Marmo",
+          "es": "Mármol"
+        },
+        {
+          "nl": "Cement",
+          "en": "Cement",
+          "de": "Zement",
+          "fr": "Ciment",
+          "it": "Cemento",
+          "es": "Cemento"
+        },
+        {
+          "nl": "Leisteen",
+          "en": "Slate",
+          "de": "Schiefer",
+          "fr": "Ardoise",
+          "it": "Ardesia",
+          "es": "Pizarra"
+        },
+        {
+          "nl": "Fluweel|Papier",
+          "en": "Velvet|Paper",
+          "de": "Samt|Papier",
+          "fr": "Velours|Papier",
+          "it": "Velluto|Carta",
+          "es": "Terciopelo|Papel"
+        },
+        {
+          "nl": "Viscose",
+          "en": "Viscose",
+          "de": "Viscose",
+          "fr": "Viscose",
+          "it": "Viscosa",
+          "es": "Viscosa"
+        },
+        {
+          "nl": "Zilver",
+          "en": "Silver",
+          "de": "Silber",
+          "fr": "Argent",
+          "it": "Argento",
+          "es": "Plata"
+        },
+        {
+          "nl": "Metaal|Edelsteen|Koper",
+          "en": "Metal|Gemstone|Copper",
+          "de": "Metall|Edelstein|Kupfer",
+          "fr": "Métal|Pierre précieuse|Cuivre",
+          "it": "Metallo|Pietra preziosa|Rame",
+          "es": "Metal|Piedra preciosa|Cobre"
+        },
+        {
+          "nl": "Verkoperd",
+          "en": "Copper-plated",
+          "de": "Verkupfert",
+          "fr": "Cuivré",
+          "it": "Ramato",
+          "es": "Cobreado"
+        },
+        {
+          "nl": "Veer|Hennep",
+          "en": "Feather|Hemp",
+          "de": "Feder|Hanf",
+          "fr": "Plume|Chanvre",
+          "it": "Piuma|Canapa",
+          "es": "Pluma|Cáñamo"
+        },
+        {
+          "nl": "Travertijn",
+          "en": "Travertine",
+          "de": "Travertin",
+          "fr": "Travertin",
+          "it": "Travertino",
+          "es": "Travertino"
+        },
+        {
+          "nl": "Metaal|Koper|Edelsteen",
+          "en": "Metal|Copper|Gemstone",
+          "de": "Metall|Kupfer|Edelstein",
+          "fr": "Métal|Cuivre|Pierre précieuse",
+          "it": "Metallo|Rame|Pietra preziosa",
+          "es": "Metal|Cobre|Piedra preciosa"
+        },
+        {
+          "nl": "Zink legering|Hout",
+          "en": "Zinc alloy|Wood",
+          "de": "Zink-Legierung|Holz",
+          "fr": "Alliage de zinc|Bois",
+          "it": "Lega di zinco|Legno",
+          "es": "Aleación de cinc|Madera"
+        },
+        {
+          "nl": "Edelsteen|Polyester",
+          "en": "Gemstone|Polyester",
+          "de": "Edelstein|Polyester",
+          "fr": "Pierre précieuse|Polyester",
+          "it": "Pietra preziosa|Poliestere",
+          "es": "Piedra Preciosa|Poliéster"
+        },
+        {
+          "nl": "Messing|Glas",
+          "en": "Brass|Glass",
+          "de": "Messing|Glas",
+          "fr": "Laiton|Verre",
+          "it": "Ottone|Vetro",
+          "es": "Latón|Vidrio"
+        },
+        {
+          "nl": "Glas|Metaal",
+          "en": "Glass|Metal",
+          "de": "Glas|Metall",
+          "fr": "Verre|Métal",
+          "it": "Vetro|Metallo",
+          "es": "Vidrio|Metal"
+        },
+        {
+          "nl": "Leer|Edelsteen",
+          "en": "Leather|Gemstone",
+          "de": "Leder|Edelstein",
+          "fr": "Cuir|Pierre précieuse",
+          "it": "Pelle|Pietra preziosa",
+          "es": "Cuero|Piedra preciosa"
+        },
+        {
+          "nl": "Edelsteen|Mineraal",
+          "en": "Gemstone|Mineral",
+          "de": "Edelstein|Mineral",
+          "fr": "Pierre précieuse|Minéral",
+          "it": "Pietra preziosa|Minerale",
+          "es": "Piedra Preciosa|Mineral"
+        },
+        {
+          "nl": "Verzilverd",
+          "en": "Silver-plated",
+          "de": "Versilbert",
+          "fr": "Argenté",
+          "it": "Placcato in argento",
+          "es": "Plateado"
+        },
+        {
+          "nl": "Mineraal|Edelsteen",
+          "en": "Mineral|Gemstone",
+          "de": "Mineral|Edelstein",
+          "fr": "Minéral|Pierre précieuse",
+          "it": "Minerale|Pietra preziosa",
+          "es": "Mineral|Piedra Preciosa"
+        },
+        {
+          "nl": "Koraal",
+          "en": "Coral",
+          "de": "Koralle",
+          "fr": "corail",
+          "it": "Corallo",
+          "es": "Coral"
+        },
+        {
+          "nl": "Parel",
+          "en": "Pearl",
+          "de": "Perle",
+          "fr": "Perle",
+          "it": "Perla",
+          "es": "Perla"
+        },
+        {
+          "nl": "Kadam",
+          "en": "Kadam",
+          "de": "Kadam",
+          "fr": "Kadam",
+          "it": "Kadam",
+          "es": "Kadam"
+        },
+        {
+          "nl": "Kunstwol",
+          "en": "Synthetic wool",
+          "de": "Kunstwolle",
+          "fr": "Laine synthétique",
+          "it": "Lana Sintetica",
+          "es": "Lana sintética"
+        },
+        {
+          "nl": "Tin",
+          "en": "Tin",
+          "de": "Zinn",
+          "fr": "Étain",
+          "it": "Stagno",
+          "es": "Estaño"
+        },
+        {
+          "nl": "Polyacryl",
+          "en": "Polyacrylic",
+          "de": "Polyacryl",
+          "fr": "Polyacryl",
+          "it": "Poliacrilico",
+          "es": "Poliacrilo"
+        },
+        {
+          "nl": "Edelsteen|Zaad",
+          "en": "Gemstone|Seed",
+          "de": "Edelstein|Samen",
+          "fr": "Pierre précieuse|Graine",
+          "it": "Pietra dura|Seme",
+          "es": "Piedra preciosa|Semilla"
+        },
+        {
+          "nl": "Polyamide",
+          "en": "Polyamide",
+          "de": "Polyamid",
+          "fr": "Polyamide",
+          "it": "Poliammide",
+          "es": "Poliamida"
+        },
+        {
+          "nl": "Hennep|Veer",
+          "en": "Hemp|Feather",
+          "de": "Hanf|Feder",
+          "fr": "Chanvre|Plume",
+          "it": "Canapa|Piuma",
+          "es": "Cáñamo|Pluma"
+        },
+        {
+          "nl": "Edelsteen|Leer",
+          "en": "Gemstone|Leather",
+          "de": "Edelstein|Leder",
+          "fr": "Pierre précieuse|Cuir",
+          "it": "Gemma|Pelle",
+          "es": "Gema|Cuero"
+        },
+        {
+          "nl": "Metaal|Edelsteen",
+          "en": "Metal|Gemstone",
+          "de": "Metall|Edelstein",
+          "fr": "Métal|Pierre précieuse",
+          "it": "Metallo|Pietra dura",
+          "es": "Metal|Piedra preciosa"
+        },
+        {
+          "nl": "Edelsteen|Hout|Zink",
+          "en": "Gemstone|Wood|Zinc",
+          "de": "Edelstein|Holz|Zink",
+          "fr": "Pierre précieuse|Bois|Zinc",
+          "it": "Pietra dura|Legno|Zinco",
+          "es": "Piedra preciosa|Madera|Zinc"
+        },
+        {
+          "nl": "Metaal|Kristal|Mineraal",
+          "en": "Metal|Crystal|Mineral",
+          "de": "Metall|Kristall|Mineral",
+          "fr": "Métal|Cristal|Minéral",
+          "it": "Metallo|Cristallo|Minerale",
+          "es": "Metal|Cristal|Mineral"
+        },
+        {
+          "nl": "Hout|Glas",
+          "en": "Wood|Glass",
+          "de": "Holz|Glas",
+          "fr": "Bois|Verre",
+          "it": "Legno|Vetro",
+          "es": "Madera|Vidrio"
+        },
+        {
+          "nl": "Koper|Steen",
+          "en": "Copper|Stone",
+          "de": "Kupfer|Stein",
+          "fr": "Cuivre|Pierre",
+          "it": "Rame|Pietra",
+          "es": "Cobre|Piedra"
+        },
+        {
+          "nl": "Jute",
+          "en": "Jute",
+          "de": "Jute",
+          "fr": "Jute",
+          "it": "Iuta",
+          "es": "Yute"
+        },
+        {
+          "nl": "Loofah",
+          "en": "Loofah",
+          "de": "Luffa",
+          "fr": "loofah",
+          "it": "Loofah",
+          "es": "Loofah"
+        },
+        {
+          "nl": "Zaad|Schelp",
+          "en": "Seed|Shell",
+          "de": "Samen|Schnecke",
+          "fr": "Graine|Coquillage",
+          "it": "Seme|conchiglia",
+          "es": "Semilla|Concha"
+        },
+        {
+          "nl": "Edelsteen|Zink|Hout",
+          "en": "Gemstone|Zinc|Wood",
+          "de": "Edelstein|Zink|Holz",
+          "fr": "Pierre précieuse|Zinc|Bois",
+          "it": "Pietra dura|Zinco|Legno",
+          "es": "Piedra preciosa|Zinc|Madera"
+        },
+        {
+          "nl": "Koper|Edelsteen",
+          "en": "Copper|Gemstone",
+          "de": "Kupfer|Edelstein",
+          "fr": "Cuivre|Pierre précieuse",
+          "it": "Rame|Pietra dura",
+          "es": "Cobre|Piedra preciosa"
+        },
+        {
+          "nl": "Polyether",
+          "en": "Polyether",
+          "de": "Polyether",
+          "fr": "Polyéther",
+          "it": "Polietere",
+          "es": "Poliéter"
+        },
+        {
+          "nl": "Sandelhout|Zink legering",
+          "en": "Sandalwood|Zinc alloy",
+          "de": "Sandelholz|Zinklegierung",
+          "fr": "Bois de santal|Alliage de zinc",
+          "it": "legno di sandalo|zinco lega",
+          "es": "Sándalo|Aleación de zinc"
+        },
+        {
+          "nl": "IJzer|Hout",
+          "en": "Iron|Wood",
+          "de": "Eisen|Holz",
+          "fr": "Fer|Bois",
+          "it": "Ferro|Legno",
+          "es": "Hierro|Madera"
+        },
+        {
+          "nl": "Zilver|Edelsteen",
+          "en": "Silver|Gemstone",
+          "de": "Silber|Edelstein",
+          "fr": "Argent|Pierre précieuse",
+          "it": "Argento|Pietra preziosa",
+          "es": "Plata|Piedra preciosa"
+        },
+        {
+          "nl": "Staal|Koper",
+          "en": "Steel|Copper",
+          "de": "Stahl|Kupfer",
+          "fr": "Acier|Cuivre",
+          "it": "Acciaio|Rame",
+          "es": "Acero|Cobre"
+        },
+        {
+          "nl": "Messing|Kurk",
+          "en": "Brass|Cork",
+          "de": "Messing|Kork",
+          "fr": "Laiton|Liège",
+          "it": "Ottone|Sughero",
+          "es": "Latón|Corcho"
+        },
+        {
+          "nl": "Katoen|Wol|Polyester",
+          "en": "Cotton|Wool|Polyester",
+          "de": "Baumwolle|Wolle|Polyester",
+          "fr": "Coton|Laine|Polyester",
+          "it": "Cotone|Lana|Poliestere",
+          "es": "Algodón|Lana|Poliéster"
+        },
+        {
+          "nl": "Edelsteen|Metaal",
+          "en": "Gemstone|Metal",
+          "de": "Edelstein|Metall",
+          "fr": "Pierre précieuse|Métal",
+          "it": "Pietra dura|Metallo",
+          "es": "Piedra preciosa|Metal"
+        },
+        {
+          "nl": "Seleniet|Mineraal",
+          "en": "Selenite|Mineral",
+          "de": "Selenit|Mineral",
+          "fr": "Sélénite|Minéral",
+          "it": "Selenite|Minerale",
+          "es": "Selenita|Mineral"
+        },
+        {
+          "nl": "Elasthaan",
+          "en": "Elastane",
+          "de": "Elasthan",
+          "fr": "Élasthanne",
+          "it": "Elastan",
+          "es": "Elastano"
+        },
+        {
+          "nl": "Jersey|Hennep",
+          "en": "Jersey|Hemp",
+          "de": "Jersey|Hanf",
+          "fr": "Jersey|Chanvre",
+          "it": "Jersey|Canapa",
+          "es": "Jersey|Cáñamo"
+        },
+        {
+          "nl": "Jersey",
+          "en": "Jersey",
+          "de": "Jersey",
+          "fr": "Jersey",
+          "it": "Jersey",
+          "es": "Jersey"
+        },
+        {
+          "nl": "Edelsteen|Hout|Roestvrijstaal",
+          "en": "Gemstone|Wood|Stainless Steel",
+          "de": "Edelstein|Holz|Edelstahl",
+          "fr": "Pierre précieuse|Bois|Acier inoxydable",
+          "it": "Pietra dura|Legno|Acciaio inossidabile",
+          "es": "Piedra preciosa|Madera|Acero inoxidable"
+        },
+        {
+          "nl": "Kokosschaal",
+          "en": "Coconut shell",
+          "de": "Kokosnussschale",
+          "fr": "Bol en coco",
+          "it": "Ciotola di cocco",
+          "es": "Concha de coco"
+        },
+        {
+          "nl": "Polystone",
+          "en": "Polystone",
+          "de": "Polystone",
+          "fr": "Polystone",
+          "it": "Polystone",
+          "es": "Polistone"
+        },
+        {
+          "nl": "Legering",
+          "en": "Alloy",
+          "de": "Legierung",
+          "fr": "Alliage",
+          "it": "Legatura",
+          "es": "Aleación"
+        },
+        {
+          "nl": "Glas|Hout",
+          "en": "Glass|Wood",
+          "de": "Glas|Holz",
+          "fr": "Verre|Bois",
+          "it": "Vetro|Legno",
+          "es": "Vidrio|Madera"
+        },
+        {
+          "nl": "Terracotta",
+          "en": "Terracotta",
+          "de": "Terracotta",
+          "fr": "Terracotta",
+          "it": "Terracotta",
+          "es": "Terracota"
+        },
+        {
+          "nl": "Plantenvezelpapier",
+          "en": "Plant fiber paper",
+          "de": "Pflanzenfaserpapier",
+          "fr": "Papier en fibres végétales",
+          "it": "Carta in fibre vegetali",
+          "es": "Papel de fibras vegetales"
+        }
+      ]
+    },
+    "custom.kleur": {
+      "name": "Kleur",
+      "type": "list.single_line_text_field",
+      "input_kind": "bank_multi",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "Goud",
+          "en": "Gold",
+          "de": "Gold",
+          "fr": "Or",
+          "it": "Oro",
+          "es": "Oro"
+        },
+        {
+          "nl": "Meerkleurig",
+          "en": "Multicolour",
+          "de": "mehrfarbig",
+          "fr": "Multicolore",
+          "it": "Multicolore",
+          "es": "Multicolor"
+        },
+        {
+          "nl": "Wit",
+          "en": "White",
+          "de": "Weiß",
+          "fr": "Blanc",
+          "it": "Bianco",
+          "es": "Blanco"
+        },
+        {
+          "nl": "Transparant",
+          "en": "Transparent",
+          "de": "Transparent",
+          "fr": "Transparent",
+          "it": "Trasparente",
+          "es": "Transparente"
+        },
+        {
+          "nl": "Messing",
+          "en": "Brass",
+          "de": "Messing",
+          "fr": "Laiton",
+          "it": "Ottone",
+          "es": "Latón"
+        },
+        {
+          "nl": "Koper",
+          "en": "Copper",
+          "de": "Kupfer",
+          "fr": "Cuivre",
+          "it": "Rame",
+          "es": "Cobre"
+        },
+        {
+          "nl": "Blauw",
+          "en": "Blue",
+          "de": "Blau",
+          "fr": "Bleu",
+          "it": "Blu",
+          "es": "Azul"
+        },
+        {
+          "nl": "Zwart",
+          "en": "Black",
+          "de": "Schwarz",
+          "fr": "Noir",
+          "it": "Nero",
+          "es": "Negro"
+        },
+        {
+          "nl": "Roze",
+          "en": "Pink",
+          "de": "Rosa",
+          "fr": "Rose",
+          "it": "Rosa",
+          "es": "Rosa"
+        },
+        {
+          "nl": "Groen",
+          "en": "Green",
+          "de": "Grün",
+          "fr": "Vert",
+          "it": "Verde",
+          "es": "Verde"
+        },
+        {
+          "nl": "Paars",
+          "en": "Purple",
+          "de": "Lila",
+          "fr": "Violet",
+          "it": "Viola",
+          "es": "Púrpura"
+        },
+        {
+          "nl": "Brons",
+          "en": "Bronze",
+          "de": "Bronze",
+          "fr": "Bronze",
+          "it": "Bronzo",
+          "es": "Bronce"
+        },
+        {
+          "nl": "Naturel",
+          "en": "Natural",
+          "de": "Natur",
+          "fr": "Naturel",
+          "it": "Naturale",
+          "es": "Natural"
+        },
+        {
+          "nl": "Oranje",
+          "en": "Orange",
+          "de": "Orange",
+          "fr": "Orange",
+          "it": "Arancione",
+          "es": "Naranja"
+        },
+        {
+          "nl": "Grijs",
+          "en": "Grey",
+          "de": "Grau",
+          "fr": "Gris",
+          "it": "Grigio",
+          "es": "Gris"
+        },
+        {
+          "nl": "Zilver",
+          "en": "Silver",
+          "de": "Silber",
+          "fr": "Argent",
+          "it": "Argento",
+          "es": "Plata"
+        },
+        {
+          "nl": "Rood",
+          "en": "Red",
+          "de": "Rot",
+          "fr": "Rouge",
+          "it": "Rosso",
+          "es": "Rojo"
+        },
+        {
+          "nl": "Naturel|Beige",
+          "en": "Natural|Beige",
+          "de": "Natur|Beige",
+          "fr": "Naturel|Beige",
+          "it": "Naturale|Beige",
+          "es": "Natural|Beige"
+        },
+        {
+          "nl": "Turquoise",
+          "en": "Turquoise",
+          "de": "Türkis",
+          "fr": "Turquoise",
+          "it": "Turchese",
+          "es": "Turquesa"
+        },
+        {
+          "nl": "Wit|Goud",
+          "en": "White|Gold",
+          "de": "Weiß|Gold",
+          "fr": "Blanc|Or",
+          "it": "Bianco|Oro",
+          "es": "Blanco|Oro"
+        },
+        {
+          "nl": "Donker blauw",
+          "en": "Dark blue",
+          "de": "Dunkelblau",
+          "fr": "bleu foncé",
+          "it": "Blu scuro",
+          "es": "Azul Oscuro"
+        },
+        {
+          "nl": "Goud|Wit",
+          "en": "Gold|White",
+          "de": "Gold|Weiß",
+          "fr": "Or|Blanc",
+          "it": "Oro|Bianco",
+          "es": "Oro|Blanco"
+        },
+        {
+          "nl": "Geel",
+          "en": "Yellow",
+          "de": "Gelb",
+          "fr": "Jaune",
+          "it": "Giallo",
+          "es": "Amarillo"
+        },
+        {
+          "nl": "Donker grijs",
+          "en": "Dark gray",
+          "de": "Dunkelgrau",
+          "fr": "Gris foncé",
+          "it": "Grigio scuro",
+          "es": "Gris oscuro"
+        },
+        {
+          "nl": "Zwart|Goud",
+          "en": "Black|Gold",
+          "de": "Schwarz|Gold",
+          "fr": "Noir|Or",
+          "it": "Nero|Oro",
+          "es": "Negro|Oro"
+        },
+        {
+          "nl": "Bruin",
+          "en": "Brown",
+          "de": "Braun",
+          "fr": "Brun",
+          "it": "Marrone",
+          "es": "Marrón"
+        },
+        {
+          "nl": "Indigo",
+          "en": "Indigo",
+          "de": "Indigo",
+          "fr": "Indigo",
+          "it": "Indaco",
+          "es": "Índigo"
+        },
+        {
+          "nl": "Creme",
+          "en": "Cream",
+          "de": "Creme",
+          "fr": "Crème",
+          "it": "Crema",
+          "es": "Crema"
+        },
+        {
+          "nl": "Paars|Violet",
+          "en": "Purple|Violet",
+          "de": "Lila|Violett",
+          "fr": "Pourpre|Violet",
+          "it": "Viola|Violetto",
+          "es": "Púrpura|Violeta"
+        },
+        {
+          "nl": "Beige",
+          "en": "Beige",
+          "de": "Beige",
+          "fr": "Beige",
+          "it": "Beige",
+          "es": "Beige"
+        },
+        {
+          "nl": "Champagne",
+          "en": "Champagne",
+          "de": "Champagner",
+          "fr": "Champagne",
+          "it": "Champagne",
+          "es": "Champagne"
+        },
+        {
+          "nl": "Antraciet",
+          "en": "Anthracite",
+          "de": "Anthrazit",
+          "fr": "Anthracite",
+          "it": "Antracite",
+          "es": "Antracita"
+        },
+        {
+          "nl": "Bordeaux",
+          "en": "Bordeaux",
+          "de": "Bordeaux",
+          "fr": "Bordeaux",
+          "it": "Bordeaux",
+          "es": "Burdeos"
+        },
+        {
+          "nl": "Goud|Zwart",
+          "en": "Gold|Black",
+          "de": "Gold|Schwarz",
+          "fr": "Or|Noir",
+          "it": "Oro|Nero",
+          "es": "Oro|Negro"
+        },
+        {
+          "nl": "Licht paars",
+          "en": "Light purple",
+          "de": "Hellviolett",
+          "fr": "Violet clair",
+          "it": "Viola chiaro",
+          "es": "Morado claro"
+        },
+        {
+          "nl": "Blauw/Violet",
+          "en": "Blue/Violet",
+          "de": "Blau/Violett",
+          "fr": "Bleu/Violet",
+          "it": "Blu/Viola",
+          "es": "Azul/Violeta"
+        },
+        {
+          "nl": "Licht groen",
+          "en": "Light green",
+          "de": "Hellgrün",
+          "fr": "Vert Clair",
+          "it": "Verde Chiaro",
+          "es": "Verde Claro"
+        },
+        {
+          "nl": "Licht blauw",
+          "en": "Light blue",
+          "de": "Hellblau",
+          "fr": "Bleu clair",
+          "it": "Azzurro chiaro",
+          "es": "Azul claro"
+        },
+        {
+          "nl": "Olijfgroen",
+          "en": "Olive green",
+          "de": "Olivgrün",
+          "fr": "Vert olive",
+          "it": "Verde oliva",
+          "es": "Verde oliva"
+        },
+        {
+          "nl": "Goud|Beige",
+          "en": "Gold|Beige",
+          "de": "Gold|Beige",
+          "fr": "Or|Beige",
+          "it": "Oro|Beige",
+          "es": "Oro|Beige"
+        },
+        {
+          "nl": "Rood/Roze/Oranje",
+          "en": "Red/Pink/Orange",
+          "de": "Rot/Rosa/Orange",
+          "fr": "Rouge/Rose/Orange",
+          "it": "Rosso/Rosa/Arancione",
+          "es": "Rojo/Rosa/Naranja"
+        },
+        {
+          "nl": "Roze goud",
+          "en": "Rose Gold",
+          "de": "Roségold",
+          "fr": "Or rose",
+          "it": "Oro rosa",
+          "es": "Oro rosa"
+        },
+        {
+          "nl": "Oudroze",
+          "en": "Dusty pink",
+          "de": "Altrosa",
+          "fr": "Vieux rose",
+          "it": "Rosa antico",
+          "es": "Rosa viejo"
+        },
+        {
+          "nl": "Lavendel",
+          "en": "Lavender",
+          "de": "Lavendel",
+          "fr": "Lavande",
+          "it": "Lavanda",
+          "es": "Lavanda"
+        },
+        {
+          "nl": "Mint",
+          "en": "Mint",
+          "de": "Minze",
+          "fr": "Menthe",
+          "it": "Menta",
+          "es": "Menta"
+        },
+        {
+          "nl": "Petrol",
+          "en": "Petrol",
+          "de": "Petrol",
+          "fr": "Pétrol",
+          "it": "Petrolio",
+          "es": "Petróleo"
+        },
+        {
+          "nl": "Goud|Roze",
+          "en": "Gold|Pink",
+          "de": "Gold|Rosa",
+          "fr": "Or|Rose",
+          "it": "Oro|Rosa",
+          "es": "Oro|Rosa"
+        },
+        {
+          "nl": "Naturel|Oranje",
+          "en": "Natural|Orange",
+          "de": "Natur|Orange",
+          "fr": "Naturel|Orange",
+          "it": "Naturale|Arancione",
+          "es": "Natural|Naranja"
+        },
+        {
+          "nl": "Taupe",
+          "en": "Taupe",
+          "de": "Taupe",
+          "fr": "Taupe",
+          "it": "Taupe",
+          "es": "Taupe"
+        }
+      ]
+    },
+    "custom.land_van_herkomst": {
+      "name": "Land van herkomst",
+      "type": "single_line_text_field",
+      "input_kind": "bank_single",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "India",
+          "en": "India",
+          "de": "Indien",
+          "fr": "Inde",
+          "it": "India",
+          "es": "India"
+        },
+        {
+          "nl": "China",
+          "en": "China",
+          "de": "China",
+          "fr": "Chine",
+          "it": "Cina",
+          "es": "China"
+        },
+        {
+          "nl": "Nepal",
+          "en": "Nepal",
+          "de": "Nepal",
+          "fr": "Népal",
+          "it": "Nepal",
+          "es": "Nepal"
+        },
+        {
+          "nl": "Brasil",
+          "en": "Brazil",
+          "de": "Brasilien",
+          "fr": "Brésil",
+          "it": "Brasile",
+          "es": "Brasil"
+        },
+        {
+          "nl": "Argentina",
+          "en": "Argentina",
+          "de": "Argentinien",
+          "fr": "Argentine",
+          "it": "Argentina",
+          "es": "Argentina"
+        },
+        {
+          "nl": "France",
+          "en": "France",
+          "de": "Frankreich",
+          "fr": "France",
+          "it": "Francia",
+          "es": "Francia"
+        },
+        {
+          "nl": "Germany",
+          "en": "Germany",
+          "de": "Deutschland",
+          "fr": "Allemagne",
+          "it": "Germania",
+          "es": "Alemania"
+        },
+        {
+          "nl": "Indonesia",
+          "en": "Indonesia",
+          "de": "Indonesien",
+          "fr": "Indonésie",
+          "it": "Indonesia",
+          "es": "Indonesia"
+        },
+        {
+          "nl": "Netherlands",
+          "en": "Netherlands",
+          "de": "Niederlande",
+          "fr": "Pays-Bas",
+          "it": "Paesi Bassi",
+          "es": "Países Bajos"
+        },
+        {
+          "nl": "Morocco",
+          "en": "Morocco",
+          "de": "Marokko",
+          "fr": "Maroc",
+          "it": "Marocco",
+          "es": "Marruecos"
+        },
+        {
+          "nl": "Latvia",
+          "en": "Latvia",
+          "de": "Lettland",
+          "fr": "Lettonie",
+          "it": "Lettonia",
+          "es": "Letonia"
+        },
+        {
+          "nl": "Italy",
+          "en": "Italy",
+          "de": "Italien",
+          "fr": "Italie",
+          "it": "Italia",
+          "es": "Italia"
+        },
+        {
+          "nl": "Mexico",
+          "en": "Mexico",
+          "de": "Mexiko",
+          "fr": "Mexique",
+          "it": "Messico",
+          "es": "México"
+        },
+        {
+          "nl": "Pakistan",
+          "en": "Pakistan",
+          "de": "Pakistan",
+          "fr": "Pakistan",
+          "it": "Pakistan",
+          "es": "Pakistán"
+        },
+        {
+          "nl": "Philippines",
+          "en": "Philippines",
+          "de": "Philippinen",
+          "fr": "Philippines",
+          "it": "Filippine",
+          "es": "Filipinas"
+        },
+        {
+          "nl": "Vietnam",
+          "en": "Vietnam",
+          "de": "Vietnam",
+          "fr": "Viêt Nam",
+          "it": "Vietnam",
+          "es": "Vietnam"
+        },
+        {
+          "nl": "Peru",
+          "en": "Peru",
+          "de": "Peru",
+          "fr": "Pérou",
+          "it": "Perù",
+          "es": "Perú"
+        },
+        {
+          "nl": "Austria",
+          "en": "Austria",
+          "de": "Österreich",
+          "fr": "Autriche",
+          "it": "Austria",
+          "es": "Austria"
+        },
+        {
+          "nl": "Taiwan",
+          "en": "Taiwan",
+          "de": "Taiwan",
+          "fr": "Taïwan",
+          "it": "Taiwan",
+          "es": "Taiwán"
+        },
+        {
+          "nl": "Japan",
+          "en": "Japan",
+          "de": "Japan",
+          "fr": "Japon",
+          "it": "Giappone",
+          "es": "Japón"
+        },
+        {
+          "nl": "Turkey",
+          "en": "Turkey",
+          "de": "Türkei",
+          "fr": "Turquie",
+          "it": "Turchia",
+          "es": "Turquía"
+        },
+        {
+          "nl": "Syria",
+          "en": "Syria",
+          "de": "Syrien",
+          "fr": "Syrie",
+          "it": "Siria",
+          "es": "Siria"
+        },
+        {
+          "nl": "Lithuana",
+          "en": "Lithuania",
+          "de": "Litauen",
+          "fr": "Lituanie",
+          "it": "Lituania",
+          "es": "Lituania"
+        },
+        {
+          "nl": "USA",
+          "en": "USA",
+          "de": "USA",
+          "fr": "USA",
+          "it": "USA",
+          "es": "Estados Unidos"
+        },
+        {
+          "nl": "Portugal",
+          "en": "Portugal",
+          "de": "Portugal",
+          "fr": "Portugal",
+          "it": "Portogallo",
+          "es": "Portugal"
+        },
+        {
+          "nl": "Bulgaria",
+          "en": "Bulgaria",
+          "de": "Bulgarien",
+          "fr": "Bulgarie",
+          "it": "Bulgaria",
+          "es": "Bulgaria"
+        },
+        {
+          "nl": "Australia",
+          "en": "Australia",
+          "de": "Australien",
+          "fr": "Australie",
+          "it": "Australia",
+          "es": "Australia"
+        },
+        {
+          "nl": "Poland",
+          "en": "Poland",
+          "de": "Polen",
+          "fr": "Pologne",
+          "it": "Polonia",
+          "es": "Polonia"
+        },
+        {
+          "nl": "Croatia",
+          "en": "Croatia",
+          "de": "Kroatien",
+          "fr": "Croatie",
+          "it": "Croazia",
+          "es": "Croacia"
+        },
+        {
+          "nl": "Hungary",
+          "en": "Hungary",
+          "de": "Ungarn",
+          "fr": "Hongrie",
+          "it": "Ungheria",
+          "es": "Hungría"
+        },
+        {
+          "nl": "Great Britain",
+          "en": "Great Britain",
+          "de": "Großbritannien",
+          "fr": "Grande-Bretagne",
+          "it": "Gran Bretagna",
+          "es": "Gran Bretaña"
+        },
+        {
+          "nl": "Czech Republic",
+          "en": "Czech Republic",
+          "de": "Tschechische Republik",
+          "fr": "République Tchèque",
+          "it": "Repubblica Ceca",
+          "es": "República Checa"
+        },
+        {
+          "nl": "Spain",
+          "en": "Spain",
+          "de": "Spanien",
+          "fr": "Espagne",
+          "it": "Spagna",
+          "es": "España"
+        },
+        {
+          "nl": "Jordan",
+          "en": "Jordan",
+          "de": "Jordanien",
+          "fr": "Jordanie",
+          "it": "Giordania",
+          "es": "Jordania"
+        },
+        {
+          "nl": "South Africa",
+          "en": "South Africa",
+          "de": "Südafrika",
+          "fr": "Afrique du Sud",
+          "it": "Sudafrica",
+          "es": "Sudáfrica"
+        },
+        {
+          "nl": "New Zealand",
+          "en": "New Zealand",
+          "de": "Neuseeland",
+          "fr": "Nouvelle-Zélande",
+          "it": "Nuova Zelanda",
+          "es": "Nueva Zelanda"
+        },
+        {
+          "nl": "Thailand",
+          "en": "Thailand",
+          "de": "Thailand",
+          "fr": "Thaïlande",
+          "it": "Tailandia",
+          "es": "Tailandia"
+        },
+        {
+          "nl": "Egypt",
+          "en": "Egypt",
+          "de": "Ägypten",
+          "fr": "Égypte",
+          "it": "Egitto",
+          "es": "Egipto"
+        },
+        {
+          "nl": "Slovakia",
+          "en": "Slovakia",
+          "de": "Slowakei",
+          "fr": "Slovaquie",
+          "it": "Slovacchia",
+          "es": "Eslovaquia"
+        },
+        {
+          "nl": "Ghana",
+          "en": "Ghana",
+          "de": "Ghana",
+          "fr": "Ghana",
+          "it": "Ghana",
+          "es": "Ghana"
+        },
+        {
+          "nl": "French Polynesia",
+          "en": "French Polynesia",
+          "de": "Französisch-Polynesien",
+          "fr": "Polynésie française",
+          "it": "Polinesia Francese",
+          "es": "Polinesia Francesa"
+        },
+        {
+          "nl": "Belgium",
+          "en": "Belgium",
+          "de": "Belgien",
+          "fr": "Belgique",
+          "it": "Belgio",
+          "es": "Bélgica"
+        }
+      ]
+    },
+    "custom.verpakking": {
+      "name": "Verpakking",
+      "type": "single_line_text_field",
+      "input_kind": "bank_single",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "Kartonnen doos",
+          "en": "Cardboard box",
+          "de": "Kartonbox",
+          "fr": "Boîte en carton",
+          "it": "Scatola di cartone",
+          "es": "Caja de cartón"
+        },
+        {
+          "nl": "Papier",
+          "en": "Paper",
+          "de": "Papier",
+          "fr": "Papier",
+          "it": "Carta",
+          "es": "Papel"
+        },
+        {
+          "nl": "Papieren zak",
+          "en": "Paper bag",
+          "de": "Papiertüte",
+          "fr": "Sac en papier",
+          "it": "Sacchetto di carta",
+          "es": "Bolsa de papel"
+        },
+        {
+          "nl": "Plastic",
+          "en": "Plastic",
+          "de": "Kunststoff",
+          "fr": "Plastique",
+          "it": "Plastica",
+          "es": "Plástico"
+        },
+        {
+          "nl": "Bioplastic zak",
+          "en": "Bioplastic bag",
+          "de": "Bioplastik-Tasche",
+          "fr": "Sac Bioplastique",
+          "it": "Sacchetto Bioplastica",
+          "es": "Bolsa de Bioplástico"
+        },
+        {
+          "nl": "Karton",
+          "en": "Cardboard",
+          "de": "Karton",
+          "fr": "Carton",
+          "it": "Cartone",
+          "es": "Cartón"
+        },
+        {
+          "nl": "Glazen fles",
+          "en": "Glass bottle",
+          "de": "Glasflasche",
+          "fr": "Bouteille en verre",
+          "it": "Bottiglia di vetro",
+          "es": "Botella de vidrio"
+        },
+        {
+          "nl": "Kartonnen giftbox",
+          "en": "Cardboard gift box",
+          "de": "Karton-Geschenkbox",
+          "fr": "Boîte-cadeau en carton",
+          "it": "Scatola regalo in cartone",
+          "es": "Caja de regalo de cartón"
+        },
+        {
+          "nl": "Textielen zakje",
+          "en": "Textile pouch",
+          "de": "Textil-Säckchen",
+          "fr": "Petit sac en textile",
+          "it": "Sacchetto tessile",
+          "es": "Bolsita de tela"
+        },
+        {
+          "nl": "Gerecycled kunststof pot",
+          "en": "Recycled plastic pot",
+          "de": "Recycelter Kunststofftopf",
+          "fr": "Pot en plastique recyclé",
+          "it": "Vaso in plastica riciclata",
+          "es": "Maceta de plástico reciclado"
+        },
+        {
+          "nl": "Kunststof pot",
+          "en": "Plastic pot",
+          "de": "Kunststofftopf",
+          "fr": "Pot en plastique",
+          "it": "Vaso di plastica",
+          "es": "Bote de plástico"
+        },
+        {
+          "nl": "Kartonnen displaydoos",
+          "en": "Cardboard display box",
+          "de": "Karton-Displaybox",
+          "fr": "Boîte d'exposition en carton",
+          "it": "Scatola espositiva in cartone",
+          "es": "Caja de cartón de exposición"
+        },
+        {
+          "nl": "Kartonnen vensterdoos",
+          "en": "Cardboard window box",
+          "de": "Fensterkarton",
+          "fr": "boîte en carton avec fenêtre",
+          "it": "Scatola di cartone con finestra",
+          "es": "Caja de Cartón con Ventana"
+        },
+        {
+          "nl": "Kartonnen koker",
+          "en": "Cardboard tube",
+          "de": "Kartonrohr",
+          "fr": "Tube en Carton",
+          "it": "Tubo Cartone",
+          "es": "Tubo de Cartón"
+        },
+        {
+          "nl": "Plastic zak",
+          "en": "Plastic bag",
+          "de": "Kunststoffbeutel",
+          "fr": "Sac en plastique",
+          "it": "Sacchetto di plastica",
+          "es": "Bolsa de plástico"
+        },
+        {
+          "nl": "Kunststof fles",
+          "en": "Plastic bottle",
+          "de": "Kunststoff-Flasche",
+          "fr": "Bouteille en plastique",
+          "it": "Bottiglia in plastica",
+          "es": "Botella de plástico"
+        },
+        {
+          "nl": "Bioplastic",
+          "en": "Bioplastic",
+          "de": "Bioplastik",
+          "fr": "Bioplastique",
+          "it": "Bioplastica",
+          "es": "Bioplástico"
+        },
+        {
+          "nl": "Aluminium pot",
+          "en": "Aluminium pot",
+          "de": "Aluminium Topf",
+          "fr": "Pot en aluminium",
+          "it": "Vaso di alluminio",
+          "es": "Olla de aluminio"
+        },
+        {
+          "nl": "Kunststof pompflacon",
+          "en": "Plastic pump bottle",
+          "de": "Kunststoff-Pumpflasche",
+          "fr": "Flacon pompe en plastique",
+          "it": "Flacone con pompa in plastica",
+          "es": "Botella con bomba de plástico"
+        },
+        {
+          "nl": "Noppenfolie plastic",
+          "en": "Bubble wrap plastic",
+          "de": "Luftpolsterfolie Kunststoff",
+          "fr": "Film à bulles plastique",
+          "it": "Pluriball in plastica",
+          "es": "Plástico de burbujas"
+        },
+        {
+          "nl": "Gerecycled kunststof fles",
+          "en": "Recycled plastic bottle",
+          "de": "Recycelte Kunststoffflasche",
+          "fr": "Bouteille en plastique recyclé",
+          "it": "Bottiglia in plastica riciclata",
+          "es": "Botella de plástico reciclado"
+        },
+        {
+          "nl": "Glazen pot",
+          "en": "Glass jar",
+          "de": "Glasgefäß",
+          "fr": "Pot en verre",
+          "it": "Vaso di vetro",
+          "es": "Tarro de vidrio"
+        },
+        {
+          "nl": "Aluminium blik",
+          "en": "Aluminium can",
+          "de": "Aluminium Dose",
+          "fr": "Boîte en aluminium",
+          "it": "Scatola di alluminio",
+          "es": "Lata de aluminio"
+        },
+        {
+          "nl": "Palmblad",
+          "en": "Palm leaf",
+          "de": "Palmblatt",
+          "fr": "Feuille de palme",
+          "it": "Foglia di palma",
+          "es": "Hoja de palma"
+        },
+        {
+          "nl": "Aluminiumvensterpotje",
+          "en": "Aluminum window pot",
+          "de": "Aluminium-Fensterbox",
+          "fr": "Petit pot fenêtre aluminium",
+          "it": "Vasetto Finestra Alluminio",
+          "es": "Maceta de aluminio con ventana"
+        },
+        {
+          "nl": "Tinlegering vensterpotje",
+          "en": "Tin alloy window pot",
+          "de": "Zinnlegierungsfensterdose",
+          "fr": "Petit pot vitré en alliage d'étain",
+          "it": "Vasetto di stagno",
+          "es": "Bote pequeño aleación de estaño"
+        },
+        {
+          "nl": "Gerecycled plastic",
+          "en": "Recycled plastic",
+          "de": "Recycelter Kunststoff",
+          "fr": "Plastique recyclé",
+          "it": "Plastica riciclata",
+          "es": "Plástico reciclado"
+        },
+        {
+          "nl": "Bioplastic fles",
+          "en": "Bioplastic bottle",
+          "de": "Bioplastik-Flasche",
+          "fr": "Bouteille en bioplastique",
+          "it": "Bottiglia in bioplastica",
+          "es": "Botella de bioplástico"
+        },
+        {
+          "nl": "Gerecycled glas",
+          "en": "Recycled glass",
+          "de": "Recyceltes Glas",
+          "fr": "Verre recyclé",
+          "it": "Vetro riciclato",
+          "es": "Vidrio Reciclado"
+        },
+        {
+          "nl": "Organza zakje",
+          "en": "Organza bag",
+          "de": "Organza Säckchen",
+          "fr": "Sachet organza",
+          "it": "Sacchetto organza",
+          "es": "Bolsa de organza"
+        },
+        {
+          "nl": "Kunststof tas",
+          "en": "Plastic bag",
+          "de": "Kunststofftasche",
+          "fr": "Sac en plastique",
+          "it": "Borsa in plastica",
+          "es": "Bolsa de plástico"
+        },
+        {
+          "nl": "Kunststof tube",
+          "en": "Plastic tube",
+          "de": "Kunststoffrohr",
+          "fr": "Tube en plastique",
+          "it": "Tubo di plastica",
+          "es": "Tubo de plástico"
+        },
+        {
+          "nl": "Bioplastic pompflacon",
+          "en": "Bioplastic pump bottle",
+          "de": "Bioplastik-Pumpflasche",
+          "fr": "Flacon pompe en bioplastique",
+          "it": "Flacone pompa in bioplastica",
+          "es": "Botella dosificadora de bioplástico"
+        },
+        {
+          "nl": "Katoenen zak",
+          "en": "Cotton bag",
+          "de": "Baumwoll-Tasche",
+          "fr": "Sac en coton",
+          "it": "Sacchetto di cotone",
+          "es": "Bolsa de algodón"
+        },
+        {
+          "nl": "Kunststof sprayflacon",
+          "en": "Plastic spray bottle",
+          "de": "Kunststoff Sprühflasche",
+          "fr": "Flacon pulvérisateur plastique",
+          "it": "Flacone spray plastica",
+          "es": "Frasco spray plástico"
+        },
+        {
+          "nl": "Gerecycled kunststof",
+          "en": "Recycled plastic",
+          "de": "Recycelter Kunststoff",
+          "fr": "Plastique recyclé",
+          "it": "Plastica riciclata",
+          "es": "Plástico reciclado"
+        },
+        {
+          "nl": "Bio kunststof jerrycan",
+          "en": "Bioplastic jerry can",
+          "de": "Bio-Kunststoff-Kanister",
+          "fr": "Jerrycan en plastique bio",
+          "it": "Tanica in bioplastica",
+          "es": "Bidón de bioplástico"
+        },
+        {
+          "nl": "Composteerbare verpakking",
+          "en": "Compostable packaging",
+          "de": "Kompostierbare Verpackung",
+          "fr": "Emballage compostable",
+          "it": "Imballaggio compostabile",
+          "es": "Embalaje compostable"
+        },
+        {
+          "nl": "Katoenen tas",
+          "en": "Cotton bag",
+          "de": "Baumwolltasche",
+          "fr": "Sac en coton",
+          "it": "Sacchetto di cotone",
+          "es": "Bolsa de algodón"
+        },
+        {
+          "nl": "Aluminium pompflacon",
+          "en": "Aluminium pump bottle",
+          "de": "Aluminium Pumpflasche",
+          "fr": "flacon pompe aluminium",
+          "it": "Flacone pompante alluminio",
+          "es": "Frasco dispensador de aluminio"
+        },
+        {
+          "nl": "Papieren wikkel",
+          "en": "Paper wrapper",
+          "de": "Papierhülle",
+          "fr": "Emballage en papier",
+          "it": "Fascetta di carta",
+          "es": "Envoltorio de papel"
+        },
+        {
+          "nl": "Velvet zakje",
+          "en": "Velvet pouch",
+          "de": "Samtbeutel",
+          "fr": "Pochette en velours",
+          "it": "Sacchetto in velluto",
+          "es": "Bolsa de terciopelo"
+        }
+      ]
+    },
+    "custom.grondstof": {
+      "name": "Grondstof",
+      "type": "single_line_text_field",
+      "input_kind": "bank_single",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "Palmpitwas",
+          "en": "Palm wax",
+          "de": "Palmkernwachs",
+          "fr": "Cire de palmiste",
+          "it": "Cera di noce di palma",
+          "es": "Cera de Palma"
+        },
+        {
+          "nl": "Sojawas",
+          "en": "Soya wax",
+          "de": "Sojawachs",
+          "fr": "Cire de soja",
+          "it": "Cera di soia",
+          "es": "Cera de soja"
+        },
+        {
+          "nl": "Himalaya zout",
+          "en": "Himalayan salt",
+          "de": "Himalaya-Salz",
+          "fr": "Sel de l'Himalaya",
+          "it": "Sale dell'Himalaya",
+          "es": "Sal del Himalaya"
+        },
+        {
+          "nl": "Sojawas|Palmpitwas",
+          "en": "Soy wax|Palm kernel wax",
+          "de": "Sojawachs|Palmkernwachs",
+          "fr": "Cire de soja|Cire de palme",
+          "it": "Cera di soia|Cera di nocciolo di palma",
+          "es": "Cera de soja|Cera de palmiste"
+        },
+        {
+          "nl": "Seleniet",
+          "en": "Selenite",
+          "de": "Selenit",
+          "fr": "Sélénite",
+          "it": "Selenite",
+          "es": "Selenita"
+        },
+        {
+          "nl": "Kokoswas",
+          "en": "Coconut wax",
+          "de": "Kokoswachs",
+          "fr": "cire de coco",
+          "it": "Cera di cocco",
+          "es": "Cera de coco"
+        },
+        {
+          "nl": "Schelp",
+          "en": "Shell",
+          "de": "Muschel",
+          "fr": "Coquille",
+          "it": "Conchiglia",
+          "es": "Concha"
+        },
+        {
+          "nl": "Bijenwas",
+          "en": "Beeswax",
+          "de": "Bienenwachs",
+          "fr": "Cire d'abeille",
+          "it": "Cera d'api",
+          "es": "Cera de abeja"
+        },
+        {
+          "nl": "Koolzaadwas",
+          "en": "Rapeseed wax",
+          "de": "Rapswachs",
+          "fr": "Cire de colza",
+          "it": "Cera di colza",
+          "es": "Cera de colza"
+        },
+        {
+          "nl": "Kokoswas|Zand|Schelp",
+          "en": "Coconut wax|Sand|Shell",
+          "de": "Kokoswachs|Sand|Muschel",
+          "fr": "Cire de coco|Sable|Coquille",
+          "it": "Cera di cocco|Sabbia|Conchiglia",
+          "es": "Cera de coco|Arena|Concha"
+        },
+        {
+          "nl": "Kokosboter",
+          "en": "Coconut butter",
+          "de": "Kokosbutter",
+          "fr": "Beurre de coco",
+          "it": "Burro di cocco",
+          "es": "Mantequilla de coco"
+        },
+        {
+          "nl": "Zand",
+          "en": "Sand",
+          "de": "Sand",
+          "fr": "Sable",
+          "it": "Sabbia",
+          "es": "Arena"
+        }
+      ]
+    },
+    "custom.prijs_per": {
+      "name": "Prijs per",
+      "type": "single_line_text_field",
+      "input_kind": "bank_single",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "1 pakje",
+          "en": "1 pack",
+          "de": "1 Päckchen",
+          "fr": "1 paquet",
+          "it": "1 confezione",
+          "es": "1 paquete"
+        },
+        {
+          "nl": "1 potje",
+          "en": "1 jar",
+          "de": "1 Töpfchen",
+          "fr": "1 pot",
+          "it": "1 vasetto",
+          "es": "1 frasco"
+        },
+        {
+          "nl": "12 pakjes",
+          "en": "12 packages",
+          "de": "12 Packungen",
+          "fr": "12 paquets",
+          "it": "12 pacchetti",
+          "es": "12 paquetes"
+        },
+        {
+          "nl": "6 pakjes",
+          "en": "6 packs",
+          "de": "6 Packungen",
+          "fr": "6 paquets",
+          "it": "6 pacchetti",
+          "es": "6 paquetes"
+        },
+        {
+          "nl": "10 rolletjes",
+          "en": "10 rolls",
+          "de": "10 Rollen",
+          "fr": "10 petits rouleaux",
+          "it": "10 rotolini",
+          "es": "10 rollos"
+        },
+        {
+          "nl": "25 pakjes",
+          "en": "25 packs",
+          "de": "25 Packungen",
+          "fr": "25 paquets",
+          "it": "25 pacchetti",
+          "es": "25 paquetes"
+        },
+        {
+          "nl": "7 pakjes",
+          "en": "7 packs",
+          "de": "7 Pakete",
+          "fr": "7 paquets",
+          "it": "7 pacchetti",
+          "es": "7 paquetes"
+        },
+        {
+          "nl": "42 pakjes",
+          "en": "42 packs",
+          "de": "42 Packungen",
+          "fr": "42 paquets",
+          "it": "42 pacchetti",
+          "es": "42 paquetes"
+        },
+        {
+          "nl": "14 pakjes",
+          "en": "14 packs",
+          "de": "14 Päckchen",
+          "fr": "14 paquets",
+          "it": "14 pacchetti",
+          "es": "14 paquetes"
+        },
+        {
+          "nl": "3 pakjes",
+          "en": "3 packages",
+          "de": "3 Päckchen",
+          "fr": "3 paquets",
+          "it": "3 pacchetti",
+          "es": "3 paquetes"
+        },
+        {
+          "nl": "1 rolletje",
+          "en": "1 roll",
+          "de": "1 Rolle",
+          "fr": "1 petit rouleau",
+          "it": "1 rotolino",
+          "es": "1 rollito"
+        },
+        {
+          "nl": "5 pakjes",
+          "en": "5 packages",
+          "de": "5 Päckchen",
+          "fr": "5 paquets",
+          "it": "5 pacchetti",
+          "es": "5 paquetes"
+        },
+        {
+          "nl": "5 rolletjes",
+          "en": "5 rolls",
+          "de": "5 Röllchen",
+          "fr": "5 petits rouleaux",
+          "it": "5 rotoli",
+          "es": "5 rollitos"
+        },
+        {
+          "nl": "18 pakjes",
+          "en": "18 packages",
+          "de": "18 Packungen",
+          "fr": "18 paquets",
+          "it": "18 pacchetti",
+          "es": "18 paquetes"
+        }
+      ]
+    },
+    "custom.rand": {
+      "name": "Rand",
+      "type": "single_line_text_field",
+      "input_kind": "bank_single",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "Goudkleurig",
+          "en": "Gold-coloured",
+          "de": "Goldfarben",
+          "fr": "Doré",
+          "it": "Dorato",
+          "es": "Dorado"
+        },
+        {
+          "nl": "Zilverkleurig",
+          "en": "Silver-colored",
+          "de": "Silberfarben",
+          "fr": "couleur argent",
+          "it": "Color argento",
+          "es": "Color Plata"
+        }
+      ]
+    },
+    "custom.toon": {
+      "name": "Toon",
+      "type": "single_line_text_field",
+      "input_kind": "enum_single",
+      "translatable": true,
+      "values": [
+        {
+          "nl": "A",
+          "en": "A",
+          "de": "A",
+          "fr": "La",
+          "it": "La",
+          "es": "La"
+        },
+        {
+          "nl": "A#",
+          "en": "A#",
+          "de": "A#",
+          "fr": "La#",
+          "it": "La#",
+          "es": "La#"
+        },
+        {
+          "nl": "B",
+          "en": "B",
+          "de": "H",
+          "fr": "Si",
+          "it": "Si",
+          "es": "Si"
+        },
+        {
+          "nl": "C",
+          "en": "C",
+          "de": "C",
+          "fr": "Do",
+          "it": "Do",
+          "es": "Do"
+        },
+        {
+          "nl": "C#",
+          "en": "C#",
+          "de": "C#",
+          "fr": "Do#",
+          "it": "Do#",
+          "es": "Do#"
+        },
+        {
+          "nl": "D",
+          "en": "D",
+          "de": "D",
+          "fr": "Ré",
+          "it": "Re",
+          "es": "Re"
+        },
+        {
+          "nl": "D#",
+          "en": "D#",
+          "de": "D#",
+          "fr": "Ré#",
+          "it": "Re#",
+          "es": "Re#"
+        },
+        {
+          "nl": "E",
+          "en": "E",
+          "de": "E",
+          "fr": "Mi",
+          "it": "Mi",
+          "es": "Mi"
+        },
+        {
+          "nl": "F",
+          "en": "F",
+          "de": "F",
+          "fr": "Fa",
+          "it": "Fa",
+          "es": "Fa"
+        },
+        {
+          "nl": "F#",
+          "en": "F#",
+          "de": "F#",
+          "fr": "Fa#",
+          "it": "Fa#",
+          "es": "Fa#"
+        },
+        {
+          "nl": "G",
+          "en": "G",
+          "de": "G",
+          "fr": "Sol",
+          "it": "Sol",
+          "es": "Sol"
+        },
+        {
+          "nl": "G#",
+          "en": "G#",
+          "de": "G#",
+          "fr": "Sol#",
+          "it": "Sol#",
+          "es": "Sol#"
+        }
+      ]
+    },
+    "custom.kledingmaat": {
+      "name": "Kledingmaat",
+      "type": "single_line_text_field",
+      "input_kind": "enum_single",
+      "translatable": false,
+      "values": [
+        {
+          "nl": "XS",
+          "en": "XS",
+          "de": "XS",
+          "fr": "XS",
+          "it": "XS",
+          "es": "XS"
+        },
+        {
+          "nl": "S",
+          "en": "S",
+          "de": "S",
+          "fr": "S",
+          "it": "S",
+          "es": "S"
+        },
+        {
+          "nl": "M",
+          "en": "M",
+          "de": "M",
+          "fr": "M",
+          "it": "M",
+          "es": "M"
+        },
+        {
+          "nl": "L",
+          "en": "L",
+          "de": "L",
+          "fr": "L",
+          "it": "L",
+          "es": "L"
+        },
+        {
+          "nl": "XL",
+          "en": "XL",
+          "de": "XL",
+          "fr": "XL",
+          "it": "XL",
+          "es": "XL"
+        },
+        {
+          "nl": "XXL",
+          "en": "XXL",
+          "de": "XXL",
+          "fr": "XXL",
+          "it": "XXL",
+          "es": "XXL"
+        },
+        {
+          "nl": "3XL",
+          "en": "3XL",
+          "de": "3XL",
+          "fr": "3XL",
+          "it": "3XL",
+          "es": "3XL"
+        },
+        {
+          "nl": "4XL",
+          "en": "4XL",
+          "de": "4XL",
+          "fr": "4XL",
+          "it": "4XL",
+          "es": "4XL"
+        },
+        {
+          "nl": "XS-S",
+          "en": "XS-S",
+          "de": "XS-S",
+          "fr": "XS-S",
+          "it": "XS-S",
+          "es": "XS-S"
+        },
+        {
+          "nl": "S-M",
+          "en": "S-M",
+          "de": "S-M",
+          "fr": "S-M",
+          "it": "S-M",
+          "es": "S-M"
+        },
+        {
+          "nl": "M-L",
+          "en": "M-L",
+          "de": "M-L",
+          "fr": "M-L",
+          "it": "M-L",
+          "es": "M-L"
+        },
+        {
+          "nl": "L-XL",
+          "en": "L-XL",
+          "de": "L-XL",
+          "fr": "L-XL",
+          "it": "L-XL",
+          "es": "L-XL"
+        },
+        {
+          "nl": "XL-XXL",
+          "en": "XL-XXL",
+          "de": "XL-XXL",
+          "fr": "XL-XXL",
+          "it": "XL-XXL",
+          "es": "XL-XXL"
+        },
+        {
+          "nl": "XXL-3XL",
+          "en": "XXL-3XL",
+          "de": "XXL-3XL",
+          "fr": "XXL-3XL",
+          "it": "XXL-3XL",
+          "es": "XXL-3XL"
+        },
+        {
+          "nl": "One size",
+          "en": "One size",
+          "de": "One size",
+          "fr": "One size",
+          "it": "One size",
+          "es": "One size"
+        }
+      ]
+    },
+    "custom.schoenmaat": {
+      "name": "Schoenmaat",
+      "type": "single_line_text_field",
+      "input_kind": "enum_single",
+      "translatable": false,
+      "values": [
+        {
+          "nl": "35",
+          "en": "35",
+          "de": "35",
+          "fr": "35",
+          "it": "35",
+          "es": "35"
+        },
+        {
+          "nl": "36",
+          "en": "36",
+          "de": "36",
+          "fr": "36",
+          "it": "36",
+          "es": "36"
+        },
+        {
+          "nl": "37",
+          "en": "37",
+          "de": "37",
+          "fr": "37",
+          "it": "37",
+          "es": "37"
+        },
+        {
+          "nl": "38",
+          "en": "38",
+          "de": "38",
+          "fr": "38",
+          "it": "38",
+          "es": "38"
+        },
+        {
+          "nl": "39",
+          "en": "39",
+          "de": "39",
+          "fr": "39",
+          "it": "39",
+          "es": "39"
+        },
+        {
+          "nl": "40",
+          "en": "40",
+          "de": "40",
+          "fr": "40",
+          "it": "40",
+          "es": "40"
+        },
+        {
+          "nl": "41",
+          "en": "41",
+          "de": "41",
+          "fr": "41",
+          "it": "41",
+          "es": "41"
+        },
+        {
+          "nl": "42",
+          "en": "42",
+          "de": "42",
+          "fr": "42",
+          "it": "42",
+          "es": "42"
+        },
+        {
+          "nl": "43",
+          "en": "43",
+          "de": "43",
+          "fr": "43",
+          "it": "43",
+          "es": "43"
+        },
+        {
+          "nl": "44",
+          "en": "44",
+          "de": "44",
+          "fr": "44",
+          "it": "44",
+          "es": "44"
+        },
+        {
+          "nl": "45",
+          "en": "45",
+          "de": "45",
+          "fr": "45",
+          "it": "45",
+          "es": "45"
+        },
+        {
+          "nl": "46",
+          "en": "46",
+          "de": "46",
+          "fr": "46",
+          "it": "46",
+          "es": "46"
+        },
+        {
+          "nl": "47",
+          "en": "47",
+          "de": "47",
+          "fr": "47",
+          "it": "47",
+          "es": "47"
+        },
+        {
+          "nl": "48",
+          "en": "48",
+          "de": "48",
+          "fr": "48",
+          "it": "48",
+          "es": "48"
+        },
+        {
+          "nl": "35-36",
+          "en": "35-36",
+          "de": "35-36",
+          "fr": "35-36",
+          "it": "35-36",
+          "es": "35-36"
+        },
+        {
+          "nl": "37-38",
+          "en": "37-38",
+          "de": "37-38",
+          "fr": "37-38",
+          "it": "37-38",
+          "es": "37-38"
+        },
+        {
+          "nl": "39-40",
+          "en": "39-40",
+          "de": "39-40",
+          "fr": "39-40",
+          "it": "39-40",
+          "es": "39-40"
+        },
+        {
+          "nl": "41-42",
+          "en": "41-42",
+          "de": "41-42",
+          "fr": "41-42",
+          "it": "41-42",
+          "es": "41-42"
+        },
+        {
+          "nl": "43-44",
+          "en": "43-44",
+          "de": "43-44",
+          "fr": "43-44",
+          "it": "43-44",
+          "es": "43-44"
+        },
+        {
+          "nl": "45-46",
+          "en": "45-46",
+          "de": "45-46",
+          "fr": "45-46",
+          "it": "45-46",
+          "es": "45-46"
+        },
+        {
+          "nl": "47-48",
+          "en": "47-48",
+          "de": "47-48",
+          "fr": "47-48",
+          "it": "47-48",
+          "es": "47-48"
+        }
+      ]
+    },
+    "custom.productlabel_in": {
+      "name": "Productlabel in",
+      "type": "single_line_text_field",
+      "input_kind": "lang_codes_multi",
+      "translatable": false,
+      "options": [
+        "NL",
+        "EN",
+        "DE",
+        "FR",
+        "IT",
+        "ES"
+      ],
+      "separator": "|"
+    },
+    "custom.met_flyer_in": {
+      "name": "Met flyer in",
+      "type": "single_line_text_field",
+      "input_kind": "lang_codes_multi",
+      "translatable": false,
+      "options": [
+        "NL",
+        "EN",
+        "DE",
+        "FR",
+        "IT",
+        "ES"
+      ],
+      "separator": "|"
+    },
+    "custom.gewicht_g": {
+      "name": "Gewicht g",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "g"
+    },
+    "custom.netto_gewicht_g": {
+      "name": "Netto gewicht g",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "g"
+    },
+    "custom.totaalgewicht_g": {
+      "name": "Totaalgewicht g",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "g"
+    },
+    "custom.inhoud_ml": {
+      "name": "Inhoud ml",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "ml"
+    },
+    "custom.brandduur_min": {
+      "name": "Brandduur (min)",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "min"
+    },
+    "custom.brandduur_uur": {
+      "name": "Brandduur (uur)",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "uur"
+    },
+    "custom.diameter_kraal_cm": {
+      "name": "Diameter kraal cm",
+      "type": "single_line_text_field",
+      "input_kind": "numeric",
+      "translatable": false,
+      "unit": "cm"
+    },
+    "custom.afmeting_cm": {
+      "name": "Afmeting cm",
+      "type": "single_line_text_field",
+      "input_kind": "dimension_text",
+      "translatable": false,
+      "unit": "cm",
+      "hint": "e.g. 26 or 26x26x10"
+    },
+    "custom.biologisch": {
+      "name": "Biologisch",
+      "type": "boolean",
+      "input_kind": "boolean",
+      "translatable": false
+    },
+    "custom.vegan": {
+      "name": "Vegan",
+      "type": "boolean",
+      "input_kind": "boolean",
+      "translatable": false
+    },
+    "custom.cafeine": {
+      "name": "Cafeïne",
+      "type": "boolean",
+      "input_kind": "boolean",
+      "translatable": false
+    }
+  }
+}
