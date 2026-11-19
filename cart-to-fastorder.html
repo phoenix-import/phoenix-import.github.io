@@ -32,7 +32,7 @@
 </header>
 
 <div class="content">
-  <p class="desc">Upload a cart history JSON from the recovery plugin. The tool extracts SKU and quantity for each line and downloads a semicolon-delimited CSV ready for fast order import.</p>
+  <p class="desc">Upload a cart history JSON from the recovery plugin. Works with both the older flat export and the newer per-cart export. The tool extracts SKU and quantity for each line (skipping zero quantities and automatic free gifts) and downloads a semicolon-delimited CSV ready for fast order import.</p>
 
   <label for="file">Cart history JSON</label>
   <input type="file" id="file" accept=".json">
@@ -70,13 +70,26 @@ document.getElementById('go').onclick = async () => {
     return;
   }
 
-  const rows = [];
-  for (const item of data) {
+  // Two shapes are supported:
+  //  old: a flat array of line items  [{sku, quantity, ...}, ...]
+  //  new: an array of carts           [{customer_name, company_name, updated_at, items:[{sku, quantity, ...}]}, ...]
+  const carts = data.some(d => Array.isArray(d?.items)) ? data.filter(d => Array.isArray(d?.items)) : null;
+  const items = carts ? carts.flatMap(c => c.items) : data;
+
+  // Free gifts added automatically by the store (e.g. "Christmas gift 2026") are not ordered products
+  const isFreeGift = item => Array.isArray(item.properties) &&
+    item.properties.some(p => p && p.key === '_mbm_free_gift');
+
+  const totals = new Map();   // sku -> qty, keeps first-seen order; repeats are summed
+  let skippedGifts = 0;
+  for (const item of items) {
+    if (isFreeGift(item)) { skippedGifts++; continue; }
     const sku = (item.sku ?? '').toString().trim();
     const qty = parseInt(item.quantity, 10);
     if (!sku || isNaN(qty) || qty <= 0) continue;
-    rows.push([sku, qty]);
+    totals.set(sku, (totals.get(sku) || 0) + qty);
   }
+  const rows = [...totals.entries()];
 
   if (rows.length === 0) {
     err('No valid SKU/quantity rows found in the file.');
@@ -87,8 +100,12 @@ document.getElementById('go').onclick = async () => {
   const csv = ['sku;quantity', ...rows.map(r => r.join(';'))].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 
-  // Derive a filename from the uploaded file name, falling back to today
-  const datePart = f.name.match(/\d{8}/) ? f.name.match(/\d{8}/)[0] : new Date().toISOString().slice(0,10).replace(/-/g,'');
+  // Date for the filename: cart's updated_at, else a YYYY-MM-DD or YYYYMMDD date in the file name, else today
+  const isoDate = (carts && carts[0]?.updated_at?.match(/^\d{4}-\d{2}-\d{2}/)?.[0]) ||
+    f.name.match(/(?<!\d)20\d{2}-\d{2}-\d{2}(?!\d)/)?.[0] ||
+    f.name.match(/(?<!\d)20\d{6}(?!\d)/)?.[0] ||
+    new Date().toISOString().slice(0,10);
+  const datePart = isoDate.replace(/-/g,'');
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(blob),
     download: `fastorder_${datePart}.csv`
@@ -105,7 +122,15 @@ document.getElementById('go').onclick = async () => {
     tbody.appendChild(tr);
   }
   document.getElementById('preview').style.display = 'block';
-  status(`Done — ${rows.length} line${rows.length !== 1 ? 's' : ''} written to CSV.`);
+  const totalQty = rows.reduce((s, [, q]) => s + q, 0);
+  let msg = `Done — ${rows.length} line${rows.length !== 1 ? 's' : ''} (${totalQty} pcs) written to CSV.`;
+  if (carts) {
+    const who = [...new Set(carts.map(c => c.company_name || c.customer_name).filter(Boolean))].join(', ');
+    msg += ` ${carts.length} cart${carts.length !== 1 ? 's' : ''}${who ? ' from ' + who : ''}.`;
+    if (carts.length > 1) msg += ' Carts were merged; repeated SKUs are summed.';
+  }
+  if (skippedGifts) msg += ` Skipped ${skippedGifts} free gift line${skippedGifts !== 1 ? 's' : ''}.`;
+  status(msg);
 };
 </script>
 </body>
